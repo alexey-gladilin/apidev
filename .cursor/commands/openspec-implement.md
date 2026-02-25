@@ -1,0 +1,234 @@
+---
+name: /openspec-implement
+id: openspec-implement
+category: OpenSpec
+description: Start TDD implementation of an approved OpenSpec change using specialized agents.
+---
+<!-- OPENSPEC:START -->
+**Guardrails**
+
+- Change must be validated and approved before implementation starts
+- Uses adaptive gated workflow with three execution modes:
+  - `AUTO` (default): checkpoint-based execution for speed/token efficiency
+  - `STRICT`: per-task full pipeline for high-risk changes
+  - `BATCH`: implement all pending tasks first, run full gates once at end
+- **CRITICAL: Launch subagents using Task tool. DO NOT write @mentions in text - use actual Task tool calls.**
+- Tracks progress in tasks.md with automatic status updates
+- Handles rejections (3 rejections → `[BLOCKED - NEEDS HUMAN REVIEW]`)
+- Runs quality gates (format/lint/test) at finalization
+
+**CRITICAL: Subagent Launch Method**
+
+**Use the Task tool to call subagents. DO NOT just write @mentions in text - they won't execute.**
+
+To launch a subagent, you MUST call the Task tool (available in your toolset) with these parameters:
+
+1. `subagent_type`: Set to `"spec-analyst"`, `"coder"`, `"tester"`, `"security"`, or `"qa"`
+2. `prompt`: Full task description with all context
+3. `description`: Short summary of what the agent will do (3-5 words)
+
+**Example Task tool call structure:**
+
+```
+Call Task tool with:
+- subagent_type: "coder"
+- description: "Implement argparse help coloring"
+- prompt: "Implement the following task from OpenSpec change 'add-cli-help-coloring':
+  Task: <description>
+  Context: <proposal, design, specs>
+  Follow RED-GREEN-REFACTOR and output HANDOFF when complete."
+```
+
+See `.cursor/agents/openspec-implementer.md` for detailed examples.
+
+**Prerequisites Check**
+
+1. Validate change exists and passes strict validation
+2. Confirm proposal is approved (ask if unclear)
+3. Ensure tasks.md is properly formatted with `[ ]` items
+4. Verify project conventions and test infrastructure are documented before coding
+
+**Steps**
+
+1. Ask for change ID if not provided in the command
+2. Run `openspec validate <change-id> --strict --no-interactive` to ensure change is valid
+3. Check if `openspec/changes/<change-id>/proposal.md` exists and is approved
+4. Load and analyze context:
+   - Read `openspec/changes/<change-id>/proposal.md` (WHY and WHAT)
+   - Read `openspec/changes/<change-id>/design.md` (if exists) (technical decisions)
+   - Read `openspec/changes/<change-id>/tasks.md` (implementation checklist)
+   - Read relevant spec deltas: `openspec/changes/<change-id>/specs/*/spec.md`
+5. Run pre-flight readiness check:
+   - Verify project coding conventions are documented (`AGENTS.md`, `openspec/AGENTS.md`, `README`, `docs`, contribution guides)
+   - Verify test infrastructure is configured and runnable (framework + command documented in project config/docs)
+   - If missing, STOP with:
+
+     ```
+     WORKFLOW STOPPED: PRE-FLIGHT FAILED
+     - Missing: <code conventions | test infrastructure>
+     - Action Required: Document conventions and configure runnable test infrastructure.
+     ```
+
+6. Initialize tracking and output current state:
+
+   ```
+   ## OPENSPEC IMPLEMENTATION: <change-id>
+   - Proposal: <one line summary>
+   - Total Tasks: <count>
+   - Pending Tasks: <count of [ ] items>
+   - Blocked Tasks: <count of [BLOCKED - NEEDS HUMAN REVIEW] items>
+   ```
+
+7. Run mandatory spec readiness gate before coding:
+   - Call Task tool with:
+     - `subagent_type`: `"spec-analyst"`
+     - `description`: `"Validate OpenSpec readiness"`
+     - `prompt`: include full change context (`proposal.md`, `design.md` if exists, `tasks.md`, delta specs, relevant base specs)
+   - Wait for `SPEC READY` or `SPEC REJECTED`
+   - If `SPEC REJECTED` → STOP workflow before coding
+   - If `SPEC READY` → proceed
+
+8. Determine execution mode (mandatory):
+   - Default mode: `AUTO`
+   - Use `STRICT` if any high-risk trigger is present:
+     - security/auth/crypto/secrets/permissions changes
+     - public API or schema compatibility impact
+     - data migration/destructive data operations
+     - compliance/safety-critical domain
+     - explicit user request for strict per-task gates
+   - Print selected mode and reason:
+
+     ```
+     Execution Mode: <AUTO|STRICT|BATCH>
+     Reason: <risk heuristic or default>
+     ```
+
+9. Execute implementation loop based on selected mode:
+
+   **AUTO mode (default, checkpoint-based)**
+   - Group pending tasks into logical waves using section/task prefixes from `tasks.md` (for example `1.*`, `2.*`, `3.*`).
+   - For each wave:
+     - Launch `coder` once for the full wave (do not force one coder run per checkbox item).
+     - Require compact context in coder prompt:
+       - current wave task IDs and descriptions
+       - changed files and short handoff summary
+       - references to proposal/tasks/spec paths (avoid re-pasting full files)
+     - Run validation gates by risk:
+       - low-risk wave: `tester`
+       - medium-risk wave: `tester -> qa`
+       - high-risk wave: `tester -> security -> qa`
+     - Mark all wave tasks as `[x]` only after required wave gate(s) return success.
+   - Always run a **final full gate** after last wave:
+     - `tester -> security -> qa`
+
+   **STRICT mode (per-task full pipeline)**
+   - Process tasks one-by-one exactly as the original strict flow:
+     - first `[ ]` task only
+     - `coder -> tester -> security -> qa` for that single task
+     - update task status and continue
+
+10. **STRICT single-task execution details (used only in STRICT mode):**
+
+   For each pending task in tasks.md:
+   - Find first `[ ]` task (skip `[BLOCKED - NEEDS HUMAN REVIEW]`, `[x]`)
+   - **ONLY ONE task at a time** - do not batch or combine tasks
+   - **CRITICAL: Launch Coder subagent using Task tool (not @mention in text):**
+     - **Call the Task tool** (from your available tools) with these parameters:
+       - `subagent_type`: `"coder"`
+       - `description`: `"Implement task from OpenSpec change"`
+       - `prompt`:
+
+         ```
+         Implement the following SINGLE task from OpenSpec change '<change-id>':
+         
+         Task: <ONLY the current task description from tasks.md - NOT all tasks>
+         
+         Context:
+         - Proposal: openspec/changes/<change-id>/proposal.md
+         - Design: openspec/changes/<change-id>/design.md (if exists)
+         - Spec Deltas: openspec/changes/<change-id>/specs/
+         - Tasks file: openspec/changes/<change-id>/tasks.md
+         
+         CRITICAL: Follow strict RED-GREEN-REFACTOR methodology:
+         1. RED PHASE: Write tests FIRST. Show failing test output before implementation.
+         2. GREEN PHASE: Write minimal code to pass tests.
+         3. REFACTOR: Improve code while keeping tests passing.
+         
+         Output HANDOFF block when complete.
+         ```
+       
+       - **⚠️ FORBIDDEN:**
+         - Do NOT pass multiple tasks in one prompt
+         - Do NOT say "implement all tasks" or "implement tasks.md"
+         - Do NOT skip RED PHASE evidence
+
+     - **IMPORTANT:** Wait for Task tool completion.
+   - Wait for HANDOFF block from Coder
+   - Call Task tool for Tester (`subagent_type: "tester"`) with HANDOFF in prompt
+   - Wait for `VERIFIED` or `REJECTION`
+   - If `VERIFIED`, call Task tool for Security (`subagent_type: "security"`) with VERIFIED in prompt
+   - Wait for `SECURITY VERIFIED` or `REJECTION`
+   - If `SECURITY VERIFIED`, call Task tool for QA (`subagent_type: "qa"`) with SECURITY VERIFIED in prompt
+   - Monitor the gated pipeline: Coder → Tester → Security → QA
+   - Wait for final APPROVED or REJECTION from QA subagent
+   - Update task status in tasks.md:
+     - If APPROVED → Mark as `[x]`
+     - If REJECTED → Increment rejection count
+     - If 3 rejections → Mark as `[BLOCKED - NEEDS HUMAN REVIEW]`
+   - Continue with next task
+11. After all tasks complete or blocked:
+   - Detect project quality gates from project docs/config (`AGENTS.md`, `README`, CI workflow, Makefile/package manager/python config`)
+   - Run quality gates:
+
+     ```bash
+     <project_format_command>
+     <project_lint_command>
+     <project_test_command>
+     ```
+
+   - If any fail → Report issues and mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`
+12. Generate completion summary (see format below)
+
+**Completion Summary Format**
+
+```
+## OPENSPEC IMPLEMENTATION COMPLETE: <change-id>
+
+**Completed:**
+- Tasks: X/Y completed
+- Quality Gates: [✅/❌] Format, [✅/❌] Lint, [✅/❌] Tests
+
+**Blocked/Pending:**
+- [List any blocked or incomplete tasks with reasons]
+
+**Next Steps:**
+- [ ] Manual review of blocked items (if any)
+- [ ] Commit changes:
+  ```bash
+  git add openspec/changes/<change-id>/tasks.md <other-files>
+  git commit -m "chore: implement <change-id>"
+  ```
+
+- [ ] After deployment: Run `openspec archive <change-id> --yes`
+
+```
+
+**Rejection Handling Protocol**
+
+- 1st rejection (from Tester/Security/QA): Call Task tool with `subagent_type="coder"` again, including rejection feedback in prompt
+- 2nd rejection: Call Task tool with `subagent_type="coder"` again, including rejection feedback in prompt
+- 3rd rejection: Mark task as `[BLOCKED - NEEDS HUMAN REVIEW]` and continue with next task
+
+**Escalation Rules**
+
+- If >30% of tasks blocked → Pause workflow, request human intervention
+- If quality gates fail → Report issues, mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`
+- Continue with remaining tasks even if some are blocked
+
+**Reference**
+
+- Subagent details: `.cursor/agents/openspec-implementer.md`
+- Workflow baseline: `docs/tdd-workflow/workflow-baseline.md`
+- TDD workflow: `docs/tdd-workflow/README.md`
+- Quick reference: `docs/tdd-workflow/cheatsheet.md`
+<!-- OPENSPEC:END -->

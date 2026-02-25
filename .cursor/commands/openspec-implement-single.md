@@ -1,0 +1,48 @@
+---
+name: /openspec-implement-single
+id: openspec-implement-single
+category: OpenSpec
+description: Implement an approved OpenSpec change in single-agent mode (without subagents/Task tool).
+---
+<!-- OPENSPEC:START -->
+**Guardrails**
+- Change must be validated and approved before implementation starts.
+- Use this command in environments without subagent support (for example Codex extension).
+- Do not call subagents or Task tool in this workflow.
+- Keep progress synchronized in `openspec/changes/<change-id>/tasks.md`.
+- Run internal gates in order: Spec Readiness -> Tester -> Security -> QA.
+
+**Steps**
+1. Validate change:
+   - `openspec show <change-id> --json --deltas-only`
+   - `openspec validate <change-id> --strict --no-interactive`
+2. Load context from:
+   - `openspec/changes/<change-id>/proposal.md`
+   - `openspec/changes/<change-id>/tasks.md`
+   - `openspec/changes/<change-id>/design.md` (if present)
+   - `openspec/changes/<change-id>/specs/*/spec.md`
+3. Run pre-flight readiness checks (project conventions + test infrastructure). If missing, stop.
+4. Run internal spec readiness gate and continue only on `SPEC READY`.
+5. Select mode:
+   - `AUTO` (default, wave-based)
+   - `STRICT` (per-task full gates)
+   - `BATCH` (all coding first, full gates at the end)
+6. Implement tasks according to mode using RED-GREEN-REFACTOR evidence.
+7. For each completed unit (task or wave), run internal verification gates:
+   - Tester gate (`VERIFIED` or rejection)
+   - Security gate (`SECURITY VERIFIED` or rejection)
+   - QA gate (`APPROVED` or rejection)
+8. Update `tasks.md` only after required gates pass.
+9. On repeated rejection:
+   - Retry up to 3 times
+   - Then mark `[BLOCKED - NEEDS HUMAN REVIEW]`
+10. Finalization:
+   - Run format/lint/tests from project conventions
+   - Ensure `tasks.md` status is accurate
+   - Output completion summary with completed and blocked tasks
+
+**Reference**
+- Single-agent workflow skill: `.cursor/skills/openspec-single-agent-implementer/SKILL.md`
+- Multi-agent workflow command: `.cursor/commands/openspec-implement.md`
+- Workflow baseline: `docs/tdd-workflow/workflow-baseline.md`
+<!-- OPENSPEC:END -->

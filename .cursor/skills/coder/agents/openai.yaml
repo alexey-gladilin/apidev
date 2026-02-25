@@ -1,0 +1,6 @@
+interface:
+  display_name: "Coder (TDD Implementer)"
+  short_description: "Implement tasks via strict Red-Green-Refactor"
+  default_prompt: "Use $coder to implement the next OpenSpec task using strict Red-Green-Refactor and provide a structured handoff."
+policy:
+  allow_implicit_invocation: true

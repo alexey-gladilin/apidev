@@ -1,0 +1,6 @@
+interface:
+  display_name: "Spec Analyst (Readiness Gate)"
+  short_description: "Validate OpenSpec readiness before coding"
+  default_prompt: "Use $spec-analyst to validate OpenSpec change readiness and output SPEC READY or SPEC REJECTED before implementation."
+policy:
+  allow_implicit_invocation: true

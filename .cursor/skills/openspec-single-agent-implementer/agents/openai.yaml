@@ -1,0 +1,6 @@
+interface:
+  display_name: "OpenSpec Single-Agent Implementer"
+  short_description: "Run OpenSpec implementation without subagents"
+  default_prompt: "Use $openspec-single-agent-implementer to implement an approved OpenSpec change in a single-agent workflow with internal spec/test/security/qa gates."
+policy:
+  allow_implicit_invocation: true

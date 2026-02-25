@@ -1,0 +1,29 @@
+---
+description: Conventional commit prefixes for git commit messages
+alwaysApply: true
+---
+
+# Commit Message Conventions
+
+When creating commit messages (`git commit -m "..."`), always use conventional commit prefixes.
+
+## Prefixes
+
+| Prefix  | Purpose | Example |
+| :------ | :------ | :------ |
+| build   | Changes to build system or external dependencies | `build: обновить webpack до 5.75.0` |
+| chore   | Routine maintenance tasks | `chore: добавить .gitignore` |
+| ci      | CI/CD configuration changes | `ci: добавить GitHub Actions workflow` |
+| docs    | Documentation updates | `docs: исправить пример в API-reference` |
+| feat    | New feature | `feat: добавить эндпоинт /health` |
+| fix     | Bug fix | `fix: исправить парсинг даты в экспорте` |
+| perf    | Performance improvement | `perf: кэшировать результат запроса` |
+| refactor| Code change that is not a feature or fix | `refactor: вынести валидацию в отдельный модуль` |
+| style   | Formatting, whitespace (no code change) | `style: привести к Black` |
+| test    | Test changes | `test: добавить тесты для сервиса экспорта` |
+| revert  | Revert a previous commit | `revert: откат коммита abc123` |
+
+## Format
+
+- Use lowercase prefix and a short, imperative description after the colon.
+- Optionally add scope: `feat(api): описание` or `fix(export): описание`.
