@@ -1,11 +1,15 @@
 from pathlib import Path
 
 from apidev.application.services.init_service import InitService
+from apidev.infrastructure.config.toml_loader import default_config_text
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 
 
 def test_init_writes_default_contract_with_property_level_required(tmp_path: Path) -> None:
-    service = InitService(fs=LocalFileSystem())
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
 
     service.run(tmp_path)
 

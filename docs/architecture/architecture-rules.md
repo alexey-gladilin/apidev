@@ -9,18 +9,25 @@
 - Спека: `openspec/changes/add-apidev-cli-tool-architecture/specs/cli-tool-architecture/spec.md`
 - Архитектурный baseline: `docs/architecture.md`
 - План валидации: `docs/architecture/validation-blueprint.md`
+- Тесты архитектуры:
+  - `tests/unit/architecture/test_layering_imports.py`
+  - `tests/unit/architecture/test_application_no_infra_imports.py`
+  - `tests/unit/architecture/test_core_purity.py`
+  - `tests/contract/architecture/test_pipeline_contract.py`
+  - `tests/contract/architecture/test_write_boundary_policy.py`
+  - `tests/contract/architecture/test_config_path_single_source.py`
 
 ## Каталог правил
 
 | Rule ID | Правило | Автопроверка сейчас | Целевая проверка |
 |---|---|---|---|
-| AR-001 | `core` не импортирует `application/commands/infrastructure` | Нет | AST import-graph test |
-| AR-002 | `application` не импортирует concrete adapters из `infrastructure` | Нет | Forbidden imports test |
-| AR-003 | `core` не выполняет direct I/O и format parsing | Частично нарушается | Purity test + refactoring gate |
-| AR-004 | `commands` остаются thin adapters | Нет | LOC/complexity + import checks |
-| AR-005 | `diff` не пишет файлы, `generate --check` без side-effects | Частично (integration happy-path) | Contract architecture tests |
-| AR-006 | Запись только в generated root | Частично (`SafeWriter`) | Negative boundary tests |
-| AR-007 | Пути contracts/templates/generated берутся из единого config source | Нет | Consistency checks |
+| AR-001 | `core` не импортирует `application/commands/infrastructure` | Да (`test_layering_imports.py`) | Дополнить import-graph visualization в CI |
+| AR-002 | `application` не импортирует concrete adapters из `infrastructure` | Да (`test_application_no_infra_imports.py`) | Сохранить |
+| AR-003 | `core` не выполняет direct I/O и format parsing | Да (`test_core_purity.py`) | Сохранить + расширять запрещенные паттерны по необходимости |
+| AR-004 | `commands` остаются thin adapters | Частично (через импортные границы) | Добавить LOC/complexity guard |
+| AR-005 | `diff` не пишет файлы, `generate --check` без side-effects | Да (`test_pipeline_contract.py`) | Сохранить |
+| AR-006 | Запись только в generated root | Да (`test_write_boundary_policy.py`) | Сохранить |
+| AR-007 | Пути contracts/templates/generated берутся из единого config source | Да (`test_config_path_single_source.py`) | Сохранить |
 
 ## Карта разрешенных направлений зависимостей
 
@@ -48,4 +55,3 @@ core -> filesystem I/O and parsing adapters
 2. Обновить `docs/architecture.md` при изменении архитектурного обзора.
 3. Обновить/добавить тесты в `tests/unit/architecture/*` и `tests/contract/architecture/*`.
 4. Синхронизировать изменения с OpenSpec, если меняется нормативное требование.
-

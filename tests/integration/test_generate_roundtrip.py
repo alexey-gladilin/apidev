@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from apidev.application.services.generate_service import GenerateService
+from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 from apidev.infrastructure.output.writer import SafeWriter
@@ -35,8 +36,9 @@ errors: []
 
     fs = LocalFileSystem()
     service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
         loader=YamlContractLoader(),
-        renderer=JinjaTemplateRenderer(project_dir=tmp_path),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
         fs=fs,
         writer=SafeWriter(fs=fs),
     )

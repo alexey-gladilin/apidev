@@ -13,11 +13,10 @@ from apidev.core.ports.template_engine import TemplateEnginePort
 
 
 class JinjaTemplateRenderer(TemplateEnginePort):
-    def __init__(self, project_dir: Path | None = None):
+    def __init__(self, custom_templates_dir: Path | None = None):
         loaders: list[PackageLoader | FileSystemLoader] = [PackageLoader("apidev", "templates")]
-        if project_dir is not None:
-            custom_templates = project_dir / ".apidev" / "templates"
-            loaders.insert(0, FileSystemLoader(str(custom_templates)))
+        if custom_templates_dir is not None:
+            loaders.insert(0, FileSystemLoader(str(custom_templates_dir)))
 
         self.env = Environment(
             loader=ChoiceLoader(loaders),

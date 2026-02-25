@@ -22,8 +22,8 @@ flowchart LR
     subgraph Domain["Domain Core"]
         MODELS["core/models/*"]
         RULES["core/rules/*"]
-        PORTS["core/ports/*"]
-        CFG["ApidevConfig"]
+        PORTS["core/ports/*\n(ContractLoaderPort,\nTemplateEnginePort,\nConfigLoaderPort,\nWriterPort)"]
+        CFG["ApidevConfig models"]
     end
 
     subgraph Infra["Infrastructure Adapters"]
@@ -61,5 +61,4 @@ flowchart LR
 - `application/*` не импортирует concrete adapters из `infrastructure/*`.
 - `core/*` не выполняет direct I/O и не зависит от `commands/application/infrastructure`.
 - `commands/*` остаются thin adapters без бизнес-правил.
-- `SafeWriter` обеспечивает write-boundary только внутри generated root.
-
+- `SafeWriter` реализует `WriterPort` и обеспечивает write-boundary только внутри generated root.

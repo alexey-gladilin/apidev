@@ -1,9 +1,10 @@
 from pathlib import Path
 
 from apidev.core.ports.filesystem import FileSystemPort
+from apidev.core.ports.writer import WriterPort
 
 
-class SafeWriter:
+class SafeWriter(WriterPort):
     def __init__(self, fs: FileSystemPort):
         self.fs = fs
 

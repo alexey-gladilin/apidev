@@ -41,6 +41,7 @@ tests/
     architecture/
       test_pipeline_contract.py
       test_write_boundary_policy.py
+      test_config_path_single_source.py
 ```
 
 ## Rule Traceability Matrix

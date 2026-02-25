@@ -52,7 +52,7 @@ sequenceDiagram
     participant U as User
     participant CMD as commands/diff_cmd
     participant SVC as application/DiffService
-    participant CFG as core/models/ApidevConfig
+    participant CFG as infrastructure/TomlConfigLoader
     participant LD as infrastructure/YamlContractLoader
     participant RND as infrastructure/JinjaTemplateRenderer
     participant FS as infrastructure/LocalFileSystem
@@ -109,6 +109,7 @@ flowchart TD
 
 - Single Responsibility: command parsing/presentation, orchestration, domain logic, and adapters stay separated.
 - Dependency direction: core does not depend on application/commands/infrastructure.
+- Application orchestrates only through ports (`ContractLoaderPort`, `TemplateEnginePort`, `ConfigLoaderPort`, `WriterPort`).
 - DRY: configuration paths and pipeline steps have a single source.
 - Safety: writes are constrained to generated root.
 - Determinism: same contracts/templates/config produce the same generation output.
@@ -120,4 +121,3 @@ flowchart TD
 - `docs/architecture/validation-blueprint.md`
 - `openspec/changes/add-apidev-cli-tool-architecture/specs/cli-tool-architecture/spec.md`
 - `docs/apidev-concept-and-approach.md`
-

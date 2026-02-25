@@ -1,7 +1,9 @@
 from pathlib import Path
 
 from apidev.application.services.validate_service import ValidateService
+from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
+from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 
 
 def test_validate_reports_no_errors_for_minimal_contract(tmp_path: Path) -> None:
@@ -19,7 +21,10 @@ response:
 errors: []
 """.strip())
 
-    service = ValidateService(loader=YamlContractLoader())
+    service = ValidateService(
+        loader=YamlContractLoader(),
+        config_loader=TomlConfigLoader(fs=LocalFileSystem()),
+    )
     result = service.run(tmp_path)
 
     assert not result.errors

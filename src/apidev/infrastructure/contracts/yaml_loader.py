@@ -9,8 +9,7 @@ from apidev.core.rules.operation_id import build_operation_id
 
 
 class YamlContractLoader(ContractLoaderPort):
-    def load(self, project_dir: Path) -> list[Operation]:
-        contracts_root = project_dir / ".apidev" / "contracts"
+    def load(self, contracts_root: Path) -> list[Operation]:
         if not contracts_root.exists():
             return []
 
