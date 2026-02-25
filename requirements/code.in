@@ -1,0 +1,7 @@
+# Development tools: formatting, linting, type checking, make menu
+# Compile: uv pip compile requirements/code.in -o requirements/code.txt
+# Install: uv pip install -r requirements/code.txt
+black
+flake8
+InquirerPy
+pyright

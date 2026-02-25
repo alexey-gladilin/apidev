@@ -1,0 +1,7 @@
+# Test dependencies
+# Compile: uv pip compile requirements/test.in -o requirements/test.txt
+# Install: uv pip install -r requirements/test.txt
+# Base dependencies are included separately (base.in / pyproject.toml)
+pytest
+pytest-asyncio
+pytest-cov

@@ -1,0 +1,36 @@
+[project]
+name = "apidev"
+version = "0.1.0"
+description = "Contract-driven API code generator CLI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "typer>=0.12.3",
+  "rich>=13.7.1",
+  "pydantic>=2.8.2",
+  "pydantic-settings>=2.4.0",
+  "PyYAML>=6.0.2",
+  "Jinja2>=3.1.4",
+  "tomli-w>=1.0.0",
+]
+
+[project.scripts]
+apidev = "apidev.cli:main"
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+addopts = "-q"
