@@ -2,8 +2,15 @@ from typer.testing import CliRunner
 
 from apidev.cli import app
 
-
 runner = CliRunner()
+
+
+def test_no_args_shows_help_by_default() -> None:
+    result = runner.invoke(app, [])
+
+    assert result.exit_code == 0
+    assert "Usage:" in result.output
+    assert "Commands" in result.output
 
 
 def test_root_help_supports_short_flag() -> None:

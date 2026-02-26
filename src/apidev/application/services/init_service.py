@@ -39,7 +39,9 @@ class InitService:
         self.fs = fs
         self.default_config_text = default_config_text
 
-    def run(self, project_dir: Path, mode: Literal["create", "repair", "force"] = "create") -> "InitResult":
+    def run(
+        self, project_dir: Path, mode: Literal["create", "repair", "force"] = "create"
+    ) -> "InitResult":
         paths = resolve_paths(project_dir, ApidevConfig())
         changed = 0
         invalid_paths: list[Path] = []

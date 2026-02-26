@@ -56,7 +56,7 @@ def test_init_repair_overwrites_only_invalid_managed_files(tmp_path: Path) -> No
     result = service.run(tmp_path, mode="repair")
 
     assert result.status == "repaired"
-    assert "version = \"1\"" in config_path.read_text(encoding="utf-8")
+    assert 'version = "1"' in config_path.read_text(encoding="utf-8")
 
 
 def test_init_force_overwrites_managed_files(tmp_path: Path) -> None:
