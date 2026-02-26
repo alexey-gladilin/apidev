@@ -7,4 +7,7 @@ Binary CLI tool for contract-driven API scaffolding.
 - `apidev init`
 - `apidev validate`
 - `apidev diff`
-- `apidev generate`
+- `apidev gen`
+
+Compatibility alias:
+- `apidev generate` (legacy alias for `apidev gen`)
