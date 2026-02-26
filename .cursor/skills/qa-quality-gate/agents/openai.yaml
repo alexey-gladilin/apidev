@@ -1,6 +1,0 @@
-interface:
-  display_name: "QA Quality Gate"
-  short_description: "Final quality review after implementation"
-  default_prompt: "Use $qa-quality-gate to run a final architecture and code quality review before completing this implementation."
-policy:
-  allow_implicit_invocation: true

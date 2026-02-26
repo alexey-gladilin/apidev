@@ -7,7 +7,7 @@ Instructions for AI coding assistants using OpenSpec for spec-driven development
 - Search existing work: `openspec spec list --long`, `openspec list` (use `rg` only for full-text search)
 - Decide scope: new capability vs modify existing capability
 - Pick a unique `change-id`: kebab-case, verb-led (`add-`, `update-`, `remove-`, `refactor-`)
-- Scaffold: `proposal.md`, `tasks.md`, `design.md` (only if needed), and delta specs per affected capability
+- Scaffold: `proposal.md`, `tasks.md`, `design.md`, artifacts under `artifacts/{research,design,plan}`, and delta specs per affected capability
 - Write deltas: use `## ADDED|MODIFIED|REMOVED|RENAMED Requirements`; include at least one `#### Scenario:` per requirement
 - Validate: `openspec validate [change-id] --strict --no-interactive` and fix issues
 - Request approval: Do not start implementation until proposal is approved
@@ -42,19 +42,30 @@ Skip proposal for:
 
 **Workflow**
 1. Review `openspec/project.md`, `openspec list`, and `openspec list --specs` to understand current context.
-2. Choose a unique verb-led `change-id` and scaffold `proposal.md`, `tasks.md`, optional `design.md`, and spec deltas under `openspec/changes/<id>/`.
+2. Choose a unique verb-led `change-id` and scaffold `proposal.md`, `tasks.md`, `design.md`, `artifacts/{research,design,plan}/`, and spec deltas under `openspec/changes/<id>/`.
 3. Draft spec deltas using `## ADDED|MODIFIED|REMOVED Requirements` with at least one `#### Scenario:` per requirement.
 4. Run `openspec validate <id> --strict --no-interactive` and resolve any issues before sharing the proposal.
 
 ### Stage 2: Implementing Changes
 Track these steps as TODOs and complete them one by one.
 1. **Read proposal.md** - Understand what's being built
-2. **Read design.md** (if exists) - Review technical decisions
+2. **Read design.md** - Review technical decisions
 3. **Read tasks.md** - Get implementation checklist
 4. **Implement tasks sequentially** - Complete in order
-5. **Confirm completion** - Ensure every item in `tasks.md` is finished before updating statuses
-6. **Update checklist** - After all work is done, set every task to `- [x]` so the list reflects reality
+5. **Update checklist incrementally** - Update each task status in `tasks.md` right after its gate-approved completion
+6. **Confirm completion** - Ensure every item in `tasks.md` reflects reality before finalization
 7. **Approval gate** - Do not start implementation until the proposal is reviewed and approved
+
+### Project Workflow Profile (Research -> Design -> Plan -> Implement)
+
+For this repository, use artifact-bound workflow under each change:
+
+- `openspec/changes/<change-id>/artifacts/research/`
+- `openspec/changes/<change-id>/artifacts/design/`
+- `openspec/changes/<change-id>/artifacts/plan/`
+
+Core files (`proposal.md`, `design.md`, `tasks.md`) must link to these artifacts for traceability.
+Implementation uses single-writer tracking: only the orchestrator updates `tasks.md` statuses.
 
 ### Stage 3: Archiving Changes
 After deployment, create separate PR to:
@@ -133,7 +144,11 @@ openspec/
 │   ├── [change-name]/
 │   │   ├── proposal.md     # Why, what, impact
 │   │   ├── tasks.md        # Implementation checklist
-│   │   ├── design.md       # Technical decisions (optional; see criteria)
+│   │   ├── design.md       # Technical decisions for Research->Design->Plan handoff
+│   │   ├── artifacts/      # Linked workflow artifacts
+│   │   │   ├── research/
+│   │   │   ├── design/
+│   │   │   └── plan/
 │   │   └── specs/          # Delta changes
 │   │       └── [capability]/
 │   │           └── spec.md # ADDED/MODIFIED/REMOVED
@@ -204,12 +219,8 @@ If multiple capabilities are affected, create multiple delta files under `change
 - [ ] 1.4 Write tests
 ```
 
-5. **Create design.md when needed:**
-Create `design.md` if any of the following apply; otherwise omit it:
-- Cross-cutting change (multiple services/modules) or a new architectural pattern
-- New external dependency or significant data model changes
-- Security, performance, or migration complexity
-- Ambiguity that benefits from technical decisions before coding
+5. **Create design.md:**
+For this repository workflow, `design.md` is required to support Design and Plan phases before implementation.
 
 Minimal `design.md` skeleton:
 ```markdown

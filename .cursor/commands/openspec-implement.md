@@ -14,6 +14,7 @@ description: Start TDD implementation of an approved OpenSpec change using speci
   - `BATCH`: implement all pending tasks first, run full gates once at end
 - **CRITICAL: Launch subagents using Task tool. DO NOT write @mentions in text - use actual Task tool calls.**
 - Tracks progress in tasks.md with automatic status updates
+- Only orchestrator updates `tasks.md` statuses; subagents return verdicts/evidence only
 - Handles rejections (3 rejections → `[BLOCKED - NEEDS HUMAN REVIEW]`)
 - Runs quality gates (format/lint/test) at finalization
 
@@ -57,6 +58,10 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Read `openspec/changes/<change-id>/proposal.md` (WHY and WHAT)
    - Read `openspec/changes/<change-id>/design.md` (if exists) (technical decisions)
    - Read `openspec/changes/<change-id>/tasks.md` (implementation checklist)
+   - Read linked artifacts (if present):
+     - `openspec/changes/<change-id>/artifacts/research/*`
+     - `openspec/changes/<change-id>/artifacts/design/*`
+     - `openspec/changes/<change-id>/artifacts/plan/*`
    - Read relevant spec deltas: `openspec/changes/<change-id>/specs/*/spec.md`
 5. Run pre-flight readiness check:
    - Verify project coding conventions are documented (`AGENTS.md`, `openspec/AGENTS.md`, `README`, `docs`, contribution guides)
@@ -72,6 +77,8 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
 6. Initialize tracking and output current state:
 
    ```
+   - Artifacts linked: <yes/no>
+   - Missing artifact references: <list or none>
    ## OPENSPEC IMPLEMENTATION: <change-id>
    - Proposal: <one line summary>
    - Total Tasks: <count>
@@ -126,6 +133,18 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - first `[ ]` task only
      - `coder -> tester -> security -> qa` for that single task
      - update task status and continue
+
+   **BATCH mode (single coding pass, final full gates)**
+   - Collect all pending `[ ]` tasks (skip `[BLOCKED - NEEDS HUMAN REVIEW]`, `[x]`).
+   - Launch `coder` once with the full pending task set and require:
+     - explicit list of completed task IDs
+     - RED-GREEN-REFACTOR evidence for each task or coherent cluster
+     - consolidated HANDOFF with changed files and tests
+   - Do not run intermediate `tester/security/qa` gates while coding is in progress.
+   - After coder completes, run full gate sequence once: `tester -> security -> qa`.
+   - Update task statuses:
+     - If final gate passes, mark completed batch tasks as `[x]`.
+     - If final gate fails, mark affected tasks as rejected/blocked per escalation rules and route fixes via `STRICT` mode until resolved.
 
 10. **STRICT single-task execution details (used only in STRICT mode):**
 
@@ -228,7 +247,5 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
 **Reference**
 
 - Subagent details: `.cursor/agents/openspec-implementer.md`
-- Workflow baseline: `docs/tdd-workflow/workflow-baseline.md`
-- TDD workflow: `docs/tdd-workflow/README.md`
-- Quick reference: `docs/tdd-workflow/cheatsheet.md`
+- Reviewer protocols: `.cursor/agents/tester.md`, `.cursor/agents/security.md`, `.cursor/agents/qa.md`
 <!-- OPENSPEC:END -->

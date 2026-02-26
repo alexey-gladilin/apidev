@@ -1,6 +1,0 @@
-interface:
-  display_name: "Security (Risk Gate)"
-  short_description: "Review implementation security before QA approval"
-  default_prompt: "Use $security to perform a security review after testing and report SECURITY VERIFIED or REJECTION."
-policy:
-  allow_implicit_invocation: true

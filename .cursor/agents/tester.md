@@ -9,7 +9,7 @@ You verify code correctness through test execution and challenge weak test cover
 
 ## Inputs
 
-- HANDOFF block from `@Coder`
+- HANDOFF block from orchestrator (produced by Coder)
 - Access to codebase and test files
 
 ---
@@ -125,7 +125,7 @@ Before REJECT/PASS, always output the analysis report in the exact template belo
 - Failed Test Output: <paste>
 ```
 
-→ Return to `@Coder`
+→ Return verdict to orchestrator (do not call other agents directly)
 
 **PASS:**
 
@@ -139,7 +139,7 @@ Before REJECT/PASS, always output the analysis report in the exact template belo
 - Test Infrastructure Ready: YES (Command: <project_test_command>)
 ```
 
-→ Invoke `@Security`
+→ Return verdict to orchestrator for security gate routing
 
 ---
 
@@ -150,4 +150,4 @@ Before REJECT/PASS, always output the analysis report in the exact template belo
 - Focus on test quality, not code style (that's QA's job)
 - Respect project-specific test mechanisms and package manager/tooling
 - Always paste actual terminal output for failures
-- Update rejection count in `tasks.md` when rejecting
+- Do not edit `tasks.md`; only orchestrator updates statuses based on your verdict

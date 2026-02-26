@@ -9,7 +9,7 @@ You are responsible for security analysis of the implementation before final QA 
 
 ## Inputs
 
-- VERIFIED block from `@Tester` (required)
+- VERIFIED block from orchestrator (required; sourced from Tester)
 - Access to source code and project conventions/docs
 
 ---
@@ -116,7 +116,7 @@ Before REJECT/APPROVE, always output the analysis report in the exact template b
 ```markdown
 ## REJECTION (Security)
 - Task ID: #<number>
-- Rejection Count: <N+1> ← UPDATE in tasks.md
+- Rejection Count: <N+1> (reported for orchestrator)
 - Severity: CRITICAL / MAJOR / MINOR
 - Issues:
   1. [File:Line] <description>
@@ -124,8 +124,7 @@ Before REJECT/APPROVE, always output the analysis report in the exact template b
 - Required Action: <specific fix instruction>
 ```
 
-→ Update `tasks.md`: `[ ] Task X [REJECTED x<N>]`
-→ Return to `@Coder`
+→ Return verdict to orchestrator (do not edit `tasks.md` directly)
 
 ### PASS (Security checks pass)
 
@@ -138,7 +137,7 @@ Before REJECT/APPROVE, always output the analysis report in the exact template b
 - Tester Infrastructure Evidence: <command/status from Tester VERIFIED>
 ```
 
-→ Invoke `@QA`
+→ Return verdict to orchestrator for QA gate routing
 
 ---
 
@@ -148,3 +147,4 @@ Before REJECT/APPROVE, always output the analysis report in the exact template b
 - Findings must be actionable and include file:line references
 - Prefer project-defined security standards over generic assumptions
 - Treat potential vulnerabilities conservatively; escalate uncertain high-risk patterns
+- Do not edit `tasks.md`; only orchestrator updates statuses

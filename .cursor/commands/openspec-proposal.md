@@ -2,27 +2,70 @@
 name: /openspec-proposal
 id: openspec-proposal
 category: OpenSpec
-description: Scaffold a new OpenSpec change and validate strictly.
+description: Создать детальный OpenSpec proposal/design/tasks + связанный artifacts-контур в рамках change-id.
 ---
 <!-- OPENSPEC:START -->
 **Guardrails**
-- Favor straightforward, minimal implementations first and add complexity only when it is requested or clearly required.
-- Keep changes tightly scoped to the requested outcome.
-- Refer to `openspec/AGENTS.md` (located inside the `openspec/` directory—run `ls openspec` or `openspec update` if you don't see it) if you need additional OpenSpec conventions or clarifications.
-- Identify any vague or ambiguous details and ask the necessary follow-up questions before editing files.
-- Do not write any code during the proposal stage. Only create design documents (proposal.md, tasks.md, design.md, and spec deltas). Implementation happens after approval via `/openspec-implement`, `/openspec-implement-single`, or `/openspec-apply` depending risk and runtime.
+- Не писать production-код на стадии proposal.
+- Proposal/Design/Plan должны быть детальными и проверяемыми.
+- Implement - отдельная фаза, не часть proposal/design/plan.
+- Все вспомогательные артефакты должны жить внутри `openspec/changes/<change-id>/artifacts/`.
 
-**Steps**
-1. Review `openspec/project.md`, run `openspec list` and `openspec list --specs`, and inspect related code or docs (e.g., via `rg`/`ls`) to ground the proposal in current behaviour; note any gaps that require clarification.
-2. Choose a unique verb-led `change-id` and scaffold `proposal.md`, `tasks.md`, and `design.md` (when needed) under `openspec/changes/<id>/`.
-3. Map the change into concrete capabilities or requirements, breaking multi-scope efforts into distinct spec deltas with clear relationships and sequencing.
-4. Capture architectural reasoning in `design.md` when the solution spans multiple systems, introduces new patterns, or demands trade-off discussion before committing to specs.
-5. Draft spec deltas in `changes/<id>/specs/<capability>/spec.md` (one folder per capability) using `## ADDED|MODIFIED|REMOVED Requirements` with at least one `#### Scenario:` per requirement and cross-reference related capabilities when relevant.
-6. Draft `tasks.md` as an ordered list of small, verifiable work items that deliver user-visible progress, include validation (tests, tooling), and highlight dependencies or parallelizable work.
-7. Validate with `openspec validate <id> --strict --no-interactive` and resolve every issue before sharing the proposal.
+**Цель команды**
+Создать OpenSpec change-пакет, где core-файлы и артефакты связаны ссылками и не расходятся:
+- `proposal.md`
+- `design.md`
+- `tasks.md`
+- `specs/*/spec.md`
+- `artifacts/research/*`
+- `artifacts/design/*`
+- `artifacts/plan/*`
+
+**Процесс**
+1. Прочитать контекст:
+   - `openspec/project.md`
+   - `openspec list`
+   - `openspec list --specs`
+2. Выбрать `change-id` и создать структуру:
+   - `openspec/changes/<change-id>/`
+   - `openspec/changes/<change-id>/artifacts/research/`
+   - `openspec/changes/<change-id>/artifacts/design/`
+   - `openspec/changes/<change-id>/artifacts/plan/`
+3. Сформировать/подтянуть research в `artifacts/research/`.
+4. Создать `proposal.md` (Problem, Goals/Non-Goals, Scope, Risks, Rollout).
+5. Создать `design.md` (As-Is, To-Be, flows, contracts, security, trade-offs).
+6. Создать `tasks.md` как фазовый план (без реализации кода).
+7. Создать spec deltas в `specs/<capability>/spec.md`.
+8. Добавить трассируемость между файлами:
+   - `proposal.md` -> ссылка на research
+   - `design.md` -> ссылки на research и design artifacts
+   - `tasks.md` -> ссылки на plan phase files
+   - `artifacts/plan/README.md` -> ссылки на `tasks.md` и `design.md`
+9. Прогнать `openspec validate <change-id> --strict --no-interactive`.
+
+**Требования к tasks.md**
+Каждый пункт должен включать:
+- фазу и номер;
+- scope;
+- артефакт/файл результата;
+- проверку (tests/lint/contracts/security);
+- DoD.
+- На стадии proposal фиксируй только плановые пункты (`[ ]`); не проставляй статусы выполнения (`[x]`, `[REJECTED]`, `[BLOCKED]`).
+
+**Definition of Ready**
+Change готов к отдельной фазе Implement, если:
+1. `openspec validate ... --strict` успешно.
+2. `proposal.md`, `design.md`, `tasks.md`, spec deltas заполнены без заглушек.
+3. Есть `Linked Artifacts`/ссылки между core-файлами и `artifacts/*`.
+4. Все артефакты лежат внутри папки change.
+5. Явно зафиксировано: Implement выполняется отдельной командой.
+
+**Архивация и валидация**
+- При `openspec archive <change-id>` артефакты переедут вместе с change, т.к. находятся внутри `openspec/changes/<change-id>/`.
+- `openspec validate` проверяет прежде всего OpenSpec core-структуру; поэтому следи, чтобы core-файлы содержали актуальные ссылки на артефакты.
 
 **Reference**
-- Use `openspec show <id> --json --deltas-only` or `openspec show <spec> --type spec` to inspect details when validation fails.
-- Search existing requirements with `rg -n "Requirement:|Scenario:" openspec/specs` before writing new ones.
-- Explore the codebase with `rg <keyword>`, `ls`, or direct file reads so proposals align with current implementation realities.
+- `openspec show <change-id> --json --deltas-only`
+- `openspec show <spec-id> --type spec`
+- `rg -n "Requirement:|Scenario:" openspec/specs`
 <!-- OPENSPEC:END -->

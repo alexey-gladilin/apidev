@@ -16,3 +16,15 @@ Use `@/openspec/AGENTS.md` to learn:
 Keep this managed block so 'openspec update' can refresh the instructions.
 
 <!-- OPENSPEC:END -->
+
+## Workflow Index
+
+- Entry points:
+  - `/openspec-proposal` for change scaffolding (`proposal.md`, `design.md`, `tasks.md`, spec deltas, artifacts).
+  - `/research-codebase` for fact-only research artifacts.
+  - `/design-feature` for Design -> Plan artifacts bound to the same change.
+  - `/openspec-implement` (multi-agent) or `/openspec-implement-single` (single-agent) for implementation.
+- Source of truth:
+  - Core change files under `openspec/changes/<change-id>/`.
+  - Artifact folders under `openspec/changes/<change-id>/artifacts/{research,design,plan}`.
+  - `tasks.md` is the execution tracker; only orchestrator updates task statuses (single writer rule).

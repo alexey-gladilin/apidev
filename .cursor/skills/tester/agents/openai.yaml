@@ -1,6 +1,0 @@
-interface:
-  display_name: "Tester (Verification Gate)"
-  short_description: "Execute tests and challenge coverage rigorously"
-  default_prompt: "Use $tester to verify a completed implementation handoff, run project tests, and issue VERIFIED or REJECTION."
-policy:
-  allow_implicit_invocation: true

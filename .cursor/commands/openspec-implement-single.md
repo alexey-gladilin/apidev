@@ -21,6 +21,9 @@ description: Implement an approved OpenSpec change in single-agent mode (without
    - `openspec/changes/<change-id>/tasks.md`
    - `openspec/changes/<change-id>/design.md` (if present)
    - `openspec/changes/<change-id>/specs/*/spec.md`
+   - `openspec/changes/<change-id>/artifacts/research/*` (if present)
+   - `openspec/changes/<change-id>/artifacts/design/*` (if present)
+   - `openspec/changes/<change-id>/artifacts/plan/*` (if present)
 3. Run pre-flight readiness checks (project conventions + test infrastructure). If missing, stop.
 4. Run internal spec readiness gate and continue only on `SPEC READY`.
 5. Select mode:
@@ -28,10 +31,11 @@ description: Implement an approved OpenSpec change in single-agent mode (without
    - `STRICT` (per-task full gates)
    - `BATCH` (all coding first, full gates at the end)
 6. Implement tasks according to mode using RED-GREEN-REFACTOR evidence.
-7. For each completed unit (task or wave), run internal verification gates:
-   - Tester gate (`VERIFIED` or rejection)
-   - Security gate (`SECURITY VERIFIED` or rejection)
-   - QA gate (`APPROVED` or rejection)
+7. For each completed unit (task or wave), run internal verification gates in this exact order:
+   - Tester gate: execute checks using `.cursor/agents/tester.md` checklist and output `VERIFIED` or `REJECTION`.
+   - Security gate: execute checks using `.cursor/agents/security.md` checklist and output `SECURITY VERIFIED` or `REJECTION`.
+   - QA gate: execute checks using `.cursor/agents/qa.md` checklist and output `APPROVED` or `REJECTION`.
+   - In single-agent mode, treat these as explicit internal stages with separate evidence blocks; do not skip a stage.
 8. Update `tasks.md` only after required gates pass.
 9. On repeated rejection:
    - Retry up to 3 times
@@ -42,7 +46,6 @@ description: Implement an approved OpenSpec change in single-agent mode (without
    - Output completion summary with completed and blocked tasks
 
 **Reference**
-- Single-agent workflow skill: `.cursor/skills/openspec-single-agent-implementer/SKILL.md`
 - Multi-agent workflow command: `.cursor/commands/openspec-implement.md`
-- Workflow baseline: `docs/tdd-workflow/workflow-baseline.md`
+- Agent protocols: `.cursor/agents/spec-analyst.md`, `.cursor/agents/coder.md`, `.cursor/agents/tester.md`, `.cursor/agents/security.md`, `.cursor/agents/qa.md`
 <!-- OPENSPEC:END -->

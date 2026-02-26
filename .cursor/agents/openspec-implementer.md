@@ -46,8 +46,12 @@ To launch a subagent:
 
 2. **Load Context:**
    - Read `openspec/changes/<change-id>/proposal.md` - Understand WHY and WHAT
-   - Read `openspec/changes/<change-id>/design.md` (if exists) - Technical decisions
+   - Read `openspec/changes/<change-id>/design.md` - Technical decisions
    - Read `openspec/changes/<change-id>/tasks.md` - Implementation checklist
+   - Read linked artifacts (if present):
+     - `openspec/changes/<change-id>/artifacts/research/*`
+     - `openspec/changes/<change-id>/artifacts/design/*`
+     - `openspec/changes/<change-id>/artifacts/plan/*`
    - Read relevant specs with deltas: `openspec/changes/<change-id>/specs/*/spec.md`
 
 3. **Pre-Flight Readiness Check (Mandatory Before Task Execution):**
@@ -252,8 +256,8 @@ Call Task tool with:
 
 After each task completion or rejection:
 
-1. Update tasks.md status immediately
-2. Commit state: `git add openspec/changes/<change-id>/tasks.md`
+1. Update tasks.md status immediately (single writer rule)
+2. Subagents (`coder`, `tester`, `security`, `qa`) must not edit tasks.md directly
 3. Continue with next task
 
 ---
