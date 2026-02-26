@@ -63,6 +63,16 @@
 
 Все DBSpec команды используют skill `dbspec-ops-reporter` и пишут отчеты в `.dbspec/reports/` (`.md` + `.json`).
 
+### Productivity команды
+
+
+| Команда            | Назначение                                             | Ключевой результат                                       |
+| ------------------ | ------------------------------------------------------ | -------------------------------------------------------- |
+| `/improve-prompt`  | ручное улучшение сырого запроса перед запуском в LLM   | 2 версии prompt (`strict`/`creative`) + чеклист ревью   |
+| `/refresh-prompt-baseline` | синхронизация baseline-рекомендаций для `/improve-prompt` | обновлен `Last checked` + запись в `Baseline Change Log` |
+
+Regression reference для prompt-команд: `docs/prompt-improvement-regression-cases.md`.
+
 ## 4. Агенты и роли
 
 

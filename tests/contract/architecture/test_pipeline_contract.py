@@ -22,7 +22,7 @@ version = "1"
 dir = ".apidev/contracts"
 
 [generator]
-generated_dir = "output/api"
+generated_dir = ".apidev/output/api"
 
 [templates]
 dir = ".apidev/templates"

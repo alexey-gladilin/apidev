@@ -6,7 +6,7 @@ class ContractsConfig(BaseModel):
 
 
 class GeneratorConfig(BaseModel):
-    generated_dir: str = "output/api"
+    generated_dir: str = ".apidev/output/api"
 
 
 class TemplatesConfig(BaseModel):
