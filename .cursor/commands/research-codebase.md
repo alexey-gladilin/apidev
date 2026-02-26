@@ -2,60 +2,60 @@
 name: /research-codebase
 id: research-codebase
 category: OpenSpec
-description: Глубокое fact-only исследование кодовой базы с сохранением артефактов в OpenSpec change.
+description: Deep fact-only codebase research with artifact storage inside an OpenSpec change.
 argument-hint: [change-id] [research-question]
 ---
 
 # Research Codebase (OpenSpec-bound, Fact-Only)
 
-Задача: документировать как система работает сейчас (as-is), без рекомендаций по изменению.
+Goal: document how the system works today (as-is), without proposing implementation changes.
 
-## Жесткие ограничения
-- Не предлагай улучшения.
-- Не критикуй реализацию.
-- Не проектируй to-be.
-- Фиксируй только факты и отдельно помеченные выводы.
+## Hard Constraints
+- Do not propose improvements.
+- Do not critique implementation quality.
+- Do not design a to-be solution.
+- Capture facts only, and clearly label any inference.
 
-## Привязка к OpenSpec
+## OpenSpec Binding
 
-Исследование выполняется в контексте конкретного `change-id`.
+Research runs in the context of a specific `change-id`.
 
-Артефакты сохраняй только сюда:
+Store artifacts only here:
 - `openspec/changes/<change-id>/artifacts/research/`
 
-Если `change-id` не передан или change не существует:
-- остановись и попроси сначала создать change через `/openspec-proposal`.
+If `change-id` is missing or the change does not exist:
+- stop and ask to create the change first via `/openspec-proposal`.
 
-## Процесс
+## Process
 
 ### 1. Intake
-Уточни:
-- исследовательский вопрос;
-- границы (backend/frontend/infra);
-- ожидаемый уровень глубины.
+Clarify:
+- research question;
+- boundaries (backend/frontend/infra);
+- expected depth level.
 
-### 2. Декомпозиция
-1. Полностью прочитай явно указанные файлы.
-2. Разбей задачу на 2-4 независимых направления.
-3. Запусти параллельные задачи через `codebase-researcher` там, где нет зависимостей.
+### 2. Decomposition
+1. Fully read explicitly referenced files.
+2. Split work into 2-4 independent tracks.
+3. Run parallel tasks through `codebase-researcher` when dependencies allow it.
 
-### 3. Синтез
-1. Объедини результаты.
-2. Устрани противоречия.
-3. Разрешен максимум 1 follow-up раунд.
+### 3. Synthesis
+1. Merge results.
+2. Resolve contradictions.
+3. Allow at most one follow-up round.
 
-### 4. Сохранение
-Создай файл:
+### 4. Save Artifact
+Create file:
 `openspec/changes/<change-id>/artifacts/research/YYYY-MM-DD-topic-name.md`
 
-### 5. Синхронизация с OpenSpec core
-Обнови:
+### 5. Sync with OpenSpec Core
+Update:
 - `openspec/changes/<change-id>/design.md`:
-  - добавь `## Research Inputs` с ссылкой на новый research-файл.
-- `openspec/changes/<change-id>/proposal.md` (если уместно):
-  - обнови раздел контекста ссылкой на research.
+  - add `## Research Inputs` with a link to the new research file.
+- `openspec/changes/<change-id>/proposal.md` (if relevant):
+  - update context section with research link.
 
-## Шаблон исследования
+## Research Template
 
 ```markdown
 ---
@@ -99,8 +99,8 @@ research_question: "..."
 - Inference: ... (Based on: `file:line`)
 ```
 
-## Quality checklist
-1. Ключевые тезисы подтверждены `file:line`.
-2. Нет советов и оценочных суждений.
-3. Есть явные Open Questions.
-4. Research привязан к `change-id` и залинкован из OpenSpec core файлов.
+## Quality Checklist
+1. Key statements are backed by `file:line` evidence.
+2. No recommendations or evaluative statements.
+3. Explicit Open Questions are present.
+4. Research is linked to `change-id` and referenced from OpenSpec core files.

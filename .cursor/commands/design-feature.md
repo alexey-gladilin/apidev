@@ -2,84 +2,84 @@
 name: /design-feature
 id: design-feature
 category: OpenSpec
-description: Design feature по фазам Research -> Design -> Plan с прямой привязкой к OpenSpec change-id.
+description: Design a feature through Research -> Design -> Plan phases, explicitly bound to an OpenSpec change-id.
 argument-hint: [change-id] [feature-name] [description or ticket link]
 ---
 
-# Design Feature - Research -> Design -> Plan (OpenSpec-bound, без Implement)
+# Design Feature - Research -> Design -> Plan (OpenSpec-bound, no Implement)
 
-Ты работаешь как архитектор и планировщик. Цель: создать детальный дизайн и фазовый план, строго привязанные к OpenSpec change.
+You work as an architect and planner. Goal: produce detailed design and phased plan strictly tied to an OpenSpec change.
 
-Принцип: сначала факты и архитектурные решения, потом план, только потом отдельная фаза Implement.
+Principle: facts and architecture decisions first, plan second, implementation in a separate phase.
 
-## Базовое правило связности с OpenSpec
+## Core OpenSpec Binding Rule
 
-Все артефакты этой команды хранятся внутри change:
+All artifacts produced by this command must stay inside the change:
 - `openspec/changes/<change-id>/artifacts/research/`
 - `openspec/changes/<change-id>/artifacts/design/`
 - `openspec/changes/<change-id>/artifacts/plan/`
 
-Ничего не сохраняй в `docs/{feature-name}` для OpenSpec-потока.
+Do not save OpenSpec workflow artifacts into `docs/{feature-name}`.
 
 ## Phase 0. Intake
 
-### 0.1 Аргументы
-- `$ARGUMENTS[0]`: `change-id` (обязательный, должен существовать в `openspec/changes/`)
+### 0.1 Arguments
+- `$ARGUMENTS[0]`: `change-id` (required, must exist in `openspec/changes/`)
 - `$ARGUMENTS[1]`: `feature-name` (slug)
-- `$ARGUMENTS[2+]`: описание фичи, тикет, ссылка или полный текст требований
+- `$ARGUMENTS[2+]`: feature description, ticket, link, or full requirements text
 
-Если `change-id` не передан или change не существует:
-1. остановись;
-2. попроси сначала запустить `/openspec-proposal`;
-3. не генерируй design/plan без change.
+If `change-id` is missing or does not exist:
+1. stop;
+2. ask to run `/openspec-proposal` first;
+3. do not generate design/plan without a change.
 
-### 0.2 Подготовка структуры
-Убедись, что существуют папки:
+### 0.2 Prepare Structure
+Ensure these folders exist:
 - `openspec/changes/<change-id>/artifacts/research/`
 - `openspec/changes/<change-id>/artifacts/design/`
 - `openspec/changes/<change-id>/artifacts/plan/`
 
 ## Phase 1. Research Gate
 
-1. Используй research из `openspec/changes/<change-id>/artifacts/research/`.
-2. Если research нет или он устарел, запусти `/research-codebase` с тем же `change-id`.
-3. На вход в дизайн допускай только research с `file:line` ссылками и секцией `Open Questions`.
+1. Use research from `openspec/changes/<change-id>/artifacts/research/`.
+2. If research is missing or outdated, run `/research-codebase` with the same `change-id`.
+3. Allow design input only from research that includes `file:line` references and an `Open Questions` section.
 
-## Phase 2. Design Artifacts (обязательно)
+## Phase 2. Design Artifacts (Required)
 
-Сгенерируй в `openspec/changes/<change-id>/artifacts/design/`:
-1. `README.md` - контекст, цель, scope, acceptance criteria.
-2. `01-architecture.md` - C4 L1/L2/L3, границы слоев, зависимости модулей.
+Generate under `openspec/changes/<change-id>/artifacts/design/`:
+1. `README.md` - context, goal, scope, acceptance criteria.
+2. `01-architecture.md` - C4 L1/L2/L3, layer boundaries, module dependencies.
 3. `02-behavior.md` - data flow + sequence (happy path + error paths).
-4. `03-decisions.md` - ADR-таблица: решение, альтернативы, компромиссы, риски.
-5. `04-testing.md` - стратегия тестирования (unit/integration/e2e), тест-кейсы и quality gates.
+4. `03-decisions.md` - ADR table: decision, alternatives, trade-offs, risks.
+5. `04-testing.md` - testing strategy (unit/integration/e2e), test cases, quality gates.
 
-Условные файлы (если релевантно):
+Conditional files (if relevant):
 - `05-events.md`
 - `06-repo-model.md`
 - `07-standards.md`
 - `08-api-contract.md`
 
-Документацию пиши на русском языке.
+Write instruction content in English.
 
-## Phase 3. Human Review Gate (обязательно)
+## Phase 3. Human Review Gate (Required)
 
-До генерации плана выдай review-пакет:
-- что спроектировано;
-- ключевые риски;
-- открытые вопросы;
-- решения, требующие подтверждения.
+Before generating plan, provide a review package:
+- what was designed;
+- key risks;
+- open questions;
+- decisions that require confirmation.
 
-Если есть критичная неопределенность, остановись и запроси подтверждение.
+If critical uncertainty remains, stop and request confirmation.
 
-## Phase 4. Plan (детальный, фазовый, без Implement)
+## Phase 4. Plan (Detailed, Phased, no Implement)
 
-Сгенерируй в `openspec/changes/<change-id>/artifacts/plan/`:
+Generate under `openspec/changes/<change-id>/artifacts/plan/`:
 - `README.md`
 - `phase-01.md`, `phase-02.md`, ...
-- `implementation-handoff.md` (только readiness и порядок, без написания кода)
+- `implementation-handoff.md` (readiness and sequence only, no code writing)
 
-Каждый `phase-XX.md` должен содержать:
+Each `phase-XX.md` must include:
 1. Goal
 2. Scope (in/out)
 3. Files to touch
@@ -89,27 +89,27 @@ argument-hint: [change-id] [feature-name] [description or ticket link]
 7. Risks & rollback
 8. Definition of Done
 
-## Phase 5. Sync в OpenSpec core files (обязательно)
+## Phase 5. Sync to OpenSpec Core Files (Required)
 
-Обнови:
+Update:
 1. `openspec/changes/<change-id>/design.md`
-   - добавь раздел `## Linked Artifacts`
-   - перечисли ссылки на `artifacts/design/*` и ключевой research
+   - add `## Linked Artifacts`
+   - list links to `artifacts/design/*` and key research
 2. `openspec/changes/<change-id>/tasks.md`
-   - добавь/обнови фазы в виде чекбоксов, согласованных с `artifacts/plan/phase-XX.md`
-   - укажи quality gates между фазами
-   - явно зафиксируй, что Implement выполняется отдельной командой
-   - не проставляй runtime-статусы выполнения (`[x]`, `[REJECTED]`, `[BLOCKED]`) на этапе design/plan
+   - add/update phases as checkboxes aligned with `artifacts/plan/phase-XX.md`
+   - include inter-phase quality gates
+   - explicitly state that Implement is executed by a separate command
+   - do not set runtime execution statuses (`[x]`, `[REJECTED]`, `[BLOCKED]`) during design/plan
 
-## Ограничения
+## Constraints
 
-- Код не писать.
-- Реализация только через `/openspec-implement` или `/openspec-implement-single`.
+- Do not write code.
+- Implementation is only through `/openspec-implement` or `/openspec-implement-single`.
 
-## Критерии готовности
+## Readiness Criteria
 
-Результат готов, если:
-1. Все артефакты лежат внутри `openspec/changes/<change-id>/artifacts/`.
-2. `design.md` и `tasks.md` содержат рабочие ссылки на артефакты.
-3. План фазовый, проверяемый, с quality gates.
-4. Нет рассинхрона между артефактами и OpenSpec core-файлами.
+Result is ready when:
+1. All artifacts are inside `openspec/changes/<change-id>/artifacts/`.
+2. `design.md` and `tasks.md` contain working links to artifacts.
+3. Plan is phased, verifiable, and includes quality gates.
+4. No drift exists between artifacts and OpenSpec core files.

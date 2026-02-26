@@ -14,5 +14,5 @@ Compatibility alias:
 
 ## Docs
 
-- `docs/roadmap.md` — текущая дорожная карта: реализовано, gaps, текущая стадия, целевые возможности.
-- `docs/ai-workflow-guide.md` — полный рабочий гайд по AI-процессу: команды, агенты, quality gates, порядок использования.
+- `docs/roadmap.md` — current roadmap: implemented items, gaps, current stage, target capabilities.
+- `docs/ai-workflow-guide.md` — complete AI workflow guide: commands, agents, quality gates, and operational usage.
