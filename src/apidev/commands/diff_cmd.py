@@ -35,10 +35,13 @@ def diff_command(project_dir: Path = Path(".")) -> None:
         postprocessor=PythonPostprocessor(),
     )
     plan = service.run(root)
+    changed = [change for change in plan.changes if change.change_type in {"ADD", "UPDATE"}]
 
-    if not plan.changes:
+    if not changed:
         console.print("No changes")
+        console.print("Drift status: no-drift")
         return
 
-    for change in plan.changes:
+    for change in changed:
         console.print(f"{change.change_type:>7} {change.path}")
+    console.print("Drift status: drift")

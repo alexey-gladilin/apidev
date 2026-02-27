@@ -38,8 +38,12 @@ def generate_command(project_dir: Path = Path("."), check: bool = False) -> None
     )
     result = service.run(root, check=check)
 
-    if result.drift_detected:
-        console.print("Drift detected")
+    if result.drift_status == "drift":
+        console.print("Drift detected (drift-status: drift)")
         raise SystemExit(1)
 
-    console.print(f"Applied changes: {result.applied_changes}")
+    if check:
+        console.print("No drift (drift-status: no-drift)")
+        return
+
+    console.print(f"Applied changes: {result.applied_changes} (drift-status: no-drift)")

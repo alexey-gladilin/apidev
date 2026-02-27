@@ -52,6 +52,28 @@ Compatibility alias:
 - `1` — бизнес-ошибка, validation failure, drift, invalid input на уровне домена;
 - `2` — ошибка парсинга CLI или неверной сигнатуры команды.
 
+## Контракт drift-status и exit semantics
+
+Нормализованные drift-статусы:
+
+- `drift` — обнаружены изменения относительно generated artifacts;
+- `no-drift` — изменения не обнаружены или успешно применены;
+- `error` — ошибка pipeline (включая validation/business failure).
+
+Матрица режимов:
+
+- `apidev diff`
+  - `drift` -> exit `0` (read-only preview);
+  - `no-drift` -> exit `0`;
+  - `error` -> exit `1`.
+- `apidev gen --check`
+  - `drift` -> exit `1` (CI gate);
+  - `no-drift` -> exit `0`;
+  - `error` -> exit `1`.
+- `apidev gen`
+  - successful apply / no changes -> `no-drift`, exit `0`;
+  - `error` -> exit `1`.
+
 ## Минимальные тесты для любого CLI-изменения
 
 - тест на root help;

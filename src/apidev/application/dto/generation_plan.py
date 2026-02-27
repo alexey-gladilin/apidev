@@ -1,5 +1,8 @@
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
+
+DriftStatus = Literal["drift", "no-drift", "error"]
 
 
 @dataclass(slots=True)
@@ -18,5 +21,9 @@ class GenerationPlan:
 @dataclass(slots=True)
 class GenerateResult:
     applied_changes: int
-    drift_detected: bool = False
+    drift_status: DriftStatus = "no-drift"
     changed_paths: list[Path] = field(default_factory=list)
+
+    @property
+    def drift_detected(self) -> bool:
+        return self.drift_status == "drift"
