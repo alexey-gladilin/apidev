@@ -1,0 +1,19 @@
+## 1. Planning — Phase 01 (Strict Schema Baseline)
+- [ ] 1.1 Scope: зафиксировать strict schema-инварианты полей контракта и mapping в diagnostics; Output: [artifacts/plan/phase-01.md](./artifacts/plan/phase-01.md); Verification: `pytest tests/unit -k validate`, `ruff check src tests`, review schema contract fixtures; DoD: определен полный перечень schema-level checks и критерии pass/fail.
+- [ ] 1.2 Scope: спланировать изменения validation pipeline для последовательности `load -> schema -> semantic`; Output: [artifacts/plan/phase-01.md](./artifacts/plan/phase-01.md); Verification: architecture traceability against [artifacts/design/01-architecture.md](./artifacts/design/01-architecture.md); DoD: зафиксированы точки интеграции слоев без смешения ответственности.
+- [ ] 1.3 Scope: спланировать регрессионные негативные кейсы structural invalid contracts; Output: [artifacts/design/04-testing.md](./artifacts/design/04-testing.md); Verification: coverage matrix review for invalid YAML/shape cases; DoD: список обязательных тест-сценариев для schema-level готов.
+
+## 2. Planning — Phase 02 (Semantic Validation & Diagnostic Codes)
+- [ ] 2.1 Scope: зафиксировать набор semantic checks и правила приоритизации ошибок; Output: [artifacts/plan/phase-02.md](./artifacts/plan/phase-02.md); Verification: cross-check against [specs/contract-validation-hardening/spec.md](./specs/contract-validation-hardening/spec.md); DoD: утверждена таблица semantic rules и ожидаемых исходов.
+- [ ] 2.2 Scope: зафиксировать каталог diagnostic codes и их стабильность; Output: [artifacts/design/03-decisions.md](./artifacts/design/03-decisions.md); Verification: contract review for code uniqueness and naming consistency; DoD: описаны code namespace, severity mapping и backward-compatibility policy.
+- [ ] 2.3 Scope: спланировать unit/contract тесты на semantic failures; Output: [artifacts/design/04-testing.md](./artifacts/design/04-testing.md); Verification: test matrix review + deterministic ordering criteria; DoD: покрыты сценарии duplicate operation_id и межполевые инварианты.
+
+## 3. Planning — Phase 03 (JSON Output & CLI Contract)
+- [ ] 3.1 Scope: зафиксировать JSON контракт `apidev validate --json`; Output: [artifacts/plan/phase-03.md](./artifacts/plan/phase-03.md); Verification: JSON schema review + parseability checks; DoD: определены обязательные поля diagnostics и summary.
+- [ ] 3.2 Scope: спланировать консистентность text/json режимов и exit-code contract; Output: [artifacts/design/02-behavior.md](./artifacts/design/02-behavior.md); Verification: CLI contract review against `docs/reference/cli-contract.md`; DoD: зафиксированы правила `exit code 0/1` и non-regression human output.
+- [ ] 3.3 Scope: спланировать integration/contract тесты для `--json`; Output: [artifacts/design/04-testing.md](./artifacts/design/04-testing.md); Verification: planned test commands (`pytest tests/integration`, contract fixtures); DoD: определен минимальный CI-набор на success/failure JSON сценарии.
+
+## 4. Planning — Final Handoff
+- [ ] 4.1 Scope: синхронизировать зависимости фаз `P1 -> P2 -> P3` и handoff-границы; Output: [artifacts/plan/implementation-handoff.md](./artifacts/plan/implementation-handoff.md); Verification: dependency/order review with plan README; DoD: готов последовательный implement roadmap без блокеров.
+- [ ] 4.2 Scope: выровнять links и трассировку между proposal/design/tasks/specs/artifacts; Output: [artifacts/plan/README.md](./artifacts/plan/README.md); Verification: manual link check + `rg -n "artifacts/" openspec/changes/001-contrac-validation`; DoD: все core-файлы ссылаются на релевантные artifacts.
+- [ ] 4.3 Scope: выполнить OpenSpec-валидацию change-пакета; Output: `openspec validate 001-contrac-validation --strict --no-interactive`; Verification: strict validation pass; DoD: change готов к отдельной команде implement.
