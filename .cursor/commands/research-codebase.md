@@ -2,11 +2,13 @@
 name: /research-codebase
 id: research-codebase
 category: OpenSpec
-description: Deep fact-only codebase research with artifact storage inside an OpenSpec change.
+description: Legacy helper. Deep fact-only codebase research with artifact storage inside an OpenSpec change.
 argument-hint: [change-id] [research-question]
 ---
 
 # Research Codebase (OpenSpec-bound, Fact-Only)
+
+Status: Legacy helper command. Primary entry point for new flows is `/openspec-proposal`, which runs Research as an internal gate.
 
 Goal: document how the system works today (as-is), without proposing implementation changes.
 

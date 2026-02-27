@@ -28,10 +28,8 @@
 Рекомендуемый путь:
 
 1. `/openspec-proposal <change-id>`
-2. `/research-codebase <change-id> "<question>"`
-3. `/design-feature <change-id> <feature-name> "<description>"`
-4. `/openspec-implement <change-id>` или `/openspec-implement-single <change-id>`
-5. `/openspec-archive <change-id>` после деплоя
+2. `/openspec-implement <change-id>` или `/openspec-implement-single <change-id>`
+3. `/openspec-archive <change-id>` после деплоя
 
 ## 3. Команды: что и когда запускать
 
@@ -40,12 +38,14 @@
 
 | Команда                      | Когда использовать                   | Что делает                                                  | Выход                                                                           |
 | ---------------------------- | ------------------------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `/openspec-proposal`         | старт новой capability/изменения     | scaffolding change + базовые артефакты Research/Design/Plan | `proposal.md`, `design.md`, `tasks.md`, spec deltas, artifact-контур            |
-| `/research-codebase`         | нужен фактологический As-Is анализ   | собирает fact-only исследование кода                        | research-файл в `artifacts/research/` + ссылки в core                           |
-| `/design-feature`            | после research для проектирования    | формирует дизайн-пакет и фазовый план без кода              | файлы в `artifacts/design/`, `artifacts/plan/`, sync с `design.md` и `tasks.md` |
+| `/openspec-proposal`         | старт новой capability/изменения     | оркестрирует полный doc pipeline: Proposal -> Research -> Design -> Plan | `proposal.md`, `design.md`, `tasks.md`, spec deltas, `artifacts/{research,design,plan}` |
 | `/openspec-implement`        | основной multi-agent implementation  | оркестрирует subagents и quality gates                      | изменения кода + обновленный статус `tasks.md`                                  |
 | `/openspec-implement-single` | когда недоступны subagents/Task tool | выполняет те же gate-этапы в single-agent режиме            | изменения кода + обновленный статус `tasks.md`                                  |
 | `/openspec-archive`          | change задеплоен                     | архивирует change и применяет обновления spec               | папка в `openspec/changes/archive/...`                                          |
+
+Legacy/internal команды:
+- `/research-codebase` - узкоспециализированный fact-only helper для research-фазы.
+- `/design-feature` - helper для Design -> Plan при ручной декомпозиции.
 
 
 ### DBSpec команды
@@ -84,7 +84,9 @@ Regression reference для prompt-команд: `docs/prompt-improvement-regres
 | `tester`               | проверка тестов и challenge coverage       | после coder           | `VERIFIED` или `REJECTION`                                                   |
 | `security`             | security review                            | после tester          | `SECURITY VERIFIED` или `REJECTION`                                          |
 | `qa`                   | финальный quality/architecture/spec review | после security        | `APPROVED` или `REJECTION`                                                   |
-| `codebase-researcher`  | узкий фактологический исследователь        | `/research-codebase`  | `Summary`, `Findings`, `Code references`, `Open questions`, `Fact/Inference` |
+| `codebase-researcher`  | узкий фактологический исследователь        | `/openspec-proposal` (Research gate)  | `Summary`, `Findings`, `Code references`, `Open questions`, `Fact/Inference` |
+| `design-architect`     | проектирование архитектурного design-пакета | `/openspec-proposal` (Design gate) | `artifacts/design/*` + linked artifacts в `design.md` |
+| `plan-orchestrator`    | фазовое планирование и sync `tasks.md`     | `/openspec-proposal` (Plan gate) | `artifacts/plan/*` + planning-only чекбоксы в `tasks.md` |
 
 
 ### 4.1 `openspec-implementer` (Orchestrator)
@@ -240,7 +242,7 @@ Regression reference для prompt-команд: `docs/prompt-improvement-regres
 
 Что делает:
 
-- Выполняет узкие параллельные research-задачи в рамках `/research-codebase`.
+- Выполняет узкие параллельные research-задачи в Research gate внутри `/openspec-proposal`.
 - Возвращает только факты по текущему состоянию системы (as-is).
 
 Что проверяет:
@@ -261,6 +263,40 @@ Regression reference для prompt-команд: `docs/prompt-improvement-regres
 - Не предлагает улучшения.
 - Не проектирует to-be.
 - Не пишет production-код.
+
+### 4.8 `design-architect`
+
+Что делает:
+
+- Формирует дизайн-пакет в `artifacts/design/*` на основе proposal + research.
+- Описывает архитектурные границы, поведение, решения (ADR) и тест-стратегию.
+
+Что отдает:
+
+- `README.md`, `01-architecture.md`, `02-behavior.md`, `03-decisions.md`, `04-testing.md`.
+- Обновленный `design.md` с `Linked Artifacts`.
+
+Ограничения:
+
+- Не пишет production-код.
+- Не обновляет runtime-статусы в `tasks.md`.
+
+### 4.9 `plan-orchestrator`
+
+Что делает:
+
+- Собирает фазовый plan-пакет в `artifacts/plan/*`.
+- Синхронизирует `tasks.md` с phase-файлами (только плановые пункты).
+
+Что отдает:
+
+- `README.md`, `phase-01.md`, `phase-02.md`, ... , `implementation-handoff.md`.
+- `tasks.md` с `[ ]` чекбоксами, quality gates и ссылками на phase-файлы.
+
+Ограничения:
+
+- Не пишет production-код.
+- Не выставляет runtime-статусы (`[x]`, `[REJECTED]`, `[BLOCKED]`).
 
 
 ## 5. Gate-модель в Implement
@@ -300,14 +336,12 @@ Regression reference для prompt-команд: `docs/prompt-improvement-regres
 ### Сценарий A: новая фича
 
 1. `/openspec-proposal add-<feature>`
-2. `/research-codebase add-<feature> "<вопрос исследования>"`
-3. `/design-feature add-<feature> <feature-name> "<контекст>"`
-4. `/openspec-implement add-<feature>`
-5. После деплоя: `/openspec-archive add-<feature>`
+2. `/openspec-implement add-<feature>`
+3. После деплоя: `/openspec-archive add-<feature>`
 
 ### Сценарий B: среда без subagents
 
-1. Подготовить change через proposal/research/design.
+1. Подготовить change через `/openspec-proposal <change-id>` (полный doc pipeline).
 2. Запустить `/openspec-implement-single <change-id>`.
 3. Пройти внутренние gate-этапы в том же порядке: Tester -> Security -> QA.
 

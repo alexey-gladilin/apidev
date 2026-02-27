@@ -2,11 +2,13 @@
 name: /design-feature
 id: design-feature
 category: OpenSpec
-description: Design a feature through Research -> Design -> Plan phases, explicitly bound to an OpenSpec change-id.
+description: Legacy helper. Design a feature through Research -> Design -> Plan phases, explicitly bound to an OpenSpec change-id.
 argument-hint: [change-id] [feature-name] [description or ticket link]
 ---
 
 # Design Feature - Research -> Design -> Plan (OpenSpec-bound, no Implement)
+
+Status: Legacy helper command. Primary entry point for new flows is `/openspec-proposal`, which runs Design and Plan as internal gates.
 
 You work as an architect and planner. Goal: produce detailed design and phased plan strictly tied to an OpenSpec change.
 
@@ -60,7 +62,7 @@ Conditional files (if relevant):
 - `07-standards.md`
 - `08-api-contract.md`
 
-Write instruction content in English.
+Write generated documentation in Russian unless the user explicitly requests another language.
 
 ## Phase 3. Human Review Gate (Required)
 
