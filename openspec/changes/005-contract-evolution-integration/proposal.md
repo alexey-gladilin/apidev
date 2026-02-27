@@ -29,8 +29,9 @@
 - Research baseline: [artifacts/research/2026-02-27-contract-evolution-integration-baseline.md](./artifacts/research/2026-02-27-contract-evolution-integration-baseline.md)
 - Design package: [artifacts/design/README.md](./artifacts/design/README.md)
 - Plan package: [artifacts/plan/README.md](./artifacts/plan/README.md)
+- Implementation blueprint: [artifacts/plan/phase-04-implementation.md](./artifacts/plan/phase-04-implementation.md)
 - Spec delta: [specs/contract-evolution-integration/spec.md](./specs/contract-evolution-integration/spec.md)
 
 ## Границы этапа
-Эта change-заявка покрывает только Proposal/Design/Plan.
+Эта change-заявка покрывает Proposal/Design/Plan, включая детальный blueprint фазы реализации.
 Implementation выполняется отдельно через `/openspec-implement` или `/openspec-implement-single` после review/approval.
