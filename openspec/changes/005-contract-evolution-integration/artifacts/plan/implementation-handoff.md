@@ -20,5 +20,5 @@
 ## Delivery Notes
 - Сохранять strict separation generated/manual code.
 - Не делать `dbspec` обязательной runtime зависимостью.
-- Держать default CLI UX backward-compatible; fail-on-breaking режим вводить как явную opt-in/explicit policy.
+- Держать default CLI UX backward-compatible; breaking-aware fail-fast включается через policy `strict` как явную opt-in настройку.
 - Использовать `.apidev/config.toml` как canonical config path; не вводить альтернативный `apidev.toml`.

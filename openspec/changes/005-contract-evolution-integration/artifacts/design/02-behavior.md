@@ -44,7 +44,7 @@
 
 2. `apidev gen --check`:
 - сохраняет side-effect-free поведение;
-- возвращает non-zero exit code при политике fail-on-breaking и наличии `breaking` changes.
+- возвращает non-zero exit code при политике `strict` и наличии `breaking` changes.
 
 3. `apidev gen`:
 - применяет generation plan в текущем safe-write boundary;

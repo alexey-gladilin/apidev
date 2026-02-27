@@ -24,4 +24,4 @@
 ## Non-Regression Focus
 - deterministic output при одинаковых входах;
 - отсутствие side effects у `diff` и `gen --check`;
-- backward-compatible default UX при отсутствии fail-on-breaking режима.
+- backward-compatible default UX при политике `warn`.

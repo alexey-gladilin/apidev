@@ -11,7 +11,7 @@
 2. Application integration
 - Внедрить classifier в `diff_service` и `generate_service`.
 - Сохранить backward-compatible default policy `warn`.
-- Выполнять compare только как `current_normalized_model` vs baseline snapshot, связанный с `release_number`.
+- Выполнять compare только как `current_normalized_model` vs baseline snapshot, резолвленный по `baseline_ref`.
 
 3. Config + release-state contract
 - Добавить/проверить параметры `compatibility_policy`, `evolution.grace_period_releases`, `evolution.release_state_file` в `.apidev/config.toml`.
@@ -21,6 +21,7 @@
 
 4. Baseline snapshot handling
 - Реализовать резолв baseline snapshot через `baseline_ref` (VCS/CI source of truth), с локальным файлом как optional cache.
+- Добавить CLI override `--baseline-ref` с приоритетом над значением из release state.
 - Валидировать формат snapshot и детерминированную нормализацию модели перед compare.
 - Ввести diagnostics `baseline-missing`/`baseline-invalid`; в `strict` policy фейлить команду.
 
