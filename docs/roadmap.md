@@ -48,8 +48,8 @@
 - реализован минимально runnable transport layer;
 - реализованы стабильный operation registry и handler bridge contract;
 - перед implementation использовать research-артефакт:
-  `openspec/changes/001-contract-validation/artifacts/research/2026-02-27-external-api-codegen-baseline.md`
-  как baseline структуры и style guardrails для шаблонов генерации.
+`openspec/changes/001-contract-validation/artifacts/research/2026-02-27-external-api-codegen-baseline.md`
+как baseline структуры и style guardrails для шаблонов генерации.
 
 ### Этап C — Diff/Generate Safety & Drift Governance
 
@@ -82,3 +82,4 @@
 - `docs/reference/cli-contract.md`
 - `docs/process/testing-strategy.md`
 - `openspec/changes/001-contract-validation/artifacts/research/2026-02-27-external-api-codegen-baseline.md`
+
