@@ -117,7 +117,11 @@ errors: []
 
     result = _run_validate(tmp_path)
 
-    invalid = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "SEMANTIC_INVALID_OPERATION_ID"]
+    invalid = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.code == "SEMANTIC_INVALID_OPERATION_ID"
+    ]
     assert len(invalid) == 1
     assert invalid[0].rule == "semantic.operation_id.format"
     assert invalid[0].location == "billing/bad-name.yaml"
@@ -453,3 +457,283 @@ errors: []
     ]
     assert len(duplicates) == 1
     assert duplicates[0].rule == "semantic.endpoint_signature.unique"
+
+
+def test_validate_accepts_schema_level_example_in_schema_fragments(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/with_examples.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+    example:
+      id: 1
+      tags:
+        - sale
+    properties:
+      id:
+        type: integer
+        example: 1
+      tags:
+        type: array
+        example:
+          - sale
+        items:
+          type: string
+          example: sale
+errors:
+  - code: INTERNAL_ERROR
+    http_status: 500
+    body:
+      type: object
+      example:
+        message: internal
+      properties:
+        message:
+          type: string
+          example: internal
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+    assert len(result.operations) == 1
+
+
+def test_validate_rejects_root_level_examples_as_unknown_field(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/root_examples.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+examples: []
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.code == "SCHEMA_UNKNOWN_FIELD" and d.location.endswith("contract.examples")
+        for d in result.diagnostics
+    )
+
+
+def test_validate_rejects_schema_example_type_and_enum_mismatch(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/bad_example_type_enum.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      count:
+        type: integer
+        example: "42"
+      status:
+        type: string
+        enum: [NEW, DONE]
+        example: ARCHIVED
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.location.endswith("response.body.properties.count.example")
+        and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+    assert any(
+        d.location.endswith("response.body.properties.status.example")
+        and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+    assert not any(
+        d.code == "SCHEMA_UNKNOWN_FIELD" and ".example" in d.location for d in result.diagnostics
+    )
+
+
+def test_validate_rejects_schema_example_container_shape_mismatch(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/bad_example_shape.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+    example: "not-object"
+    properties:
+      tags:
+        type: array
+        example: "not-array"
+        items:
+          type: string
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.location.endswith("response.body.example") and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+    assert any(
+        d.location.endswith("response.body.properties.tags.example")
+        and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+
+
+def test_validate_accepts_null_example_for_null_type(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/null_example.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      archived_at:
+        type: "null"
+        example: null
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+
+
+def test_validate_rejects_schema_example_unknown_and_missing_required_properties(
+    tmp_path: Path,
+) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/bad_example_object_keys.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+    example:
+      id: item-1
+      extra: unexpected
+    properties:
+      id:
+        type: string
+        required: true
+      status:
+        type: string
+        required: true
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.location.endswith("response.body.example.extra") and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+    assert any(
+        d.location.endswith("response.body.example.status") and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+
+
+def test_validate_rejects_nested_array_item_example_unknown_and_missing_required(
+    tmp_path: Path,
+) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/bad_nested_item_example.yaml",
+        """
+method: GET
+path: /v1/items
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: string
+              required: true
+            status:
+              type: string
+              required: true
+        example:
+          - id: item-1
+            extra: unexpected
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.location.endswith("response.body.properties.items.items.example.extra")
+        and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+    assert any(
+        d.location.endswith("response.body.properties.items.items.example.status")
+        and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )

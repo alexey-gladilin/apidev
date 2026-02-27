@@ -8,6 +8,7 @@ from apidev.commands.runtime import load_runtime
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
 from apidev.infrastructure.output.writer import SafeWriter
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 
@@ -33,6 +34,7 @@ def generate_command(project_dir: Path = Path("."), check: bool = False) -> None
         renderer=JinjaTemplateRenderer(custom_templates_dir=paths.templates_dir),
         fs=fs,
         writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
     )
     result = service.run(root, check=check)
 

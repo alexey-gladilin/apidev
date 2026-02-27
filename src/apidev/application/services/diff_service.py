@@ -8,9 +8,9 @@ from apidev.core.models.operation import Operation
 from apidev.core.ports.config_loader import ConfigLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
+from apidev.core.ports.python_postprocessor import PythonPostprocessMode, PythonPostprocessorPort
 from apidev.core.ports.template_engine import TemplateEnginePort
 from apidev.core.rules.operation_id import ensure_unique_operation_ids
-from apidev.infrastructure.output.postprocess import PostprocessMode, format_python_content
 
 
 class DiffService:
@@ -20,11 +20,13 @@ class DiffService:
         loader: ContractLoaderPort,
         renderer: TemplateEnginePort,
         fs: FileSystemPort,
+        postprocessor: PythonPostprocessorPort,
     ):
         self.config_loader = config_loader
         self.loader = loader
         self.renderer = renderer
         self.fs = fs
+        self.postprocessor = postprocessor
 
     def run(self, project_dir: Path) -> GenerationPlan:
         config = self.config_loader.load(project_dir)
@@ -104,6 +106,8 @@ class DiffService:
     def _build_registry_entry(self, operation: Operation) -> dict[str, object]:
         class_base = self._class_base(operation.operation_id)
         error_details = self._error_details(operation)
+        error_schemas = self._error_schemas(operation)
+        response_schema = operation.contract.response_body
         return {
             "operation_id": operation.operation_id,
             "method": operation.contract.method,
@@ -111,6 +115,12 @@ class DiffService:
             "summary": operation.contract.summary,
             "description": operation.contract.description,
             "contract_fingerprint": self._contract_fingerprint(operation),
+            "response_schema_literal": self._python_literal(response_schema),
+            "response_example_literal": self._python_literal(self._schema_example(response_schema)),
+            "error_schemas_literal": self._python_literal(error_schemas),
+            "error_examples_literal": self._python_literal(
+                [item["example"] for item in error_schemas]
+            ),
             "router_module": f"routers.{operation.operation_id}",
             "models": {
                 "request": (
@@ -153,6 +163,7 @@ class DiffService:
             "description": operation.contract.description,
             "contract_fingerprint": self._contract_fingerprint(operation),
             "schema_fragment_literal": self._python_literal(schema_fragment),
+            "schema_example_literal": self._python_literal(self._schema_example(schema_fragment)),
             "error_details": error_details,
         }
 
@@ -170,7 +181,27 @@ class DiffService:
         ]
         return sorted(details, key=lambda item: (item["code"], item["http_status"]))
 
+    def _error_schemas(self, operation: Operation) -> list[dict[str, object]]:
+        details = [
+            {
+                "code": str(error.get("code", "")).strip(),
+                "http_status": int(error.get("http_status", 500)),
+                "body": error.get("body", {}),
+                "example": self._schema_example(error.get("body", {})),
+            }
+            for error in operation.contract.errors
+            if isinstance(error, dict)
+        ]
+        return sorted(details, key=lambda item: (item["code"], item["http_status"]))
+
+    def _schema_example(self, schema_fragment: object) -> object:
+        if isinstance(schema_fragment, dict):
+            return schema_fragment.get("example")
+        return None
+
     def _contract_fingerprint(self, operation: Operation) -> str:
+        response_body = operation.contract.response_body
+        errors = operation.contract.errors
         payload = {
             "method": operation.contract.method,
             "path": operation.contract.path,
@@ -179,9 +210,15 @@ class DiffService:
             "description": operation.contract.description,
             "response": {
                 "status": operation.contract.response_status,
-                "body": operation.contract.response_body,
+                "body": response_body,
+                "example": self._schema_example(response_body),
             },
-            "errors": operation.contract.errors,
+            "errors": errors,
+            "error_examples": [
+                self._schema_example(error.get("body", {}))
+                for error in errors
+                if isinstance(error, dict)
+            ],
         }
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
@@ -205,11 +242,11 @@ class DiffService:
         return pformat(value, sort_dicts=True, width=100)
 
     def _postprocess_python(
-        self, project_dir: Path, target: Path, content: str, mode: PostprocessMode
+        self, project_dir: Path, target: Path, content: str, mode: PythonPostprocessMode
     ) -> str:
         if target.suffix != ".py":
             return content
-        return format_python_content(
+        return self.postprocessor.format_python_content(
             project_dir=project_dir,
             target_path=target,
             content=content,

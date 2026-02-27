@@ -8,6 +8,7 @@ from apidev.commands.runtime import load_runtime
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 
 console = Console()
@@ -31,6 +32,7 @@ def diff_command(project_dir: Path = Path(".")) -> None:
         loader=contract_loader,
         renderer=JinjaTemplateRenderer(custom_templates_dir=paths.templates_dir),
         fs=fs,
+        postprocessor=PythonPostprocessor(),
     )
     plan = service.run(root)
 

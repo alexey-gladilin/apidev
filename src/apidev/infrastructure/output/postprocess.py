@@ -4,7 +4,6 @@ import shutil
 import subprocess
 from typing import Literal
 
-
 PostprocessMode = Literal["auto", "none", "ruff", "black"]
 
 
@@ -105,7 +104,9 @@ def run_python_postprocess(
             check=False,
         )
         if completed.returncode == 0:
-            return PostprocessResult(status="applied", message=f"Postprocess: {' '.join(command[:2])}")
+            return PostprocessResult(
+                status="applied", message=f"Postprocess: {' '.join(command[:2])}"
+            )
 
         stderr = completed.stderr.strip() or completed.stdout.strip() or "unknown formatter error"
         if mode != "auto":

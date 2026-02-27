@@ -1,9 +1,11 @@
 from pathlib import Path
+from typing import Any, cast
 
 from apidev.application.services.diff_service import DiffService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 
 
@@ -39,6 +41,7 @@ def _create_diff_service() -> DiffService:
         loader=YamlContractLoader(),
         renderer=JinjaTemplateRenderer(),
         fs=fs,
+        postprocessor=PythonPostprocessor(),
     )
 
 
@@ -175,6 +178,84 @@ errors: []
     first_snapshot = [(change.path.as_posix(), change.content) for change in first.changes]
     second_snapshot = [(change.path.as_posix(), change.content) for change in second.changes]
     assert first_snapshot == second_snapshot
+
+
+def test_diff_service_propagates_examples_into_metadata_and_fingerprint(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    contract_path = tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml"
+    contract_path.parent.mkdir(parents=True, exist_ok=True)
+    contract_path.write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    example:
+      invoice_id: inv-001
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    body:
+      type: object
+      example:
+        code: INVOICE_NOT_FOUND
+""".strip(),
+        encoding="utf-8",
+    )
+
+    first_plan = _create_diff_service().run(tmp_path)
+    first_operation_map = next(
+        change for change in first_plan.changes if change.path.name == "operation_map.py"
+    )
+    first_namespace: dict[str, object] = {}
+    exec(first_operation_map.content, {}, first_namespace)
+    first_operation_map_value = cast(dict[str, Any], first_namespace["OPERATION_MAP"])
+    first_entry = first_operation_map_value["billing_get_invoice"]
+
+    assert first_entry["response_example"] == {"invoice_id": "inv-001"}
+    assert first_entry["error_examples"] == [{"code": "INVOICE_NOT_FOUND"}]
+
+    first_fingerprint = first_entry["contract_fingerprint"]
+    contract_path.write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    example:
+      invoice_id: inv-002
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    body:
+      type: object
+      example:
+        code: INVOICE_NOT_FOUND
+""".strip(),
+        encoding="utf-8",
+    )
+
+    second_plan = _create_diff_service().run(tmp_path)
+    second_operation_map = next(
+        change for change in second_plan.changes if change.path.name == "operation_map.py"
+    )
+    second_namespace: dict[str, object] = {}
+    exec(second_operation_map.content, {}, second_namespace)
+    second_operation_map_value = cast(dict[str, Any], second_namespace["OPERATION_MAP"])
+    second_entry = second_operation_map_value["billing_get_invoice"]
+
+    assert second_entry["response_example"] == {"invoice_id": "inv-002"}
+    assert first_fingerprint != second_entry["contract_fingerprint"]
 
 
 def test_operation_map_escapes_malicious_path_literal(tmp_path: Path) -> None:

@@ -8,6 +8,10 @@ OPERATION_MAP = {
         "summary": {{ entry.summary | tojson }},
         "description": {{ entry.description | tojson }},
         "contract_fingerprint": {{ entry.contract_fingerprint | tojson }},
+        "response_schema": {{ entry.response_schema_literal }},
+        "response_example": {{ entry.response_example_literal }},
+        "error_schemas": {{ entry.error_schemas_literal }},
+        "error_examples": {{ entry.error_examples_literal }},
         "router_module": {{ entry.router_module | tojson }},
         "models": {
             "request": {{ entry.models.request | tojson }},

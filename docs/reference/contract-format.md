@@ -162,6 +162,7 @@ errors:
 - `required`
 - `description`
 - `enum`
+- `example`
 
 Неизвестные поля запрещены.
 
@@ -193,6 +194,32 @@ errors:
 
 - Тип: `array`
 - Если задан, не должен быть пустым
+
+### `example`
+
+- Опциональное поле
+- Допустимо в schema-фрагментах (`response.body`, `errors[*].body`, `properties.<name>`, `items`)
+- Должно быть совместимо с `type` узла
+- Если задан `enum`, значение `example` должно входить в `enum`
+- Для `object` значение `example` должно быть объектом и рекурсивно соответствовать вложенным правилам
+- Для `array` значение `example` должно быть массивом и рекурсивно соответствовать `items`
+
+Пример:
+
+```yaml
+response:
+  status: 200
+  body:
+    type: object
+    example:
+      invoice_id: inv-001
+    properties:
+      invoice_id:
+        type: string
+        example: inv-001
+```
+
+Root-level блок `examples` в контракте не поддерживается и валидатор трактует его как unknown field.
 
 ## Семантические правила (между контрактами)
 
@@ -255,6 +282,14 @@ x_custom: true
 ```
 
 Результат: ошибка `SCHEMA_UNKNOWN_FIELD`.
+
+### Неподдерживаемый root-level `examples`
+
+```yaml
+examples: []
+```
+
+Результат: ошибка `SCHEMA_UNKNOWN_FIELD` для `contract.examples`.
 
 ## Диагностические коды (текущий набор)
 

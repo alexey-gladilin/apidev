@@ -27,7 +27,15 @@ AUTH_MODES = {"public", "bearer"}
 ROOT_ALLOWED_FIELDS = {"method", "path", "auth", "summary", "description", "response", "errors"}
 RESPONSE_ALLOWED_FIELDS = {"status", "body"}
 ERROR_ALLOWED_FIELDS = {"code", "http_status", "body"}
-SCHEMA_ALLOWED_FIELDS = {"type", "properties", "items", "required", "description", "enum"}
+SCHEMA_ALLOWED_FIELDS = {
+    "type",
+    "properties",
+    "items",
+    "required",
+    "description",
+    "enum",
+    "example",
+}
 PATH_SAFE_PATTERN = re.compile(r"^/[A-Za-z0-9\-._~/%{}:]*$")
 
 
@@ -450,6 +458,16 @@ def _validate_body_schema(
                 )
             )
 
+    if "example" in schema_fragment:
+        diagnostics.extend(
+            _validate_schema_example(
+                relpath=relpath,
+                field_name=field_name,
+                schema_fragment=schema_fragment,
+                example_value=schema_fragment.get("example"),
+            )
+        )
+
     if isinstance(declared_type, str):
         if declared_type != "object" and properties is not None:
             diagnostics.append(
@@ -473,6 +491,127 @@ def _validate_body_schema(
             )
 
     return diagnostics
+
+
+def _validate_schema_example(
+    relpath: str, field_name: str, schema_fragment: dict[str, Any], example_value: Any
+) -> list[ValidationDiagnostic]:
+    diagnostics: list[ValidationDiagnostic] = []
+    declared_type = schema_fragment.get("type")
+    enum_values = schema_fragment.get("enum")
+    properties = schema_fragment.get("properties")
+    items = schema_fragment.get("items")
+
+    if isinstance(enum_values, list) and example_value not in enum_values:
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SCHEMA_INVALID_VALUE,
+                severity="error",
+                message=(
+                    f"Field '{field_name}.example' must be one of the enum values declared in "
+                    f"'{field_name}.enum'."
+                ),
+                location=f"{relpath}:{field_name}.example",
+                rule=RULE_FIELD_VALUE,
+            )
+        )
+
+    if not isinstance(declared_type, str):
+        return diagnostics
+
+    if not _is_example_type_compatible(declared_type, example_value):
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SCHEMA_INVALID_VALUE,
+                severity="error",
+                message=(
+                    f"Field '{field_name}.example' must be compatible with type '{declared_type}'."
+                ),
+                location=f"{relpath}:{field_name}.example",
+                rule=RULE_FIELD_VALUE,
+            )
+        )
+        return diagnostics
+
+    if (
+        declared_type == "object"
+        and isinstance(properties, dict)
+        and isinstance(example_value, dict)
+    ):
+        unknown_keys = sorted(key for key in example_value if key not in properties)
+        for key in unknown_keys:
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message=(
+                        f"Field '{field_name}.example.{key}' is not declared in "
+                        f"'{field_name}.properties'."
+                    ),
+                    location=f"{relpath}:{field_name}.example.{key}",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+
+        for prop_name, prop_schema in sorted(properties.items()):
+            if not isinstance(prop_schema, dict):
+                continue
+            if prop_schema.get("required") is True and prop_name not in example_value:
+                diagnostics.append(
+                    ValidationDiagnostic(
+                        code=SCHEMA_INVALID_VALUE,
+                        severity="error",
+                        message=(
+                            f"Field '{field_name}.example' must include required property "
+                            f"'{prop_name}'."
+                        ),
+                        location=f"{relpath}:{field_name}.example.{prop_name}",
+                        rule=RULE_FIELD_VALUE,
+                    )
+                )
+
+        for prop_name, prop_schema in sorted(properties.items()):
+            if prop_name not in example_value or not isinstance(prop_schema, dict):
+                continue
+            diagnostics.extend(
+                _validate_schema_example(
+                    relpath=relpath,
+                    field_name=f"{field_name}.properties.{prop_name}",
+                    schema_fragment=prop_schema,
+                    example_value=example_value[prop_name],
+                )
+            )
+
+    if declared_type == "array" and isinstance(items, dict) and isinstance(example_value, list):
+        for item in example_value:
+            diagnostics.extend(
+                _validate_schema_example(
+                    relpath=relpath,
+                    field_name=f"{field_name}.items",
+                    schema_fragment=items,
+                    example_value=item,
+                )
+            )
+
+    return diagnostics
+
+
+def _is_example_type_compatible(declared_type: str, example_value: Any) -> bool:
+    if declared_type == "object":
+        return isinstance(example_value, dict)
+    if declared_type == "array":
+        return isinstance(example_value, list)
+    if declared_type == "string":
+        return isinstance(example_value, str)
+    if declared_type == "integer":
+        return isinstance(example_value, int) and not isinstance(example_value, bool)
+    if declared_type == "number":
+        return (isinstance(example_value, int | float)) and not isinstance(example_value, bool)
+    if declared_type == "boolean":
+        return isinstance(example_value, bool)
+    if declared_type == "null":
+        return example_value is None
+    return True
 
 
 def _report_unknown_fields(
