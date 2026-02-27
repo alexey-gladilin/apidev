@@ -1,22 +1,64 @@
-# Архитектурная документация APIDev
+# Архитектура APIDev
 
-Этот набор документов фиксирует текущую и целевую архитектуру APIDev в формате C4 и задает архитектурные инварианты для автоматической валидации нарушений.
+Этот раздел является точкой входа в архитектурную документацию проекта и задает роль каждого файла в каталоге `docs/architecture/`.
 
-## Состав
+## Роли документов
 
-- `c4-context.md` — C4 Level 1 (System Context): границы системы, акторы, внешние системы.
-- `c4-container.md` — C4 Level 2 (Containers): основные контейнеры/подсистемы и их взаимодействия.
-- `c4-components.md` — C4 Level 3 (Components): ключевые компоненты внутри Python-приложения APIDev.
-- `architecture-rules.md` — каталог архитектурных правил, анти-паттернов и проверок.
-- `validation-blueprint.md` — план перевода правил в исполняемые проверки CI.
+| Документ | Роль | Статус |
+|---|---|---|
+| `architecture-overview.md` | архитектурный baseline текущего состояния | Authoritative |
+| `architecture-rules.md` | нормативные архитектурные инварианты | Authoritative |
+| `c4-context.md` | системный контекст C4 Level 1 | Reference |
+| `c4-container.md` | контейнерная модель C4 Level 2 | Reference |
+| `c4-components.md` | компонентная модель C4 Level 3 | Reference |
+| `patterns-and-naming.md` | rationale и фактические паттерны | Reference |
+| `team-conventions.md` | краткие правила для ежедневной работы | Guide |
+| `validation-blueprint.md` | план превращения правил в CI-проверки | Reference |
 
-## Область действия
+## Что читать в каком порядке
 
-- В фокусе: `src/apidev/*`, будущие тесты `tests/unit/architecture/*`, OpenSpec по CLI architecture.
-- Поведенческие требования остаются в OpenSpec; этот раздел документирует архитектурные границы и их проверяемость.
+Для быстрого понимания архитектуры:
 
-## Как поддерживать в актуальном состоянии
+1. `architecture-overview.md`
+2. `architecture-rules.md`
+3. `c4-container.md`
+4. `c4-components.md`
 
-- При изменении архитектурных границ обновляйте C4 диаграммы (L1-L3).
-- Если добавлен новый модуль или слой, обновляйте `architecture-rules.md` и соответствующие архитектурные тесты.
-- Если меняются нормативные требования, синхронизируйте изменения с OpenSpec (`openspec/*`).
+Для изменения архитектурных границ:
+
+1. `architecture-overview.md`
+2. `architecture-rules.md`
+3. `validation-blueprint.md`
+4. `docs/process/testing-strategy.md`
+
+Для naming и review:
+
+1. `team-conventions.md`
+2. `patterns-and-naming.md`
+
+## Правила поддержки
+
+- Нормативные правила формулируются в `architecture-rules.md`.
+- `architecture-overview.md` описывает baseline и не дублирует каталог правил.
+- C4-документы раскрывают структуру, но не создают новые нормы.
+- `team-conventions.md` остается коротким operational cheat sheet.
+- При изменении архитектурных границ синхронно обновляются:
+  - `architecture-overview.md`
+  - `architecture-rules.md`
+  - релевантные C4-документы
+  - `validation-blueprint.md`
+  - архитектурные тесты
+
+## Связь с OpenSpec и тестами
+
+- Поведенческие требования остаются в OpenSpec.
+- Repository-wide архитектурные правила отражаются в `architecture-rules.md`.
+- Автоматическая проверяемость правил описывается в `validation-blueprint.md`.
+- Архитектурные тесты располагаются в `tests/unit/architecture/*` и `tests/contract/architecture/*`.
+
+## Связанные документы
+
+- `docs/README.md`
+- `docs/architecture/architecture-overview.md`
+- `docs/architecture/architecture-rules.md`
+- `docs/process/testing-strategy.md`

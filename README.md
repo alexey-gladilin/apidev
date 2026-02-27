@@ -14,5 +14,6 @@ Compatibility alias:
 
 ## Docs
 
-- `docs/roadmap.md` — current roadmap: implemented items, gaps, current stage, target capabilities.
-- `docs/ai-workflow-guide.md` — complete AI workflow guide: commands, agents, quality gates, and operational usage.
+- `docs/README.md` — documentation map and source-of-truth index.
+- `docs/roadmap.md` — historical roadmap snapshot and planned direction.
+- `docs/process/ai-workflow.md` — AI workflow, agents, and operational guidance.

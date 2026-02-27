@@ -1,34 +1,61 @@
-# Architecture Validation Blueprint
+# План Архитектурной Валидации
 
-## Purpose
+Статус: `Reference`
 
-This blueprint describes how architecture docs become executable guardrails in CI.
+Этот документ описывает, как архитектурные правила из `architecture-rules.md` превращаются в исполняемые guardrails в тестах и CI.
 
-## Input Artifacts
+## Входные артефакты
 
-- [Architecture Baseline](./README.md)
-- [Architecture Rules](./architecture-rules.md)
-- Source code under `src/apidev/*`
+- `docs/architecture/architecture-overview.md`
+- `docs/architecture/architecture-rules.md`
+- `docs/process/testing-strategy.md`
+- исходный код `src/apidev/*`
 
-## Validation Phases
+## Фазы валидации
 
-### Phase 1: Static Import Checks
+### Фаза 1. Static import checks
 
-- Parse Python AST for all modules under `src/apidev`.
-- Build import graph between top-level packages: `apidev.commands`, `apidev.application`, `apidev.core`, `apidev.infrastructure`.
-- Assert graph against `AR-001`.
+- парсинг Python AST для модулей под `src/apidev`;
+- построение import graph между `apidev.commands`, `apidev.application`, `apidev.core`, `apidev.infrastructure`;
+- проверка правил `AR-001` и частично `AR-004`.
 
-### Phase 2: Forbidden Dependency Checks
+### Фаза 2. Forbidden dependency checks
 
-- For `AR-002`, fail if `apidev.application.*` imports from `apidev.infrastructure.*`.
-- For `AR-003`, fail if `apidev.core.*` imports file-format or I/O concerns directly.
+- проверка `AR-002` для запрета concrete infra imports в `application/*`;
+- проверка `AR-003` для запрета direct I/O и format parsing в `core/*`;
+- в будущем — проверка `AR-008` для raw YAML/TOML parsing в core.
 
-### Phase 3: Behavioral Architecture Checks
+### Фаза 3. Behavioral architecture checks
 
-- Validate `AR-005` with integration tests where `diff` produces plan only and `generate --check` detects drift without writes.
-- Validate `AR-006` with negative tests for out-of-root paths.
+- проверка `AR-005` через сценарии без side effects для `diff` и `apidev gen --check`;
+- проверка `AR-006` через negative tests для write boundary;
+- проверка `AR-007` через tests на single source path policy;
+- в будущем — review-oriented heuristics для `AR-009`.
 
-## Suggested Test Layout
+### Фаза 4. Convention checks
+
+- review-checks для `AR-010`;
+- при необходимости — lightweight grep/AST checks для языка документации и code artifacts.
+
+## Текущая матрица traceability
+
+| Rule ID | Основная проверка | Текущий тест |
+|---|---|---|
+| AR-001 | import graph allowed edges | `test_layering_imports.py` |
+| AR-002 | no infra imports in app layer | `test_application_no_infra_imports.py` |
+| AR-003 | no direct I/O/format handling in core | `test_core_purity.py` |
+| AR-005 | side-effect safety | `test_pipeline_contract.py` |
+| AR-006 | out-of-bound write rejection | `test_write_boundary_policy.py` |
+| AR-007 | config path consistency | `test_config_path_single_source.py` |
+
+## Целевые расширения
+
+- `AR-004` — test или metric guard на thinness commands
+- `AR-008` — автоматическая проверка raw format parsing в core
+- `AR-009` — heuristic guard против service bloat
+- `AR-010` — repository-level policy checks после стабилизации baseline
+
+## Целевой layout тестов
 
 ```text
 tests/
@@ -44,24 +71,18 @@ tests/
       test_config_path_single_source.py
 ```
 
-## Rule Traceability Matrix
+## Изменение правил
 
-| Rule ID | Primary Check | Suggested Test |
-|---|---|---|
-| AR-001 | Import graph allowed edges | `test_layering_imports.py` |
-| AR-002 | No infra imports in app layer | `test_application_no_infra_imports.py` |
-| AR-003 | No direct I/O/format handling in core | `test_core_purity.py` |
-| AR-004 | Command thinness (optional metrics) | `test_command_thinness.py` |
-| AR-005 | Pipeline and side-effect behavior | `test_pipeline_contract.py` |
-| AR-006 | Out-of-bound write rejection | `test_write_boundary_policy.py` |
-| AR-007 | Config path consistency checks | `test_config_path_single_source.py` |
+Если меняется архитектурное правило:
 
-## CI Integration (Target)
+1. обновить `architecture-rules.md`;
+2. обновить `architecture-overview.md`, если меняется baseline;
+3. обновить этот документ, если меняется стратегия валидации;
+4. обновить тесты, если правило должно быть test-backed;
+5. при behavior-level изменении синхронизировать change с OpenSpec.
 
-- Add architecture test subset to mandatory CI stage.
-- Fail PR when any `AR-*` check fails.
-- Keep error output in format: `RULE_ID | file:line | message`.
+## Связанные документы
 
-## Change Management
-
-- Any architecture rule update must update `architecture-rules.md`, relevant tests, and OpenSpec architecture requirements (if behavior-level change).
+- `docs/architecture/architecture-rules.md`
+- `docs/architecture/architecture-overview.md`
+- `docs/process/testing-strategy.md`

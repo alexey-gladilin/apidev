@@ -2,7 +2,7 @@
 # Makefile for apidev
 # =============================================================================
 
-.PHONY: help menu install-deps format lint test architecture-test
+.PHONY: help menu install-deps format lint test architecture-test docs-check
 
 .DEFAULT_GOAL := help
 
@@ -114,3 +114,20 @@ architecture-test: ## Run architecture guardrail tests only
 		exit 1; \
 	fi
 	@echo "$(GREEN)Architecture tests passed$(NC)"
+
+docs-check: ## Run documentation consistency checks
+	@echo "$(YELLOW)Running documentation checks...$(NC)"
+	@if [ ! -d .venv ]; then \
+		echo "$(RED)Virtual environment not found. Run: uv venv$(NC)"; \
+		exit 1; \
+	fi
+	@if [ -f .venv/bin/pytest ]; then \
+		.venv/bin/pytest tests/unit/test_documentation_conventions.py -v; \
+	elif [ -f .venv/Scripts/pytest.exe ]; then \
+		.venv/Scripts/pytest.exe tests/unit/test_documentation_conventions.py -v; \
+	else \
+		echo "$(RED)pytest not found. Install: uv pip install -r requirements/test.txt$(NC)"; \
+		echo "  (if test.txt missing: uv pip compile requirements/test.in -o requirements/test.txt)"; \
+		exit 1; \
+	fi
+	@echo "$(GREEN)Documentation checks passed$(NC)"

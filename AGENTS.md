@@ -27,3 +27,9 @@ Keep this managed block so 'openspec update' can refresh the instructions.
   - Core change files under `openspec/changes/<change-id>/`.
   - Artifact folders under `openspec/changes/<change-id>/artifacts/{research,design,plan}`.
   - `tasks.md` is the execution tracker; only orchestrator updates task statuses (single writer rule).
+
+## Repository Conventions
+
+- Project documentation must be written in Russian.
+- Code comments, docstrings, identifiers, test names, CLI flags, and other code artifacts must be written in English.
+- When updating architecture or team-process documentation, keep `docs/architecture/team-conventions.md` and `docs/architecture/architecture-rules.md` aligned if the change affects repository-wide conventions.

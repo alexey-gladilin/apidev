@@ -1,4 +1,4 @@
-# C4 Level 2: Container View
+# C4 Level 2: Контейнерная Модель
 
 ## Назначение
 
@@ -25,9 +25,9 @@ flowchart TD
 | Контейнер | Ответственность | Ключевые модули |
 |---|---|---|
 | CLI | Parse/dispatch команд, UX-output | `src/apidev/cli.py`, `src/apidev/commands/*` |
-| Application Services | Оркестрация pipeline `load/validate/plan/write` | `src/apidev/application/services/*` |
-| Domain Core | Модели, правила, порты | `src/apidev/core/models/*`, `src/apidev/core/rules/*`, `src/apidev/core/ports/*` |
-| Infrastructure Adapters | YAML/Jinja/FS/writer реализации | `src/apidev/infrastructure/*` |
+| Application Services | Thin orchestration pipeline `load/validate/plan/write`; mapping boundary models to domain models | `src/apidev/application/services/*` |
+| Domain Core | Selective DDD core: rich models, value objects, rules, ports | `src/apidev/core/models/*`, `src/apidev/core/rules/*`, `src/apidev/core/ports/*` |
+| Infrastructure Adapters | YAML/Jinja/FS/writer реализации; boundary parsing and external format adapters | `src/apidev/infrastructure/*` |
 | Local File Storage | Хранение контрактов, templates, generated output | `.apidev/*`, target generated dir |
 
 ## Главные архитектурные границы
@@ -35,4 +35,5 @@ flowchart TD
 - `core` не зависит от `application`, `commands`, `infrastructure`.
 - `application` опирается на порты core и не должен знать concrete adapters.
 - Все filesystem side-effects локализованы в infrastructure.
-
+- Pydantic и другие schema/boundary validators используются на границе внешних форматов и не подменяют rich domain core.
+- В walkthrough и примерах для генерации используется `apidev gen`.

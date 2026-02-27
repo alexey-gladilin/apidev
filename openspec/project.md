@@ -21,42 +21,28 @@ It is designed to work standalone and optionally integrate with `dbspec` for typ
 ### Code Style
 - Keep generated and manual code strictly separated.
 - Prefer deterministic output: same input contracts must produce identical generated files.
-- Naming:
-- Files: `snake_case`
-- Python classes: `PascalCase`
-- Python functions/variables: `snake_case`
-- `operation_id` is derived from relative contract path:
-- `<domain>/<file_stem>.yaml` -> `<domain>_<file_stem>`
-- Example: `billing/create_invoice.yaml` -> `billing_create_invoice`
+- Detailed naming and language policy lives in:
+  - `docs/architecture/team-conventions.md`
+  - `docs/architecture/patterns-and-naming.md`
+  - `docs/reference/glossary.md`
 
 ### Architecture Patterns
 - Onion-style layering across dev-tools: `uidev -> apidev -> dbspec`.
-- `apidev` has two runtimes:
-- Tool runtime: validate contracts, compute diff, render templates, generate code.
-- Target app runtime: generated transport + manual business handlers + bridge layer.
-- In target projects, use three code zones:
-- `generated/` for regenerated artifacts (routes, transport schemas, wrappers)
-- `manual/` for business logic (handlers/services/repositories)
-- `manual/runtime` for bridge concerns (handler registry, error mapping, auth hooks)
-- Generated routes call stable handler interfaces by `operation_id`, not direct domain implementations.
+- Detailed architecture baseline and rules live in:
+  - `docs/architecture/architecture-overview.md`
+  - `docs/architecture/architecture-rules.md`
+  - `docs/architecture/validation-blueprint.md`
 
 ### Testing Strategy
 - Validate-first workflow:
-- `apidev validate` before generation
-- `apidev diff` to inspect planned changes
-- `apidev generate` to apply
-- Prefer contract tests for generated endpoints (smoke + key error paths).
-- Add CI drift checks using generation check mode (`--check`) to ensure committed generated files match contracts.
-- Protect manual code during regeneration with tests that assert generated-only overwrite behavior.
+  - `apidev validate`
+  - `apidev diff`
+  - `apidev gen`
+- Full testing policy lives in `docs/process/testing-strategy.md`.
 
 ### Git Workflow
 - Contracts are first-class project artifacts and should be committed.
-- Recommended to commit:
-- `.apidev/contracts/`
-- `.apidev/templates/` (if customized)
-- `.apidev/config.toml` when shared team config is desired
-- Do not commit local temporary files or local-only artifacts.
-- Keep commits scoped by concern (contracts, templates, generated output, manual logic).
+- Process guidance for contributors lives in `CONTRIBUTING.md`.
 
 ## Domain Context
 `apidev` models API contracts per endpoint, not one giant spec file.
@@ -79,6 +65,7 @@ Ownership model:
 - Avoid generating business logic, repository internals, or policy engine internals.
 - Keep auth and domain error policy manual in bridge layer while exposing declared behavior in generated OpenAPI metadata.
 - Tooling should support incremental adoption in existing projects (module-by-module rollout).
+- Canonical generation command in repository documentation is `apidev gen`; `apidev generate` is a compatibility alias.
 
 ## External Dependencies
 - FastAPI runtime in target applications

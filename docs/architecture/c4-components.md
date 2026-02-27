@@ -1,4 +1,4 @@
-# C4 Level 3: Component View (APIDev Python App)
+# C4 Level 3: Компонентная Модель APIDev
 
 ## Назначение
 
@@ -20,14 +20,14 @@ flowchart LR
     end
 
     subgraph Domain["Domain Core"]
-        MODELS["core/models/*"]
+        MODELS["core/models/*\n(rich models, value objects)"]
         RULES["core/rules/*"]
         PORTS["core/ports/*\n(ContractLoaderPort,\nTemplateEnginePort,\nConfigLoaderPort,\nWriterPort)"]
         CFG["ApidevConfig models"]
     end
 
     subgraph Infra["Infrastructure Adapters"]
-        YAML["YamlContractLoader"]
+        YAML["YamlContractLoader\n+ boundary parsing"]
         J2["JinjaTemplateRenderer"]
         LFS["LocalFileSystem"]
         WR["SafeWriter"]
@@ -62,3 +62,5 @@ flowchart LR
 - `core/*` не выполняет direct I/O и не зависит от `commands/application/infrastructure`.
 - `commands/*` остаются thin adapters без бизнес-правил.
 - `SafeWriter` реализует `WriterPort` и обеспечивает write-boundary только внутри generated root.
+- Boundary parsing/shape validation остаются в adapters or edge-facing layers; `core/*` работает с доменными понятиями, а не raw payload.
+- `core/models/*` может содержать rich models и value objects с поведением, если это поведение относится к инвариантам модели.

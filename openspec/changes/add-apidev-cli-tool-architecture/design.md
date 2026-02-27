@@ -104,7 +104,7 @@ Packaging:
 - `apidev init`: создает `.apidev/config.toml`, `.apidev/contracts`, `.apidev/templates` (если отсутствуют).
 - `apidev validate`: загружает контракты, валидирует schema/uniqueness, выводит diagnostics.
 - `apidev diff`: формирует generation plan и показывает file-level изменения без записи.
-- `apidev generate`: применяет plan и записывает только разрешенные generated файлы.
+- `apidev gen`: применяет plan и записывает только разрешенные generated файлы.
 
 ## Write Safety Policy
 - По умолчанию запись разрешена только в `generator.generated_dir` из `.apidev/config.toml`.
@@ -121,7 +121,7 @@ Packaging:
 
 ## Migration Plan
 1. Создать CLI skeleton с entrypoint `apidev`.
-2. Реализовать минимальные команды `init`, `validate`, `diff`, `generate` как вертикальный срез.
+2. Реализовать минимальные команды `init`, `validate`, `diff`, `gen` как вертикальный срез.
 3. Добавить unit/integration тесты для operation_id, валидации и генерации.
 4. Добавить release pipeline для сборки wheel/sdist.
 

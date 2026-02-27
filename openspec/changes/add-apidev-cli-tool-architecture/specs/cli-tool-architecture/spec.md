@@ -34,9 +34,9 @@ The CLI SHALL provide minimal commands for initializing config, validating contr
 - **AND** tool SHALL report file-level adds/updates/removals without writing files
 
 #### Scenario: Generate applies deterministic output
-- **WHEN** user runs `apidev generate`
+- **WHEN** user runs `apidev gen`
 - **THEN** tool SHALL write planned files deterministically
-- **AND** repeated generate with unchanged inputs SHALL produce no content changes
+- **AND** repeated generation with unchanged inputs SHALL produce no content changes
 
 ### Requirement: Safe Write Boundaries in Target Projects
 The generator SHALL restrict writes to configured generated directories and SHALL protect manual user code from overwrite.

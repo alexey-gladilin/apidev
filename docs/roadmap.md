@@ -1,123 +1,79 @@
-# APIDev Roadmap
+# Дорожная Карта APIDev
+
+Статус: `Historical`
 
 Снимок состояния: 26 февраля 2026.
 
-## 1. Что уже реализовано
+Этот документ не является нормативным описанием текущего поведения. Он фиксирует состояние проекта на дату снимка, основные gaps и направление развития.
 
-- CLI как installable binary: `apidev` entrypoint в `pyproject.toml`.
-- Команды MVP:
-- `apidev init` (инициализация `.apidev` + стартовый контракт).
-- `apidev validate` (загрузка контрактов + проверка уникальности `operation_id`).
-- `apidev diff` (план изменений без записи файлов).
-- `apidev gen` + alias `apidev generate`.
-- Базовый pipeline: `load -> validate -> plan -> render -> write/check`.
-- Детерминированная генерация базовых артефактов:
-- `operation_map.py`.
-- `routers/<operation_id>.py` (скелет endpoint-файлов).
-- Safety policy записи:
-- запись только внутри `generator.generated_dir`;
-- защита от записи в root generated-папки и за ее пределами.
-- Режим проверки дрейфа: `apidev gen --check` (non-zero при расхождении).
-- Архитектурные guardrail-тесты (слои, зависимости, write-boundary, single source paths).
-- Тестовый каркас: unit + contract + integration, все тесты проходят.
+## Что уже реализовано к дате снимка
 
-## 2. Что частично реализовано или еще не реализовано
+- installable CLI binary `apidev`;
+- команды `init`, `validate`, `diff`, `gen` и compatibility alias `generate`;
+- базовый pipeline `load -> validate -> plan -> render -> write/check`;
+- deterministic generation базовых generated-артефактов;
+- write-boundary policy внутри configured generated root;
+- drift check через `apidev gen --check`;
+- архитектурные guardrail-тесты;
+- unit, contract и integration test foundation.
 
-- Глубокая валидация контрактов:
-- сейчас фактически проверяется только уникальность `operation_id`;
-- нет полноценной валидации структуры request/query/response/errors на уровне схемы.
-- Генерация transport-слоя:
-- шаблон `generated_schema.py.j2` есть, но в текущем pipeline не используется;
-- нет генерации полноценных Pydantic-моделей и runtime-роутеров FastAPI.
-- Diff-модель:
-- сейчас есть `ADD/UPDATE/SAME`, но не реализован полноценный `REMOVE` для удаленных контрактов.
-- Совместимость/эволюция контрактов:
-- `core/rules/compatibility.py` пока placeholder;
-- нет `--fail-on-breaking` и правил semver-совместимости.
-- DX и observability CLI:
-- нет кодов/категорий диагностики, привязки ошибок к файлам/строкам;
-- нет machine-readable вывода (`--json`) для CI-аналитики.
-- Интеграции и расширяемость:
-- нет интеграции с `dbspec`;
-- нет plugin-модели шаблонов/расширений.
-- Release automation:
-- packaging есть, но pipeline релизной автоматизации (build/publish/changelog gates) не зафиксирован в репозитории как обязательный процесс.
+## Основные gaps на дату снимка
 
-## 3. Где мы сейчас
+- глубокая семантическая валидация контрактов еще не реализована;
+- transport generation пока ограничен skeleton-уровнем;
+- в generation plan отсутствует полноценный `REMOVE`;
+- compatibility rules и `--fail-on-breaking` находятся в target state;
+- machine-readable diagnostics и richer CLI observability еще не завершены;
+- release automation не закреплена как repository-wide process.
 
-Текущая стадия: **MVP Foundation / Architecture Baseline Complete**.
+## Текущая стадия
 
-Проект уже пригоден как внутренний инструмент для:
+`MVP Foundation / Architecture Baseline Complete`
 
-- инициализации структуры;
-- проверки базовых контрактов;
-- предпросмотра изменений;
-- безопасной генерации скелета.
+Проект уже пригоден как внутренний инструмент для init/validate/diff/gen workflow, но еще не завершил путь до production-grade transport generator полного цикла.
 
-Проект пока не готов как production-grade API generator полного цикла (transport models, strict validation, compatibility governance).
+## Направление развития
 
-## 4. Дорожная карта (предложение по этапам)
+### Этап A — Contract Validation Hardening
 
-## Этап A — Contract Validation Hardening
+- строгая схема контракта;
+- семантические проверки;
+- диагностические коды;
+- `--json` вывод.
 
-Цель: превратить `validate` в реальный quality gate.
+### Этап B — Transport Generation MVP+
 
-- Добавить строгую схему контракта и семантические проверки.
-- Ввести диагностические коды и file-scoped ошибки.
-- Добавить `--json` формат вывода.
-- DoD: `validate` блокирует невалидные контракты с точными причинами.
+- request/response/error model generation;
+- минимально runnable transport layer;
+- стабильный operation registry и handler bridge contract.
 
-## Этап B — Transport Generation MVP+
+### Этап C — Diff/Generate Safety & Drift Governance
 
-Цель: генерировать применимый transport-слой, а не только скелет.
+- `REMOVE` в generation plan;
+- richer dry-run/check отчеты;
+- breaking-aware safety modes.
 
-- Подключить генерацию схем (request/response/error models).
-- Расширить генерацию роутеров до минимально рабочей FastAPI-формы.
-- Зафиксировать стабильный шаблон operation registry + handler bridge контракт.
-- DoD: из набора контрактов поднимается минимальный runnable API transport.
+### Этап D — Contract Evolution & Integrations
 
-## Этап C — Diff/Generate Safety & Drift Governance
+- compatibility classification;
+- optional `dbspec` integration;
+- formal deprecation policy.
 
-Цель: повысить предсказуемость изменений и CI-контроль.
+### Этап E — Productization
 
-- Добавить `REMOVE` в generation plan.
-- Добавить dry-run/check отчеты с итоговой сводкой по типам изменений.
-- Добавить режимы `--fail-on-breaking` (после внедрения compatibility rules).
-- DoD: CI видит полный спектр drift и breaking-изменений до merge.
+- release checklist и automation;
+- onboarding documentation;
+- расширенные e2e и contract кейсы.
 
-## Этап D — Contract Evolution & Integrations
+## KPI готовности
 
-Цель: управляемая эволюция контрактов и экосистемная интеграция.
+- `validate` на типовом проекте: < 2 сек для 100 контрактов;
+- `gen --check` в CI: стабильный детерминированный результат без ложных срабатываний;
+- доля ручных правок в generated-зоне: 0;
+- время от нового контракта до runnable endpoint skeleton: < 10 минут.
 
-- Реализовать compatibility rules (breaking/non-breaking classifier).
-- Опциональная интеграция с `dbspec` для type hints/nullability/reference hints.
-- Политика депрекаций для CLI и контрактов.
-- DoD: есть формальные правила миграции контрактов и интеграционный контур.
+## Связанные документы
 
-## Этап E — Productization
-
-Цель: стабильный командный инструмент с прозрачным релизным циклом.
-
-- Release checklist и automation (build/test/version/publish).
-- Документация “from zero to first generated endpoint”.
-- Расширение e2e/contract тестов по реальным кейсам доменов.
-- DoD: повторяемый релизный процесс и предсказуемое внедрение в новые проекты.
-
-## 5. Целевые функциональные возможности (Product Goal)
-
-- Contract-first описание API по endpoint-файлам (YAML) с четкой доменной декомпозицией.
-- Строгая валидация контрактов как gate перед генерацией.
-- Полный deterministic generation transport-слоя (routes/schemas/error envelopes/operation map).
-- Безопасная перегенерация без риска затереть manual-код.
-- Проверка drift и breaking changes в CI.
-- Поддержка кастомных шаблонов проекта без fork генератора.
-- Инкрементальное внедрение в существующие сервисы (модуль за модулем).
-- Прозрачная интеграция с lower-level tools (`dbspec`) без жесткой связности.
-
-## 6. Предлагаемые KPI готовности
-
-- `validate` на типовом проекте: < 2 сек для 100 контрактов.
-- `gen --check` в CI: стабильный детерминированный результат без ложных срабатываний.
-- Доля ручных правок в generated-зоне: 0 (любой drift фиксируется в CI).
-- Время от нового контракта до runnable endpoint skeleton: < 10 минут.
-
+- `docs/product/vision.md`
+- `docs/reference/cli-contract.md`
+- `docs/process/testing-strategy.md`
