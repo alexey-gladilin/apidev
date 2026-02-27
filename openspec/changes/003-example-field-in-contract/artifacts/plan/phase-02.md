@@ -2,13 +2,13 @@
 
 ## Цель
 
-Сделать schema-level и endpoint-level examples частью deterministic generation metadata и generated OpenAPI transport артефактов.
+Сделать schema-level `example` частью deterministic generation metadata и generated OpenAPI transport артефактов.
 
 ## Work packages
 
-1. Проверить и при необходимости обновить fingerprint payload с учетом examples.
-2. Расширить transport schema template для экспонирования examples.
-3. Расширить openapi docs template для включения operation-level request/response/error examples.
+1. Проверить и при необходимости обновить fingerprint payload с учетом `example`.
+2. Расширить transport schema template для экспонирования `example`.
+3. Расширить openapi docs template для включения schema-level `example` в response/error metadata.
 
 ## Deliverables
 
@@ -19,5 +19,5 @@
 ## Exit criteria
 
 - Изменение `example` отражается в diff/gen output.
-- Изменение endpoint-level `examples` отражается в diff/gen output.
+- Root-level `examples` не появляется в generated output и остается вне scope.
 - При неизменных входах generated output остается byte-stable.

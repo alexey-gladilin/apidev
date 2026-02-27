@@ -6,11 +6,11 @@
 - Причина: минимальный и контролируемый шаг эволюции формата.
 - Последствия: расширение до `examples` возможно отдельной change без ломки текущего контракта.
 
-## D1a. Поддерживать endpoint-level блок `examples` в root контракта
+## D1a. Явно не поддерживать root-level `examples` в этой change
 
 - Статус: Accepted
-- Причина: Swagger/OpenAPI UX требует полноценных operation payload примеров.
-- Последствия: требуется отдельная root-валидация структуры `examples.request/response/errors`.
+- Причина: ограничение объема реализации до одиночного schema-level `example`.
+- Последствия: root-level `examples` продолжает отклоняться как unknown field.
 
 ## D2. Валидация `example` должна быть strict
 

@@ -3,9 +3,8 @@
 ## Unit tests
 - `tests/unit/test_validate_service.py`
   - positive: `example` проходит для корректных primitive/object/array/enum;
-  - positive: root-level `examples.request/response/errors` проходят при валидной структуре;
   - negative: type mismatch, enum mismatch, shape mismatch;
-  - negative: `examples.errors.<code>` для несуществующего error code;
+  - negative: root-level `examples` отклоняется как unknown field;
   - diagnostics location/rule/code проверяются явно.
 - `tests/unit/test_diff_service_transport_generation.py`
   - проверка fingerprint drift при изменении `example` only;
@@ -13,12 +12,12 @@
 
 ## Integration tests
 - `tests/integration/test_generate_roundtrip.py`
-  - roundtrip без diff для неизменного контракта с examples;
+  - roundtrip без diff для неизменного контракта с `example`;
   - diff/update при модификации example.
-  - OpenAPI output содержит operation-level examples в request/response.
+  - OpenAPI output содержит schema-level `example` в response/error metadata.
 
 ## Contract/Architecture tests
-- При необходимости добавить архитектурный контракт на сохранение deterministic generated output с examples.
+- При необходимости добавить архитектурный контракт на сохранение deterministic generated output с `example`.
 
 ## Planned verification commands
 - `uv run pytest tests/unit/test_validate_service.py`

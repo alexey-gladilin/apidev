@@ -6,7 +6,7 @@
 
 ## Work packages
 
-1. Обновить unit/integration тесты под schema-level и endpoint-level example-сценарии.
+1. Обновить unit/integration тесты под schema-level `example` сценарии.
 2. Обновить `docs/reference/contract-format.md`.
 3. Проверить link-traceability между core и artifacts файлами.
 4. Выполнить strict validation change-пакета.

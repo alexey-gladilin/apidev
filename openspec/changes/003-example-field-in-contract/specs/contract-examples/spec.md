@@ -1,52 +1,47 @@
 ## ADDED Requirements
 
-### Requirement: Contract supports endpoint-level `examples` block
-`apidev validate` SHALL accept optional root-level block `examples` for operation payload examples used by generated OpenAPI metadata.
+### Requirement: Контрактная схема поддерживает опциональное поле `example`
+`apidev validate` SHALL принимать опциональное поле `example` внутри поддерживаемых schema-фрагментов (`response.body`, `errors[*].body`, вложенные `properties` и `items`) без диагностики unknown-field.
 
-#### Scenario: Endpoint-level request and success response examples are accepted
-- **WHEN** contract defines `examples.request` and `examples.response`
-- **THEN** validation SHALL accept these fields when payload shape is compatible with declared schemas
+#### Scenario: Пример принимается в схеме ответа
+- **WHEN** контракт содержит `response.body.properties.<field>.example`
+- **THEN** schema validation SHALL успешно проходить для этого узла, если `example` совместим с ограничениями схемы
+- **AND** diagnostics SHALL NOT содержать `SCHEMA_UNKNOWN_FIELD` для `example`
 
-#### Scenario: Endpoint-level error example is accepted per declared error code
-- **WHEN** contract defines `examples.errors.<ERROR_CODE>`
-- **THEN** validation SHALL ensure `<ERROR_CODE>` exists in `errors[*].code`
-- **AND** example payload SHALL be compatible with corresponding `errors[*].body`
+#### Scenario: Пример принимается во вложенном элементе массива
+- **WHEN** контракт содержит `response.body.items.example` для `type: array`
+- **THEN** schema validation SHALL считать этот узел валидным schema field
 
-### Requirement: Contract schema supports optional `example` field
-`apidev validate` SHALL accept optional field `example` inside supported schema fragments (`response.body`, `errors[*].body`, nested `properties`, and `items`) without reporting unknown-field diagnostics.
+### Requirement: Значение `example` валидируется по ограничениям схемы
+Validation SHALL проверять совместимость `example` с объявленным schema node (`type`, `enum` и container shape).
 
-#### Scenario: Example is accepted in response schema
-- **WHEN** contract defines `response.body.properties.<field>.example`
-- **THEN** schema validation SHALL pass for this field if `example` matches declared schema constraints
-- **AND** diagnostics SHALL NOT include `SCHEMA_UNKNOWN_FIELD` for `example`
+#### Scenario: Несовпадение примитивного типа отклоняется
+- **WHEN** schema node имеет `type: integer` и `example: "42"`
+- **THEN** validation SHALL вернуть диагностическое сообщение об ошибочном типе примера
 
-#### Scenario: Example is accepted in nested array item schema
-- **WHEN** contract defines `response.body.items.example` for `type: array`
-- **THEN** schema validation SHALL treat this node as valid schema field
+#### Scenario: Несовпадение enum отклоняется
+- **WHEN** schema node имеет `enum: ["NEW", "DONE"]` и `example: "ARCHIVED"`
+- **THEN** validation SHALL вернуть диагностическое сообщение о несовместимости с enum
 
-### Requirement: `example` value is validated against schema constraints
-Validation SHALL enforce compatibility of `example` with the declared schema node (`type`, `enum`, and container shape).
+### Requirement: Root-level `examples` не поддерживается
+`apidev validate` SHALL отклонять root-level блок `examples` как неизвестное поле контракта в рамках этой change.
 
-#### Scenario: Primitive type mismatch is rejected
-- **WHEN** schema node has `type: integer` and `example: "42"`
-- **THEN** validation SHALL produce an error diagnostic for invalid example type
+#### Scenario: Контракт с `examples` на root уровне отклоняется
+- **WHEN** контракт содержит root-level `examples`
+- **THEN** validation SHALL вернуть unknown-field диагностику для `examples`
 
-#### Scenario: Enum mismatch is rejected
-- **WHEN** schema node has `enum: ["NEW", "DONE"]` and `example: "ARCHIVED"`
-- **THEN** validation SHALL produce an error diagnostic for enum incompatibility
+### Requirement: Generated transport/OpenAPI metadata детерминированно сохраняет `example`
+`apidev diff` и `apidev gen` SHALL включать принятый schema-level `example` в generated metadata так, чтобы неизменные контракты сохраняли byte-stable output, а изменение `example` приводило к обнаруживаемому drift.
 
-### Requirement: Generated transport/OpenAPI metadata preserves examples deterministically
-`apidev diff` and `apidev gen` SHALL include accepted examples in generated metadata so that unchanged contracts keep byte-stable outputs and changed examples produce detectable drift.
+#### Scenario: Повторная генерация остается стабильной
+- **WHEN** контракты и шаблоны не менялись между двумя запусками генерации
+- **THEN** generated artifacts с `example` SHALL оставаться byte-identical
 
-#### Scenario: Regeneration remains stable
-- **WHEN** contracts and templates are unchanged between two generation runs
-- **THEN** generated artifacts containing examples SHALL remain byte-identical
+#### Scenario: Изменение `example` влияет на fingerprint и diff
+- **WHEN** в schema меняется только значение `example`
+- **THEN** operation metadata fingerprint SHALL измениться
+- **AND** `apidev diff` SHALL показать соответствующие generated updates
 
-#### Scenario: Example change affects fingerprint and diff
-- **WHEN** only `example` value changes in contract schema
-- **THEN** operation metadata fingerprint SHALL change
-- **AND** `apidev diff` SHALL report corresponding generated updates
-
-#### Scenario: Endpoint-level examples are rendered in OpenAPI operation metadata
-- **WHEN** contract contains `examples.request` and/or `examples.response`
-- **THEN** generated OpenAPI metadata SHALL expose these examples on operation request/response content
+#### Scenario: Schema-level `example` отображается в OpenAPI metadata
+- **WHEN** контракт содержит `example` в response/error schema
+- **THEN** generated OpenAPI metadata SHALL включать этот пример в соответствующий schema fragment

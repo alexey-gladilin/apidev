@@ -6,9 +6,9 @@
 
 ## Что изменится
 - Добавляется поддержка опционального поля `example` в schema-фрагментах (`response.body`, `errors[*].body`, вложенные `properties`, `items`).
-- Добавляется endpoint-level блок `examples` в root контракта для полноценных operation payload examples в Swagger/OpenAPI.
+- Поддерживается только одиночный пример `example`; множественные примеры `examples` не поддерживаются.
 - Формализуются правила валидации `example` (типовая совместимость с `type`, `enum`, контейнерными структурами).
-- Генерация transport/OpenAPI metadata расширяется так, чтобы `example` из контракта попадал в generated артефакты детерминированно.
+- Генерация transport/OpenAPI metadata расширяется так, чтобы schema-level `example` из контракта попадал в generated артефакты детерминированно.
 - Обновляются reference docs и тестовая матрица на positive/negative/regression сценарии для `example`.
 
 ## Влияние

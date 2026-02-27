@@ -29,7 +29,7 @@
 
 ## Baseline Conclusions
 - На текущем baseline поле `example` фактически запрещено и блокируется на этапе validate.
-- На текущем baseline отсутствует root-level endpoint блок примеров (например `examples.request/response/errors`), поэтому Swagger operation-level examples задавать декларативно нельзя.
+- На текущем baseline отсутствует поддержка root-level `examples`; в рамках change это поведение сохраняется.
 - После расширения schema allowlist потребуется добавить explicit validation правилa для type/enum/container совместимости, чтобы сохранить strict contract quality.
 - Generation/OpenAPI слой потребует явной фиксации поведения для deterministic exposure examples.
 
