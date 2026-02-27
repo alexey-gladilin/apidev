@@ -1,40 +1,71 @@
 ## ADDED Requirements
 
-### Requirement: Compatibility classification for contract evolution
-`apidev diff` and `apidev gen --check` SHALL classify detected contract changes into compatibility categories and expose this classification in diagnostics.
+### Requirement: Классификация совместимости для эволюции контрактов
+`apidev diff` и `apidev gen --check` SHALL классифицировать обнаруженные изменения контрактов по категориям совместимости и выводить эту классификацию в diagnostics.
 
-#### Scenario: Diff reports breaking and non-breaking groups
-- **WHEN** user runs `apidev diff` after modifying contracts
-- **THEN** output SHALL include categorized compatibility summary
-- **AND** each detected change SHALL be assigned to a deterministic compatibility category
+#### Scenario: Diff выводит группы breaking и non-breaking изменений
+- **WHEN** пользователь запускает `apidev diff` после изменения контрактов
+- **THEN** вывод SHALL содержать категоризированную сводку совместимости
+- **AND** каждое обнаруженное изменение SHALL быть отнесено к детерминированной категории совместимости
 
-#### Scenario: Check mode can fail on breaking changes
-- **WHEN** configured breaking-aware policy is active and `apidev gen --check` detects `breaking` changes
-- **THEN** command SHALL return non-zero exit code
-- **AND** diagnostics SHALL explicitly list breaking change reasons
+#### Scenario: Check mode завершает команду с ошибкой при active strict policy
+- **WHEN** включена policy `strict` и `apidev gen --check` обнаруживает изменения категории `breaking`
+- **THEN** команда SHALL возвращать non-zero exit code
+- **AND** diagnostics SHALL явно перечислять причины breaking classification
 
-### Requirement: Optional read-only DBSpec integration
-APIDev SHALL support optional integration with `dbspec` as a read-only source of schema hints without requiring `dbspec` for baseline workflows.
+### Requirement: Контракт конфигурации compatibility policy
+Система SHALL поддерживать явный конфигурационный контракт для compatibility policy с предсказуемыми defaults и приоритетами источников настроек.
 
-#### Scenario: Workflow stays operational without DBSpec
-- **WHEN** `dbspec` artifacts are unavailable
-- **THEN** `apidev validate`, `apidev diff`, and `apidev gen` SHALL continue in baseline mode
-- **AND** tool SHALL NOT require DBSpec as mandatory dependency
+#### Scenario: Policy по умолчанию не ломает обратную совместимость workflow
+- **WHEN** пользователь не задаёт compatibility policy ни в CLI, ни в конфиге
+- **THEN** система SHALL использовать policy `warn` по умолчанию
+- **AND** `apidev gen --check` SHALL завершаться с ошибкой только при drift, но не из-за одних лишь `breaking` diagnostics
 
-#### Scenario: Contract data has priority over external hints
-- **WHEN** both contract fields and optional dbspec hints provide values for the same schema attribute
-- **THEN** deterministic merge policy SHALL apply
-- **AND** contract-declared value SHALL take priority
+#### Scenario: CLI имеет приоритет над файлом конфигурации
+- **WHEN** policy указана одновременно в CLI и в `apidev.toml`
+- **THEN** значение из CLI SHALL иметь более высокий приоритет, чем значение из файла конфигурации
+- **AND** diagnostics SHALL отражать фактически применённую policy
 
-### Requirement: Formal deprecation lifecycle
-The system SHALL enforce a formal deprecation lifecycle for evolving contract elements to reduce unmanaged breaking removals.
+### Requirement: Optional read-only dbspec integration
+APIDev SHALL поддерживать optional integration с `dbspec` как read-only источником schema hints без обязательной зависимости от `dbspec` для baseline workflow.
 
-#### Scenario: Deprecated element is tracked before removal
-- **WHEN** contract element is marked as deprecated
-- **THEN** diagnostics and generated metadata SHALL expose deprecation status
-- **AND** lifecycle state SHALL be preserved across subsequent diff/generate runs
+#### Scenario: Workflow остаётся работоспособным без dbspec
+- **WHEN** артефакты `dbspec` недоступны
+- **THEN** `apidev validate`, `apidev diff` и `apidev gen` SHALL продолжать работу в baseline mode
+- **AND** инструмент SHALL NOT требовать `dbspec` как обязательную зависимость
 
-#### Scenario: Removing without deprecation window is breaking
-- **WHEN** a previously active element is removed without passing through a defined deprecation period
-- **THEN** change SHALL be classified as `breaking`
-- **AND** diagnostics SHALL include policy violation details
+#### Scenario: Данные контракта имеют приоритет над внешними hints
+- **WHEN** и contract fields, и optional dbspec hints задают значение одного schema attribute
+- **THEN** SHALL применяться детерминированная merge policy
+- **AND** значение, объявленное в контракте, SHALL иметь приоритет
+
+### Requirement: Формальный deprecation lifecycle и release state
+Система SHALL обеспечивать формальный deprecation lifecycle (`active -> deprecated -> removed`) с релизным состоянием, достаточным для проверки deprecation window.
+
+#### Scenario: Deprecated элемент отслеживается до удаления
+- **WHEN** элемент контракта помечается как `deprecated`
+- **THEN** diagnostics и generated metadata SHALL отображать deprecation status
+- **AND** lifecycle state SHALL сохраняться между последующими запусками diff/generate
+
+#### Scenario: Release state использует монотонный номер релиза
+- **WHEN** система фиксирует очередной релиз для policy checks
+- **THEN** release state SHALL включать обязательный `release_number` (integer, монотонно возрастающий)
+- **AND** release state MAY включать `git_commit`, `released_at` (UTC) и `tag` как опциональные metadata для трассировки
+
+### Requirement: Конфигурируемое deprecation window
+Система SHALL использовать конфигурируемый параметр `grace_period_releases` для проверки допустимости удаления deprecated элементов.
+
+#### Scenario: Удаление раньше окна классифицируется как breaking
+- **WHEN** элемент удалён и выполняется условие `current_release_number - deprecated_since_release_number < grace_period_releases`
+- **THEN** изменение SHALL классифицироваться как `breaking`
+- **AND** diagnostics SHALL содержать детали policy violation с фактическими числовыми значениями окна
+
+#### Scenario: Удаление после окна не классифицируется как breaking по policy-причине
+- **WHEN** элемент удалён и выполняется условие `current_release_number - deprecated_since_release_number >= grace_period_releases`
+- **THEN** изменение SHALL NOT классифицироваться как `breaking` только по причине нарушения deprecation window
+- **AND** diagnostics MAY содержать информационное сообщение об успешном соблюдении deprecation policy
+
+#### Scenario: Значение окна по умолчанию и валидация параметра
+- **WHEN** `grace_period_releases` не задан в конфигурации
+- **THEN** система SHALL использовать documented default значение
+- **AND** при значении меньше 1 система SHALL возвращать ошибку конфигурации с явным указанием недопустимого значения
