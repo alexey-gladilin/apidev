@@ -87,5 +87,6 @@ def test_generate_check_has_no_write_side_effects(tmp_path: Path) -> None:
     result = service.run(tmp_path, check=True)
 
     assert result.drift_detected
+    assert result.drift_status == "drift"
     assert writer.calls == []
     assert not (tmp_path / "src" / "app" / "api" / "generated").exists()

@@ -174,6 +174,7 @@ errors: []
 
     no_drift = service.run(tmp_path, check=True)
     assert not no_drift.drift_detected
+    assert no_drift.drift_status == "no-drift"
 
     contract_path.write_text(
         """
@@ -192,6 +193,7 @@ errors: []
 
     drift = service.run(tmp_path, check=True)
     assert drift.drift_detected
+    assert drift.drift_status == "drift"
 
 
 def test_generate_check_detects_drift_for_changed_description(tmp_path: Path) -> None:
@@ -241,6 +243,7 @@ errors: []
 
     no_drift = service.run(tmp_path, check=True)
     assert not no_drift.drift_detected
+    assert no_drift.drift_status == "no-drift"
 
     contract_path.write_text(
         """
@@ -259,6 +262,7 @@ errors: []
 
     drift = service.run(tmp_path, check=True)
     assert drift.drift_detected
+    assert drift.drift_status == "drift"
 
 
 def test_generate_check_detects_drift_for_changed_nested_field_description(tmp_path: Path) -> None:
@@ -313,6 +317,7 @@ errors: []
 
     no_drift = service.run(tmp_path, check=True)
     assert not no_drift.drift_detected
+    assert no_drift.drift_status == "no-drift"
 
     contract_path.write_text(
         """
@@ -336,6 +341,7 @@ errors: []
 
     drift = service.run(tmp_path, check=True)
     assert drift.drift_detected
+    assert drift.drift_status == "drift"
 
 
 def test_generate_emits_schema_example_and_openapi_example_metadata(tmp_path: Path) -> None:

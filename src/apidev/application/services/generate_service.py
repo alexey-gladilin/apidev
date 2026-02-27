@@ -34,13 +34,16 @@ class GenerateService:
         changed = [c for c in plan.changes if c.change_type in {"ADD", "UPDATE"}]
 
         if check:
-            return GenerateResult(applied_changes=0, drift_detected=bool(changed))
+            return GenerateResult(
+                applied_changes=0,
+                drift_status="drift" if changed else "no-drift",
+            )
 
         for change in changed:
             self.writer.write(plan.generated_root, change.path, change.content)
 
         return GenerateResult(
             applied_changes=len(changed),
-            drift_detected=False,
+            drift_status="no-drift",
             changed_paths=[change.path for change in changed],
         )
