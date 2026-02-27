@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import typer
@@ -11,7 +12,10 @@ from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 console = Console()
 
 
-def validate_command(project_dir: Path = Path(".")) -> None:
+def validate_command(
+    project_dir: Path = Path("."),
+    json_output: bool = typer.Option(False, "--json", help="Print diagnostics as JSON."),
+) -> None:
     root = project_dir.resolve()
     service = ValidateService(
         loader=YamlContractLoader(),
@@ -19,9 +23,22 @@ def validate_command(project_dir: Path = Path(".")) -> None:
     )
     result = service.run(root)
 
-    if result.errors:
-        for err in result.errors:
-            console.print(f"[red]ERROR[/red] {err}")
-        raise typer.Exit(code=1)
+    if json_output:
+        payload = {
+            "diagnostics": [diagnostic.as_dict() for diagnostic in result.diagnostics],
+            "summary": result.summary(),
+        }
+        typer.echo(json.dumps(payload, ensure_ascii=False))
+    elif result.diagnostics:
+        for diagnostic in result.diagnostics:
+            color = "red" if diagnostic.severity == "error" else "yellow"
+            console.print(
+                f"[{color}]{diagnostic.severity.upper()}[/{color}] "
+                f"{diagnostic.code} {diagnostic.message} "
+                f"({diagnostic.location}, rule={diagnostic.rule})"
+            )
+    else:
+        console.print(f"Contracts valid. Operations: {len(result.operations)}")
 
-    console.print(f"Contracts valid. Operations: {len(result.operations)}")
+    if result.has_errors:
+        raise typer.Exit(code=1)

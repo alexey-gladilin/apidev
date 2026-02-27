@@ -30,6 +30,7 @@ CANONICAL_DOC_PATHS = {
     "docs/process/ai-workflow.md",
     "docs/process/prompt-improvement-regression-cases.md",
     "docs/reference/cli-contract.md",
+    "docs/reference/contract-format.md",
     "docs/reference/glossary.md",
     "docs/decisions/README.md",
     "CONTRIBUTING.md",

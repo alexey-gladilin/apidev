@@ -1,4 +1,4 @@
-# Design Artifact Package: 001-contrac-validation
+# Design Artifact Package: 001-contract-validation
 
 ## Контекст
 Пакет покрывает этап `A — Contract Validation Hardening` из `docs/roadmap.md`:

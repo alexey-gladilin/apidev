@@ -54,6 +54,7 @@
 | Тестовая стратегия | `docs/process/testing-strategy.md` | Authoritative |
 | AI workflow | `docs/process/ai-workflow.md` | Guide |
 | CLI contract | `docs/reference/cli-contract.md` | Authoritative |
+| Формат контрактов API | `docs/reference/contract-format.md` | Authoritative |
 | Глоссарий | `docs/reference/glossary.md` | Authoritative |
 | Дорожная карта | `docs/roadmap.md` | Historical |
 | ADR process | `docs/decisions/README.md` | Authoritative |

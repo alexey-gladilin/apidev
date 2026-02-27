@@ -122,9 +122,9 @@ docs-check: ## Run documentation consistency checks
 		exit 1; \
 	fi
 	@if [ -f .venv/bin/pytest ]; then \
-		.venv/bin/pytest tests/unit/test_documentation_conventions.py -v; \
+		.venv/bin/pytest tests/unit/test_documentation_conventions.py tests/unit/test_documentation_quality.py -v; \
 	elif [ -f .venv/Scripts/pytest.exe ]; then \
-		.venv/Scripts/pytest.exe tests/unit/test_documentation_conventions.py -v; \
+		.venv/Scripts/pytest.exe tests/unit/test_documentation_conventions.py tests/unit/test_documentation_quality.py -v; \
 	else \
 		echo "$(RED)pytest not found. Install: uv pip install -r requirements/test.txt$(NC)"; \
 		echo "  (if test.txt missing: uv pip compile requirements/test.in -o requirements/test.txt)"; \

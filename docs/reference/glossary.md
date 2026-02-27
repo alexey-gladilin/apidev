@@ -66,6 +66,7 @@ Runtime целевого приложения, использующего genera
 
 ## Связанные документы
 
+- `docs/reference/contract-format.md`
 - `docs/product/vision.md`
 - `docs/architecture/architecture-overview.md`
 - `docs/reference/cli-contract.md`

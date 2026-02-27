@@ -1,4 +1,4 @@
-# Implementation Handoff: 001-contrac-validation
+# Implementation Handoff: 001-contract-validation
 
 ## Phase Dependencies
 1. `P1` (schema baseline) must complete before semantic rule expansion in `P2`.

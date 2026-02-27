@@ -15,6 +15,9 @@ Use adaptive orchestration with `AUTO` mode by default, `STRICT` mode for high-r
 
 **ALWAYS launch subagents via Task tool. DO NOT use @mentions.**
 
+If Task tool is not available in the runtime, use a compatible agent API path (`spawn_agent`/`send_input`/`wait`) and preserve the same role separation (`spec-analyst`, `coder`, `tester`, `security`, `qa`) by explicitly following `.cursor/agents/<role>.md` instructions.
+If neither Task tool nor compatible agent APIs are available, STOP and report `WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE`. Do not continue with manual single-agent implementation under this workflow.
+
 To launch a subagent:
 
 1. **Call Task tool**
@@ -43,6 +46,7 @@ To launch a subagent:
 
    - If validation fails → STOP and report issues
    - If proposal not approved → STOP and request approval
+   - If subagent tooling unavailable → STOP and direct to `/openspec-implement-single`
 
 2. **Load Context:**
    - Read `openspec/changes/<change-id>/proposal.md` - Understand WHY and WHAT
@@ -83,6 +87,7 @@ To launch a subagent:
    - Wait for `SPEC READY` or `SPEC REJECTED`.
    - If `SPEC REJECTED` → STOP workflow before coding.
    - If `SPEC READY` → proceed to Phase 2.
+   - Log invocation evidence (agent launch method + returned verdict token).
 
 ### Phase 2: EXECUTION MODE SELECTION
 
@@ -258,6 +263,16 @@ After each task completion or rejection:
 
 1. Update tasks.md status immediately (single writer rule)
 2. Subagents (`coder`, `tester`, `security`, `qa`) must not edit tasks.md directly
+
+### Mandatory Orchestration Audit
+
+Before final completion summary, verify there is evidence of subagent execution for required stages:
+- readiness: `spec-analyst`
+- implementation: `coder`
+- validation gates: `tester` (+ `security` and/or `qa` based on mode/risk)
+
+If any stage lacks evidence, the run is invalid and must terminate with:
+`WORKFLOW INVALID: SUBAGENT ORCHESTRATION MISSING`.
 3. Continue with next task
 
 ---

@@ -1,4 +1,4 @@
-# Plan Artifact Package: 001-contrac-validation
+# Plan Artifact Package: 001-contract-validation
 
 ## Цель
 Разбить implement-фазу Stage A на управляемые этапы `P1 -> P2 -> P3` с явными quality gates.

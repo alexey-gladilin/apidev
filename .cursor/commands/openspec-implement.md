@@ -17,6 +17,7 @@ description: Start TDD implementation of an approved OpenSpec change using speci
 - Only orchestrator updates `tasks.md` statuses; subagents return verdicts/evidence only
 - Handles rejections (3 rejections → `[BLOCKED - NEEDS HUMAN REVIEW]`)
 - Runs quality gates (format/lint/test) at finalization
+- **MANDATORY:** If subagent tooling is unavailable, STOP workflow and do not implement manually in this command.
 
 **CRITICAL: Subagent Launch Method**
 
@@ -41,6 +42,20 @@ Call Task tool with:
 ```
 
 See `.cursor/agents/openspec-implementer.md` for detailed examples.
+
+**Subagent Capability Gate (run before any implementation work)**
+
+1. Detect whether subagent launch tooling is available in the current environment:
+   - Preferred: `Task` tool with `subagent_type`.
+   - Compatible fallback: native agent APIs (for example `spawn_agent`/`send_input`/`wait`) with explicit role routing to `.cursor/agents/<role>.md`.
+2. If neither mechanism is available, STOP immediately with:
+
+   ```
+   WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
+   - Required: Task tool or compatible spawn/wait agent APIs
+   - Action Required: Use /openspec-implement-single OR run in an environment with subagent support.
+   ```
+3. In this failure mode, it is FORBIDDEN to continue with direct single-agent implementation under `/openspec-implement`.
 
 **Prerequisites Check**
 
@@ -94,6 +109,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Wait for `SPEC READY` or `SPEC REJECTED`
    - If `SPEC REJECTED` → STOP workflow before coding
    - If `SPEC READY` → proceed
+   - Log subagent execution evidence in output (agent/tool used + verdict token).
 
 8. Determine execution mode (mandatory):
    - Default mode: `AUTO`
@@ -116,6 +132,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Group pending tasks into logical waves using section/task prefixes from `tasks.md` (for example `1.*`, `2.*`, `3.*`).
    - For each wave:
      - Launch `coder` once for the full wave (do not force one coder run per checkbox item).
+     - Record the coder invocation evidence in output (wave IDs + agent/tool handle).
      - Require compact context in coder prompt:
        - current wave task IDs and descriptions
        - changed files and short handoff summary
@@ -124,6 +141,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
        - low-risk wave: `tester`
        - medium-risk wave: `tester -> qa`
        - high-risk wave: `tester -> security -> qa`
+     - Record gate evidence in output (`VERIFIED` / `SECURITY VERIFIED` / `APPROVED` or `REJECTION`).
      - Mark all wave tasks as `[x]` only after required wave gate(s) return success.
    - Always run a **final full gate** after last wave:
      - `tester -> security -> qa`
@@ -207,6 +225,19 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
 
    - If any fail → Report issues and mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`
 12. Generate completion summary (see format below)
+
+13. Mandatory orchestration audit (before final answer):
+   - Confirm at least one invocation for each required stage:
+     - readiness: `spec-analyst`
+     - implementation: `coder`
+     - validation: `tester` (+ `security`/`qa` per selected mode)
+   - If any required stage has no subagent invocation evidence, FAIL workflow with:
+
+     ```
+     WORKFLOW INVALID: SUBAGENT ORCHESTRATION MISSING
+     - Missing stage(s): <list>
+     - Action Required: Re-run /openspec-implement with proper subagent execution.
+     ```
 
 **Completion Summary Format**
 
