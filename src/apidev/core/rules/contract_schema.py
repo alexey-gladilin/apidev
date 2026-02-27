@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -27,6 +28,7 @@ ROOT_ALLOWED_FIELDS = {"method", "path", "auth", "summary", "description", "resp
 RESPONSE_ALLOWED_FIELDS = {"status", "body"}
 ERROR_ALLOWED_FIELDS = {"code", "http_status", "body"}
 SCHEMA_ALLOWED_FIELDS = {"type", "properties", "items", "required", "description", "enum"}
+PATH_SAFE_PATTERN = re.compile(r"^/[A-Za-z0-9\-._~/%{}:]*$")
 
 
 def validate_contract_schema(
@@ -115,9 +117,7 @@ def validate_contract_schema(
                 ValidationDiagnostic(
                     code=SCHEMA_INVALID_VALUE,
                     severity="error",
-                    message=(
-                        f"Field 'method' must be one of: {', '.join(sorted(HTTP_METHODS))}."
-                    ),
+                    message=(f"Field 'method' must be one of: {', '.join(sorted(HTTP_METHODS))}."),
                     location=f"{relpath}:method",
                     rule=RULE_FIELD_VALUE,
                 )
@@ -150,6 +150,30 @@ def validate_contract_schema(
                     code=SCHEMA_INVALID_VALUE,
                     severity="error",
                     message="Field 'path' must be non-empty.",
+                    location=f"{relpath}:path",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+        if any(char in path for char in ('"', "'", "\\", "\n", "\r", "\t")):
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message=(
+                        "Field 'path' contains unsupported characters for code generation safety."
+                    ),
+                    location=f"{relpath}:path",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+        if not PATH_SAFE_PATTERN.fullmatch(path):
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message=(
+                        "Field 'path' must contain only URL-safe characters and parameter braces."
+                    ),
                     location=f"{relpath}:path",
                     rule=RULE_FIELD_VALUE,
                 )
@@ -192,7 +216,9 @@ def validate_contract_schema(
     response_status: Any = None
     response_body: Any = None
     if isinstance(response, dict):
-        diagnostics.extend(_report_unknown_fields(relpath, "response", response, RESPONSE_ALLOWED_FIELDS))
+        diagnostics.extend(
+            _report_unknown_fields(relpath, "response", response, RESPONSE_ALLOWED_FIELDS)
+        )
         if "status" not in response:
             diagnostics.append(
                 ValidationDiagnostic(
@@ -239,12 +265,18 @@ def validate_contract_schema(
             if not isinstance(error_item, dict):
                 continue
 
-            diagnostics.extend(_report_unknown_fields(relpath, prefix, error_item, ERROR_ALLOWED_FIELDS))
-            diagnostics.extend(_require_type(relpath, f"{prefix}.code", error_item.get("code"), str))
+            diagnostics.extend(
+                _report_unknown_fields(relpath, prefix, error_item, ERROR_ALLOWED_FIELDS)
+            )
+            diagnostics.extend(
+                _require_type(relpath, f"{prefix}.code", error_item.get("code"), str)
+            )
             diagnostics.extend(
                 _require_type(relpath, f"{prefix}.http_status", error_item.get("http_status"), int)
             )
-            diagnostics.extend(_require_type(relpath, f"{prefix}.body", error_item.get("body"), dict))
+            diagnostics.extend(
+                _require_type(relpath, f"{prefix}.body", error_item.get("body"), dict)
+            )
             code = error_item.get("code")
             if isinstance(code, str):
                 normalized_code = code.strip()
@@ -263,9 +295,7 @@ def validate_contract_schema(
                         ValidationDiagnostic(
                             code=SCHEMA_INVALID_VALUE,
                             severity="error",
-                            message=(
-                                f"Field '{prefix}.code' must use UPPER_SNAKE_CASE format."
-                            ),
+                            message=(f"Field '{prefix}.code' must use UPPER_SNAKE_CASE format."),
                             location=f"{relpath}:{prefix}.code",
                             rule=RULE_FIELD_VALUE,
                         )
@@ -300,6 +330,8 @@ def validate_contract_schema(
     if diagnostics:
         return None, diagnostics
 
+    normalized_errors = list(errors) if isinstance(errors, list) else []
+
     return (
         EndpointContract(
             source_path=document.source_path,
@@ -310,7 +342,7 @@ def validate_contract_schema(
             description=str(description).strip(),
             response_status=int(response_status),
             response_body=dict(response_body),
-            errors=list(errors),
+            errors=normalized_errors,
         ),
         diagnostics,
     )
@@ -385,9 +417,7 @@ def _validate_body_schema(
                 )
                 if required_value is not None:
                     diagnostics.extend(
-                        _require_type(
-                            relpath, f"{prop_field_name}.required", required_value, bool
-                        )
+                        _require_type(relpath, f"{prop_field_name}.required", required_value, bool)
                     )
                 if isinstance(prop_name, str) and not prop_name.strip():
                     diagnostics.append(

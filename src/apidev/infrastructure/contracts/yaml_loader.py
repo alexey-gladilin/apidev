@@ -45,7 +45,9 @@ class YamlContractLoader(ContractLoaderPort, ContractDocumentLoaderPort):
         operations: list[Operation] = []
         for document in self.load_documents(contracts_root):
             if document.parse_error:
-                raise ValueError(f"Invalid YAML at {document.contract_relpath}: {document.parse_error}")
+                raise ValueError(
+                    f"Invalid YAML at {document.contract_relpath}: {document.parse_error}"
+                )
 
             path = document.source_path
             rel = document.contract_relpath

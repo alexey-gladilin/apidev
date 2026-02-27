@@ -1,12 +1,16 @@
 from collections import defaultdict
+import re
 
 from apidev.core.models.diagnostic import ValidationDiagnostic
 from apidev.core.models.operation import Operation
 
 SEMANTIC_DUPLICATE_OPERATION_ID = "SEMANTIC_DUPLICATE_OPERATION_ID"
+SEMANTIC_INVALID_OPERATION_ID = "SEMANTIC_INVALID_OPERATION_ID"
 SEMANTIC_DUPLICATE_ENDPOINT_SIGNATURE = "SEMANTIC_DUPLICATE_ENDPOINT_SIGNATURE"
 RULE_OPERATION_ID_UNIQUE = "semantic.operation_id.unique"
+RULE_OPERATION_ID_FORMAT = "semantic.operation_id.format"
 RULE_ENDPOINT_SIGNATURE_UNIQUE = "semantic.endpoint_signature.unique"
+OPERATION_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
 def validate_semantic_rules(operations: list[Operation]) -> list[ValidationDiagnostic]:
@@ -18,6 +22,22 @@ def validate_semantic_rules(operations: list[Operation]) -> list[ValidationDiagn
         by_endpoint_signature[key].append(operation)
 
     diagnostics: list[ValidationDiagnostic] = []
+    for operation in operations:
+        if OPERATION_ID_PATTERN.fullmatch(operation.operation_id):
+            continue
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SEMANTIC_INVALID_OPERATION_ID,
+                severity="error",
+                message=(
+                    f"Invalid operation_id '{operation.operation_id}'. "
+                    "Use lower_snake_case with leading letter."
+                ),
+                location=operation.contract_relpath.as_posix(),
+                rule=RULE_OPERATION_ID_FORMAT,
+            )
+        )
+
     for operation_id in sorted(by_operation_id):
         bucket = by_operation_id[operation_id]
         if len(bucket) < 2:

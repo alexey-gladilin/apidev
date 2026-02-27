@@ -2,7 +2,7 @@
 
 Статус: `Historical`
 
-Снимок состояния: 26 февраля 2026.
+Снимок состояния: 27 февраля 2026.
 
 Этот документ не является нормативным описанием текущего поведения. Он фиксирует состояние проекта на дату снимка, основные gaps и направление развития.
 
@@ -11,7 +11,8 @@
 - installable CLI binary `apidev`;
 - команды `init`, `validate`, `diff`, `gen` и compatibility alias `generate`;
 - базовый pipeline `load -> validate -> plan -> render -> write/check`;
-- deterministic generation базовых generated-артефактов;
+- deterministic generation transport-артефактов (operation registry, routers, request/response/error models);
+- minimal runnable transport layer с explicit handler bridge contract;
 - write-boundary policy внутри configured generated root;
 - drift check через `apidev gen --check`;
 - архитектурные guardrail-тесты;
@@ -20,7 +21,6 @@
 ## Основные gaps на дату снимка
 
 - глубокая семантическая валидация контрактов еще не реализована;
-- transport generation пока ограничен skeleton-уровнем;
 - в generation plan отсутствует полноценный `REMOVE`;
 - compatibility rules и `--fail-on-breaking` находятся в target state;
 - machine-readable diagnostics и richer CLI observability еще не завершены;
@@ -28,9 +28,9 @@
 
 ## Текущая стадия
 
-`MVP Foundation / Architecture Baseline Complete`
+`Transport Generation MVP+ Complete`
 
-Проект уже пригоден как внутренний инструмент для init/validate/diff/gen workflow, но еще не завершил путь до production-grade transport generator полного цикла.
+Проект реализует этапы A+B (contract validation hardening + transport generation MVP+) и готов для следующего шага по safety/drift governance этапа C.
 
 ## Направление развития
 
@@ -43,9 +43,13 @@
 
 ### Этап B — Transport Generation MVP+
 
-- request/response/error model generation;
-- минимально runnable transport layer;
-- стабильный operation registry и handler bridge contract.
+- статус: `Done (27 февраля 2026)`;
+- реализованы request/response/error model generation;
+- реализован минимально runnable transport layer;
+- реализованы стабильный operation registry и handler bridge contract;
+- перед implementation использовать research-артефакт:
+  `openspec/changes/001-contract-validation/artifacts/research/2026-02-27-external-api-codegen-baseline.md`
+  как baseline структуры и style guardrails для шаблонов генерации.
 
 ### Этап C — Diff/Generate Safety & Drift Governance
 
@@ -77,3 +81,4 @@
 - `docs/product/vision.md`
 - `docs/reference/cli-contract.md`
 - `docs/process/testing-strategy.md`
+- `openspec/changes/001-contract-validation/artifacts/research/2026-02-27-external-api-codegen-baseline.md`

@@ -19,3 +19,4 @@ class GenerationPlan:
 class GenerateResult:
     applied_changes: int
     drift_detected: bool = False
+    changed_paths: list[Path] = field(default_factory=list)

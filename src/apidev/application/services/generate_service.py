@@ -36,4 +36,8 @@ class GenerateService:
         for change in changed:
             self.writer.write(plan.generated_root, change.path, change.content)
 
-        return GenerateResult(applied_changes=len(changed), drift_detected=False)
+        return GenerateResult(
+            applied_changes=len(changed),
+            drift_detected=False,
+            changed_paths=[change.path for change in changed],
+        )

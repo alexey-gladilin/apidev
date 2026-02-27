@@ -98,6 +98,31 @@ errors: []
     assert duplicate[0].location == "domain_a/orders/get_item.yaml,domain_b/orders/get_item.yaml"
 
 
+def test_validate_reports_invalid_operation_id_format_from_filename(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/bad-name.yaml",
+        """
+method: GET
+path: /v1/items
+auth: bearer
+summary: Get item
+description: Get item
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    invalid = [diagnostic for diagnostic in result.diagnostics if diagnostic.code == "SEMANTIC_INVALID_OPERATION_ID"]
+    assert len(invalid) == 1
+    assert invalid[0].rule == "semantic.operation_id.format"
+    assert invalid[0].location == "billing/bad-name.yaml"
+
+
 def test_validate_diagnostics_order_is_deterministic(tmp_path: Path) -> None:
     _write_contract(
         tmp_path,
@@ -241,6 +266,34 @@ errors:
     assert any(d.location.endswith("errors[0].http_status") for d in result.diagnostics)
 
 
+def test_validate_rejects_unsafe_path_characters_for_codegen(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/unsafe_path.yaml",
+        """
+method: GET
+path: '/x"+__import__("os").system("echo_INJECTED")+"'
+auth: public
+summary: Unsafe
+description: Unsafe
+response:
+  status: 200
+  body:
+    type: object
+    properties: {}
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.location.endswith(":path") and d.code == "SCHEMA_INVALID_VALUE"
+        for d in result.diagnostics
+    )
+
+
 def test_validate_rejects_invalid_error_code_format_and_duplicates(tmp_path: Path) -> None:
     _write_contract(
         tmp_path,
@@ -338,7 +391,9 @@ errors: []
     result = _run_validate(tmp_path)
 
     assert result.has_errors
-    assert any(d.location.endswith("response.body.properties.status.enum") for d in result.diagnostics)
+    assert any(
+        d.location.endswith("response.body.properties.status.enum") for d in result.diagnostics
+    )
     assert any(
         d.location.endswith("response.body.properties.status.required")
         and d.code == "SCHEMA_INVALID_TYPE"
@@ -393,6 +448,8 @@ errors: []
 
     result = _run_validate(tmp_path)
 
-    duplicates = [d for d in result.diagnostics if d.code == "SEMANTIC_DUPLICATE_ENDPOINT_SIGNATURE"]
+    duplicates = [
+        d for d in result.diagnostics if d.code == "SEMANTIC_DUPLICATE_ENDPOINT_SIGNATURE"
+    ]
     assert len(duplicates) == 1
     assert duplicates[0].rule == "semantic.endpoint_signature.unique"

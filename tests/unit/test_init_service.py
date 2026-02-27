@@ -7,6 +7,16 @@ from apidev.infrastructure.config.toml_loader import default_config_text
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 
 
+def _managed_template_paths(root: Path) -> list[Path]:
+    templates_dir = root / ".apidev" / "templates"
+    return [
+        templates_dir / "generated_operation_map.py.j2",
+        templates_dir / "generated_openapi_docs.py.j2",
+        templates_dir / "generated_router.py.j2",
+        templates_dir / "generated_schema.py.j2",
+    ]
+
+
 def test_init_writes_default_contract_with_property_level_required(tmp_path: Path) -> None:
     service = InitService(
         fs=LocalFileSystem(),
@@ -29,6 +39,19 @@ def test_init_writes_default_contract_with_property_level_required(tmp_path: Pat
     assert second.status == "already_initialized"
 
 
+def test_init_creates_managed_templates(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+
+    service.run(tmp_path)
+
+    for template_path in _managed_template_paths(tmp_path):
+        assert template_path.exists()
+        assert template_path.read_text(encoding="utf-8").strip()
+
+
 def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) -> None:
     service = InitService(
         fs=LocalFileSystem(),
@@ -44,14 +67,14 @@ def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) ->
         service.run(tmp_path, mode="create")
 
 
-def test_init_repair_overwrites_only_invalid_managed_files(tmp_path: Path) -> None:
+def test_init_repair_overwrites_invalid_config_toml(tmp_path: Path) -> None:
     service = InitService(
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
     )
     service.run(tmp_path)
     config_path = tmp_path / ".apidev" / "config.toml"
-    config_path.write_text('version = "999"\n', encoding="utf-8")
+    config_path.write_text("version = \n", encoding="utf-8")
 
     result = service.run(tmp_path, mode="repair")
 
@@ -72,3 +95,77 @@ def test_init_force_overwrites_managed_files(tmp_path: Path) -> None:
 
     assert result.status == "forced"
     assert "method: GET" in contract_path.read_text(encoding="utf-8")
+
+
+def test_init_create_accepts_valid_custom_config(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+[contracts]
+dir = "spec/contracts"
+[generator]
+generated_dir = ".apidev/output/api"
+[templates]
+dir = ".apidev/templates"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = service.run(tmp_path, mode="create")
+
+    assert result.status == "initialized"
+    assert (tmp_path / "spec" / "contracts").exists()
+
+
+def test_init_repair_restores_missing_contract_in_custom_contracts_dir(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+[contracts]
+dir = "spec/contracts"
+[generator]
+generated_dir = ".apidev/output/api"
+[templates]
+dir = ".apidev/templates"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    custom_contract = tmp_path / "spec" / "contracts" / "system" / "health.yaml"
+    custom_contract.parent.mkdir(parents=True, exist_ok=True)
+    custom_contract.write_text("method: GET\npath: /v1/health\n", encoding="utf-8")
+    custom_contract.unlink()
+
+    result = service.run(tmp_path, mode="repair")
+
+    assert result.status == "repaired"
+    assert custom_contract.exists()
+    assert "method: GET" in custom_contract.read_text(encoding="utf-8")
+
+
+def test_init_repair_restores_missing_managed_template(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    template_to_remove = tmp_path / ".apidev" / "templates" / "generated_router.py.j2"
+    template_to_remove.unlink()
+
+    result = service.run(tmp_path, mode="repair")
+
+    assert result.status == "repaired"
+    assert template_to_remove.exists()
+    assert template_to_remove.read_text(encoding="utf-8").strip()

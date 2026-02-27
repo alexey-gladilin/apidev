@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel
 
 
@@ -7,6 +8,7 @@ class ContractsConfig(BaseModel):
 
 class GeneratorConfig(BaseModel):
     generated_dir: str = ".apidev/output/api"
+    postprocess: Literal["auto", "none", "ruff", "black"] = "auto"
 
 
 class TemplatesConfig(BaseModel):

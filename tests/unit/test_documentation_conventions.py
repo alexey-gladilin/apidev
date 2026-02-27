@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 DOC_FILES = [
@@ -42,7 +41,9 @@ GENERATE_ALIAS_ALLOWED = {
     "openspec/project.md",
 }
 
-DOC_PATH_PATTERN = re.compile(r"(?:^|[`( ])((?:docs|openspec)/[A-Za-z0-9_./-]+\.md|CONTRIBUTING\.md)(?:[` )]|$)")
+DOC_PATH_PATTERN = re.compile(
+    r"(?:^|[`( ])((?:docs|openspec)/[A-Za-z0-9_./-]+\.md|CONTRIBUTING\.md)(?:[` )]|$)"
+)
 
 
 def _repo_rel(path: Path) -> str:
