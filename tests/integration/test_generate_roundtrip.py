@@ -1,9 +1,11 @@
 from pathlib import Path
+from typing import Any, cast
 
 from apidev.application.services.generate_service import GenerateService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
 from apidev.infrastructure.output.writer import SafeWriter
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 
@@ -41,6 +43,7 @@ errors: []
         renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
         fs=fs,
         writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
     )
 
     first = service.run(tmp_path)
@@ -97,6 +100,7 @@ errors:
         renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
         fs=fs,
         writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
     )
 
     result = service.run(tmp_path)
@@ -163,6 +167,7 @@ errors: []
         renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
         fs=fs,
         writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
     )
 
     _ = service.run(tmp_path)
@@ -229,6 +234,7 @@ errors: []
         renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
         fs=fs,
         writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
     )
 
     _ = service.run(tmp_path)
@@ -300,6 +306,7 @@ errors: []
         renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
         fs=fs,
         writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
     )
 
     _ = service.run(tmp_path)
@@ -329,3 +336,82 @@ errors: []
 
     drift = service.run(tmp_path, check=True)
     assert drift.drift_detected
+
+
+def test_generate_emits_schema_example_and_openapi_example_metadata(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    example:
+      invoice_id: inv-001
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    body:
+      type: object
+      example:
+        code: INVOICE_NOT_FOUND
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path)
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    response_model = generated_root / "transport" / "models" / "billing_get_invoice_response.py"
+    operation_map = generated_root / "operation_map.py"
+    openapi_docs = generated_root / "openapi_docs.py"
+
+    response_source = response_model.read_text(encoding="utf-8")
+    assert 'SCHEMA_EXAMPLE = {"invoice_id": "inv-001"}' in response_source
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.read_text(encoding="utf-8"), {}, operation_map_namespace)
+    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+
+    openapi_source = openapi_docs.read_text(encoding="utf-8")
+    openapi_source = openapi_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = build_openapi_paths()
+
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert get_operation["responses"]["200"]["content"]["application/json"]["example"] == {
+        "invoice_id": "inv-001"
+    }
+    assert get_operation["x-apidev-errors"][0]["example"] == {"code": "INVOICE_NOT_FOUND"}

@@ -5,6 +5,7 @@ from apidev.application.services.diff_service import DiffService
 from apidev.core.ports.config_loader import ConfigLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
+from apidev.core.ports.python_postprocessor import PythonPostprocessorPort
 from apidev.core.ports.template_engine import TemplateEnginePort
 from apidev.core.ports.writer import WriterPort
 
@@ -17,12 +18,14 @@ class GenerateService:
         renderer: TemplateEnginePort,
         fs: FileSystemPort,
         writer: WriterPort,
+        postprocessor: PythonPostprocessorPort,
     ):
         self.diff_service = DiffService(
             config_loader=config_loader,
             loader=loader,
             renderer=renderer,
             fs=fs,
+            postprocessor=postprocessor,
         )
         self.writer = writer
 

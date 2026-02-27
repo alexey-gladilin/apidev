@@ -10,11 +10,32 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
         entry = OPERATION_MAP[operation_id]
         path = str(entry["path"])
         method = str(entry["method"]).lower()
+        response_schema = entry.get("response_schema", {})
+        response_example = entry.get("response_example")
         operation = {
             "operationId": operation_id,
             "summary": str(entry.get("summary", "")),
             "description": str(entry.get("description", "")),
-            "responses": {"200": {"description": "Success"}},
+            "responses": {
+                "200": {
+                    "description": "Success",
+                    "content": {
+                        "application/json": {
+                            "schema": response_schema,
+                            "example": response_example,
+                        }
+                    },
+                }
+            },
+            "x-apidev-errors": [
+                {
+                    "code": str(error.get("code", "")),
+                    "http_status": int(error.get("http_status", 500)),
+                    "schema": error.get("body", {}),
+                    "example": error.get("example"),
+                }
+                for error in entry.get("error_schemas", [])
+            ],
         }
         methods = paths.setdefault(path, {})
         methods[method] = operation

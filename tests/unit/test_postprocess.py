@@ -16,9 +16,7 @@ def test_postprocess_none_mode_skips(tmp_path: Path) -> None:
     assert result.status == "skipped"
 
 
-def test_postprocess_auto_skips_when_no_formatter_found(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_postprocess_auto_skips_when_no_formatter_found(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr("apidev.infrastructure.output.postprocess.shutil.which", lambda _: None)
 
     result = run_python_postprocess(
@@ -56,9 +54,7 @@ def test_postprocess_auto_prefers_ruff(tmp_path: Path, monkeypatch) -> None:
     assert captured and captured[0][:2] == ["ruff", "format"]
 
 
-def test_postprocess_explicit_formatter_fails_when_missing(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_postprocess_explicit_formatter_fails_when_missing(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setattr("apidev.infrastructure.output.postprocess.shutil.which", lambda _: None)
 
     result = run_python_postprocess(
@@ -94,7 +90,6 @@ def test_format_python_content_auto_formats_with_ruff(tmp_path: Path, monkeypatc
         return None
 
     def _run(cmd: list[str], **kwargs: object) -> SimpleNamespace:
-        source = str(kwargs["input"])
         assert cmd[:2] == ["ruff", "format"]
         return SimpleNamespace(returncode=0, stdout="x = 1\n", stderr="")
 
