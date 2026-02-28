@@ -16,6 +16,11 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
             "operationId": operation_id,
             "summary": str(entry.get("summary", "")),
             "description": str(entry.get("description", "")),
+            "deprecated": str(entry.get("deprecation_status", "active")) == "deprecated",
+            "x-apidev-deprecation": {
+                "status": str(entry.get("deprecation_status", "active")),
+                "deprecated_since_release": entry.get("deprecated_since_release"),
+            },
             "responses": {
                 "200": {
                     "description": "Success",

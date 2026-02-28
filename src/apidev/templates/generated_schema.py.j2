@@ -12,6 +12,8 @@ class {{ model.class_name }}:
     http_path: str = {{ model.path | tojson }}
     summary: str = {{ model.summary | tojson }}
     description: str = {{ model.description | tojson }}
+    deprecation_status: str = {{ model.deprecation_status | tojson }}
+    deprecated_since_release: int | None = {{ model.deprecated_since_release_literal }}
     contract_fingerprint: str = {{ model.contract_fingerprint | tojson }}
     payload: dict[str, Any] | None = None
 

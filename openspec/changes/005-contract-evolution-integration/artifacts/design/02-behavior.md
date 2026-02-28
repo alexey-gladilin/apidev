@@ -31,9 +31,10 @@
 
 ## Baseline Snapshot Contract
 - Baseline для compatibility classification резолвится через `baseline_ref` из VCS/CI (team-wide source of truth).
-- Локальный `.apidev/releases/<release_number>/api-snapshot.json` допускается как cache, но не является единственным источником истины.
+- Локальный cache baseline snapshot хранится по пути `.apidev/cache/baseline/<baseline_ref>.json`, где `<baseline_ref>` нормализуется для имени файла (символы вне `[A-Za-z0-9._-]` заменяются на `_`).
 - Snapshot содержит нормализованную API-модель (operations, request/response schemas, errors, deprecation metadata).
 - В `diff`/`gen --check` классификация выполняется только через сравнение `current_normalized_model` с baseline snapshot.
+- Загрузка baseline выполняется по стратегии `cache -> VCS`: при отсутствии cache или при невалидном cache payload (включая corrupted JSON) выполняется fallback к чтению baseline из `git show`/`git ls-tree`.
 - При отсутствии baseline используется явная диагностика `baseline-missing`; при невалидном формате `baseline-invalid`.
 - В `strict` policy отсутствие или невалидность baseline приводит к non-zero exit code.
 

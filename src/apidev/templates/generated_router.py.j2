@@ -27,6 +27,8 @@ ROUTE_METADATA = {
     "path": {{ operation.contract.path | tojson }},
     "summary": {{ operation.contract.summary | tojson }},
     "description": {{ operation.contract.description | tojson }},
+    "deprecation_status": {{ bridge.deprecation_status | tojson }},
+    "deprecated_since_release": {{ bridge.deprecated_since_release_literal }},
     "contract_fingerprint": {{ bridge.contract_fingerprint | tojson }},
     "request_model": {{ bridge.request_class | tojson }},
     "response_model": {{ bridge.response_class | tojson }},

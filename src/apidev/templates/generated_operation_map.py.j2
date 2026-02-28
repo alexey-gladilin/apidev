@@ -7,6 +7,8 @@ OPERATION_MAP = {
         "path": {{ entry.path | tojson }},
         "summary": {{ entry.summary | tojson }},
         "description": {{ entry.description | tojson }},
+        "deprecation_status": {{ entry.deprecation_status | tojson }},
+        "deprecated_since_release": {{ entry.deprecated_since_release_literal }},
         "contract_fingerprint": {{ entry.contract_fingerprint | tojson }},
         "response_schema": {{ entry.response_schema_literal }},
         "response_example": {{ entry.response_example_literal }},

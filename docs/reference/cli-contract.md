@@ -74,6 +74,22 @@ Compatibility alias:
   - successful apply / no changes -> `no-drift`, exit `0`;
   - `error` -> exit `1`.
 
+## Контракт compatibility policy и baseline
+
+- `--compatibility-policy` поддерживает значения `warn` (по умолчанию) и `strict`.
+- В `warn` команда выводит compatibility diagnostics, но не фейлит запуск только из-за policy.
+- В `strict` команда завершает выполнение с `exit 1`, если итоговая compatibility-категория `breaking`.
+- `--baseline-ref` (git tag/commit) переопределяет `baseline_ref` из release-state.
+- При отсутствии baseline или невалидном baseline используются diagnostics `baseline-missing` и `baseline-invalid`.
+- При применении baseline выводится diagnostic `baseline-ref-applied` с деталями источника (`cli` или `release-state`).
+
+## Контракт deprecation semantics
+
+- APIDev использует lifecycle `active -> deprecated -> removed`.
+- Для `diff` и `gen --check` удаление operation до конца grace window классифицируется как `deprecation-window-violation` (breaking).
+- Если grace window соблюдено, выводится `deprecation-window-satisfied` (non-breaking).
+- Статус deprecation должен быть отражен в generated metadata/artifacts.
+
 ## Минимальные тесты для любого CLI-изменения
 
 - тест на root help;

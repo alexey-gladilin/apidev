@@ -27,6 +27,44 @@
 - `.apidev/contracts/system/health.yaml`
 - `.apidev/contracts/billing/create_invoice.yaml`
 
+## Конфигурация Evolution и release-state
+
+Для compatibility/deprecation policy используется `.apidev/config.toml` (секция `[evolution]`) и release-state файл.
+
+Поля `[evolution]`:
+
+- `compatibility_policy`: `warn | strict` (по умолчанию `warn`).
+- `grace_period_releases`: `integer >= 1` (по умолчанию `2`).
+- `release_state_file`: путь к release-state JSON (по умолчанию `.apidev/release-state.json`, не пустая строка).
+
+Формат release-state (`.apidev/release-state.json` по умолчанию):
+
+- JSON-объект.
+- Обязательные поля:
+  - `release_number`: `integer >= 1`.
+  - `baseline_ref`: непустая строка (git tag или git commit).
+- Опциональные поля:
+  - `released_at`: `string`.
+  - `git_commit`: `string`.
+  - `tag`: `string`.
+  - `deprecated_operations`: `object`, где ключ — `operation_id`, значение — `deprecated_since_release_number (integer >= 1)`.
+
+При невалидном `config.toml` или `release-state.json` команда должна возвращать явную ошибку с указанием некорректного поля.
+
+Семантика baseline и policy:
+
+- Источник `baseline_ref` по умолчанию — `release-state.json`.
+- CLI override `--baseline-ref` имеет приоритет над `release-state baseline_ref`.
+- Compatibility classification в `diff` и `gen --check` выполняется только при валидном baseline snapshot.
+- Для невалидного/отсутствующего baseline используются diagnostics `baseline-invalid`/`baseline-missing`.
+
+Семантика deprecation lifecycle:
+
+- `deprecated_operations` фиксирует момент депрекации operation в релизах.
+- При удалении operation до истечения `grace_period_releases` формируется `deprecation-window-violation` (breaking).
+- При удалении после окна формируется `deprecation-window-satisfied` (non-breaking).
+- Для operation, отмеченных в `deprecated_operations`, generated metadata/artifacts должны отражать статус `deprecated`; иначе статус `active`.
+
 ## Минимальный валидный контракт
 
 ```yaml

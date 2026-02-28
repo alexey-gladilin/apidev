@@ -68,6 +68,8 @@ errors:
     assert '"path": "/v1/invoices/{invoice_id}"' in operation_map_source
     assert '"summary": "Get invoice"' in operation_map_source
     assert '"description": "Get invoice details"' in operation_map_source
+    assert '"deprecation_status": "active"' in operation_map_source
+    assert '"deprecated_since_release": None' in operation_map_source
     assert '"contract_fingerprint": "' in operation_map_source
     assert '"router_module": "routers.billing_get_invoice"' in operation_map_source
     assert '"callable": "routers.billing_get_invoice.route"' in operation_map_source
@@ -85,10 +87,15 @@ errors:
     )
     assert '"summary": "Get invoice"' in router_source
     assert '"description": "Get invoice details"' in router_source
+    assert '"deprecation_status": "active"' in router_source
+    assert '"deprecated_since_release": None' in router_source
     assert '"contract_fingerprint": "' in router_source
     assert "def build_openapi_paths()" in openapi_docs_source
     assert '"summary": str(entry.get("summary", ""))' in openapi_docs_source
     assert '"description": str(entry.get("description", ""))' in openapi_docs_source
+    assert '"deprecated": ' in openapi_docs_source
+    assert 'entry.get("deprecation_status", "active")' in openapi_docs_source
+    assert '"x-apidev-deprecation": {' in openapi_docs_source
 
 
 def test_generate_rejects_unsafe_contract_path_for_codegen(tmp_path: Path) -> None:

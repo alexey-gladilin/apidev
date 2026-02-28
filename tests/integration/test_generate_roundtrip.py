@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Any, cast
 
@@ -421,3 +422,618 @@ errors:
         "invoice_id": "inv-001"
     }
     assert get_operation["x-apidev-errors"][0]["example"] == {"code": "INVOICE_NOT_FOUND"}
+
+
+def test_generate_emits_deprecation_status_in_metadata_and_templates(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "release-state.json").write_text(
+        json.dumps(
+            {
+                "release_number": 3,
+                "baseline_ref": "v1.2.0",
+                "deprecated_operations": {"billing_get_invoice": 2},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path)
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
+    router_source = (generated_root / "routers" / "billing_get_invoice.py").read_text(
+        encoding="utf-8"
+    )
+    response_source = (
+        generated_root / "transport" / "models" / "billing_get_invoice_response.py"
+    ).read_text(encoding="utf-8")
+    openapi_docs = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+
+    assert '"deprecation_status": "deprecated"' in operation_map_source
+    assert '"deprecated_since_release": 2' in operation_map_source
+    assert '"deprecation_status": "deprecated"' in router_source
+    assert '"deprecated_since_release": 2' in router_source
+    assert 'deprecation_status: str = "deprecated"' in response_source
+    assert "deprecated_since_release: int | None = 2" in response_source
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+
+    openapi_source = openapi_docs.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = build_openapi_paths()
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+
+    assert get_operation["deprecated"] is True
+    assert get_operation["x-apidev-deprecation"] == {
+        "status": "deprecated",
+        "deprecated_since_release": 2,
+    }
+
+
+def test_generate_continues_without_optional_dbspec_hints(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    result = service.run(tmp_path)
+    assert result.applied_changes >= 1
+
+    response_model = (
+        tmp_path
+        / ".apidev"
+        / "output"
+        / "api"
+        / "transport"
+        / "models"
+        / "billing_get_invoice_response.py"
+    )
+    assert response_model.exists()
+
+
+def test_generate_continues_with_invalid_json_optional_hints(tmp_path: Path) -> None:
+    """Invalid JSON in apidev-hints.json must not block workflow; hints are ignored."""
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".dbspec").mkdir(parents=True)
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
+        "{ invalid json }",
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    result = service.run(tmp_path)
+    assert result.applied_changes >= 1
+    response_model = (
+        tmp_path / ".apidev" / "output" / "api" / "transport" / "models"
+    ) / "billing_get_invoice_response.py"
+    assert response_model.exists()
+    assert '"invoice_id": {"type": "string"}' in response_model.read_text(encoding="utf-8")
+
+
+def test_generate_continues_with_empty_operations_hints(tmp_path: Path) -> None:
+    """Empty operations object in hints must not alter output; same as no hints."""
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".dbspec").mkdir(parents=True)
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text('{"operations":{}}', encoding="utf-8")
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    result = service.run(tmp_path)
+    assert result.applied_changes >= 1
+    response_with_empty = (
+        tmp_path / ".apidev" / "output" / "api" / "transport" / "models"
+    ) / "billing_get_invoice_response.py"
+    content_with_empty = response_with_empty.read_text(encoding="utf-8")
+
+    (tmp_path / ".dbspec" / "apidev-hints.json").unlink()
+    service.run(tmp_path)
+    content_without = response_with_empty.read_text(encoding="utf-8")
+    assert content_with_empty == content_without
+
+
+def test_generate_ignores_malformed_optional_dbspec_error_http_status_hint(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    body:
+      type: object
+      properties:
+        code:
+          type: string
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".dbspec").mkdir(parents=True)
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
+        json.dumps(
+            {
+                "operations": {
+                    "billing_get_invoice": {
+                        "errors": [
+                            {
+                                "code": "INVOICE_NOT_FOUND",
+                                "http_status": "not-an-int",
+                                "body": {
+                                    "properties": {
+                                        "hint_field": {"type": "integer"},
+                                    }
+                                },
+                            }
+                        ]
+                    }
+                }
+            },
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    result = service.run(tmp_path)
+    assert result.applied_changes >= 1
+
+
+def test_generate_continues_with_oversized_optional_dbspec_hints(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".dbspec").mkdir(parents=True)
+    oversized_hints = (
+        '{"operations":{"billing_get_invoice":{"response_body":{"properties":{"db_only":{"type":"integer"}}}}},'
+        '"padding":"'
+        + ("x" * 1_100_000)
+        + '"}'
+    )
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(oversized_hints, encoding="utf-8")
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    result = service.run(tmp_path)
+    assert result.applied_changes >= 1
+
+    response_model = (
+        tmp_path
+        / ".apidev"
+        / "output"
+        / "api"
+        / "transport"
+        / "models"
+        / "billing_get_invoice_response.py"
+    )
+    response_source = response_model.read_text(encoding="utf-8")
+    assert '"invoice_id": {"type": "string"}' in response_source
+    assert '"db_only"' not in response_source
+
+
+def test_generate_applies_deterministic_dbspec_merge_with_contract_priority(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+        nullable: false
+        description: Invoice identifier
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    (tmp_path / ".dbspec").mkdir(parents=True)
+    hints_a = {
+        "operations": {
+            "billing_get_invoice": {
+                "response_body": {
+                    "properties": {
+                        "db_only": {"type": "integer"},
+                        "invoice_id": {
+                            "nullable": True,
+                            "type": "integer",
+                        },
+                    },
+                }
+            }
+        }
+    }
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
+        json.dumps(hints_a, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    first = service.run(tmp_path)
+    assert first.applied_changes >= 1
+
+    response_model = (
+        tmp_path
+        / ".apidev"
+        / "output"
+        / "api"
+        / "transport"
+        / "models"
+        / "billing_get_invoice_response.py"
+    )
+    response_source = response_model.read_text(encoding="utf-8")
+    assert '"db_only": {"type": "integer"}' in response_source
+    assert '"nullable": False' in response_source
+    assert '"type": "string"' in response_source
+
+    hints_b = {
+        "operations": {
+            "billing_get_invoice": {
+                "response_body": {
+                    "properties": {
+                        "invoice_id": {"type": "integer", "nullable": True},
+                        "db_only": {"type": "integer"},
+                    }
+                }
+            }
+        }
+    }
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
+        json.dumps(hints_b, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    check_result = service.run(tmp_path, check=True)
+    assert check_result.drift_status == "no-drift"
+
+
+def test_generate_check_is_stable_for_reordered_optional_hint_lists(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".dbspec").mkdir(parents=True)
+    hints_a = {
+        "operations": {
+            "billing_get_invoice": {
+                "response_body": {
+                    "properties": {"invoice_id": {"enum": ["PAID", "DRAFT", "VOID"]}}
+                }
+            }
+        }
+    }
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
+        json.dumps(hints_a, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+    first = service.run(tmp_path)
+    assert first.applied_changes >= 1
+
+    hints_b = {
+        "operations": {
+            "billing_get_invoice": {
+                "response_body": {
+                    "properties": {"invoice_id": {"enum": ["VOID", "PAID", "DRAFT"]}}
+                }
+            }
+        }
+    }
+    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
+        json.dumps(hints_b, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
+
+    check_result = service.run(tmp_path, check=True)
+    assert check_result.drift_status == "no-drift"
