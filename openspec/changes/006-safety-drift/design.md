@@ -14,12 +14,17 @@ Roadmap Horizon 1 фиксирует обязательность закрыти
 - `REMOVE` проектируется как first-class change type generation-плана с read-only preview в `diff` и `gen --check`.
 - В apply-режиме `apidev gen` удаление допускается только внутри generated root и проходит через safety guard.
 - Drift-status/exit semantics сохраняют текущий CLI-контракт, но расширяются на remove-only кейсы.
+- Канонический каталог diagnostics фиксируется как `remove-conflict` и `remove-boundary-violation` с обязательной схемой полей `code`, `location`, `detail`.
 
 ## Риски / Компромиссы
 - Риск: ложные удаления при некорректном определении stale artifact.
   - Митигация: детерминированное построение expected artifact set и strict boundary checks.
 - Риск: расхождение diagnostics между сервисным и CLI-слоем.
   - Митигация: фиксированный mapping diagnostic codes и единый regression-набор.
+
+## Предпосылки / зависимости implement-фазы
+- CI и локальные проверки опираются на фиксированный machine-readable формат diagnostics (`code`, `location`, `detail`) без неявных преобразований.
+- Транзакционный rollback apply находится вне scope данного change-пакета; в ошибочных remove-сценариях применяется safe-fail модель с `drift-status: error` и последующим повторным запуском.
 
 ## Linked Artifacts
 - Research: [artifacts/research/2026-02-28-safety-drift-remove-baseline.md](./artifacts/research/2026-02-28-safety-drift-remove-baseline.md)

@@ -24,9 +24,9 @@
 - Ошибка apply возвращает `drift-status: error`.
 
 ## 5. Conflict и diagnostic сценарии
-- stale artifact отсутствует к моменту apply: диагностируется как remove-conflict, classified как `error`.
-- попытка remove вне generated root: диагностируется как boundary-violation, classified как `error`.
-- diagnostics содержат stable code, location (path), detail (причина/контекст).
+- stale artifact отсутствует к моменту apply: диагностируется кодом `remove-conflict`, classified как `error`.
+- попытка remove вне generated root: диагностируется кодом `remove-boundary-violation`, classified как `error`.
+- diagnostics содержат фиксированные machine-readable поля `code`, `location`, `detail`.
 
 ## 6. Трассировка на requirements
 - `REQ-1`: секции 1, 6

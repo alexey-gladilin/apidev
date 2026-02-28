@@ -22,6 +22,13 @@
   - `docs/reference/cli-contract.md`, `docs/process/testing-strategy.md`
 - Breaking: на proposal-этапе нет runtime-breaking изменений; пакет описывает проектирование и план implement-фазы.
 
+## Предпосылки и зависимости
+- Канонический каталог remove diagnostics фиксирован в рамках change-пакета: `remove-conflict`, `remove-boundary-violation`.
+- Минимальная machine-readable схема diagnostics фиксирована: `code`, `location`, `detail`.
+- CI/automation предполагает парсинг diagnostics по фиксированным полям и кодам без эвристик.
+- Транзакционный rollback apply не является обязательной зависимостью текущего scope; стратегия отказа — deterministic safe-fail и повторный запуск после исправления причины.
+- Документационные quality gates (`make docs-check`) и strict OpenSpec validation являются обязательными зависимостями readiness.
+
 ## Linked Artifacts
 - Research baseline: [artifacts/research/2026-02-28-safety-drift-remove-baseline.md](./artifacts/research/2026-02-28-safety-drift-remove-baseline.md)
 - Design package: [artifacts/design/README.md](./artifacts/design/README.md)

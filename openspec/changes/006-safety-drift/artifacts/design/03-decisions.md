@@ -16,9 +16,14 @@
 - Компромисс: часть конфликтов (например, path traversal) становится hard-fail.
 
 ## Decision 4: Deterministic diagnostics для remove-case
-- Решение: фиксировать machine-readable коды remove-конфликтов и boundary-нарушений.
+- Решение: фиксировать machine-readable коды `remove-conflict` и `remove-boundary-violation` и обязательную схему diagnostics (`code`, `location`, `detail`).
 - Причина: CI triage и воспроизводимость сигналов.
 - Компромисс: расширение diagnostic контракта в коде и документации.
+
+## Decision 5: Non-transactional failure model для apply REMOVE
+- Решение: не вводить требование transactional rollback в scope данного change; использовать deterministic safe-fail (`drift-status: error`) и recovery через повторный запуск после устранения причины.
+- Причина: снижение скрытых зависимостей и недопущение неявных инфраструктурных требований.
+- Компромисс: частично примененный mixed-план требует явного повторного запуска после исправления ошибки.
 
 ## Альтернативы, которые рассмотрены
 - Не включать `REMOVE` в drift и оставить только apply-семантику.

@@ -42,6 +42,15 @@
 ### Requirement: Deterministic ordering и diagnostics для REMOVE
 Система SHALL обеспечивать детерминированный порядок `REMOVE`-операций и воспроизводимые diagnostics.
 
+Канонический каталог diagnostic codes для remove-сценариев SHALL быть фиксирован:
+- `remove-conflict` — stale artifact отсутствует к моменту apply;
+- `remove-boundary-violation` — путь remove-операции выходит за `generated root`.
+
+Минимальный machine-readable формат diagnostics SHALL быть фиксирован для обоих кодов:
+- `code` (string, из канонического каталога);
+- `location` (string, filesystem path или logical location);
+- `detail` (string, стабильное человеко-читаемое пояснение).
+
 #### Scenario: Повторный diff даёт одинаковый REMOVE-план
 - **WHEN** входные контракты и состояние generated root не изменяются
 - **THEN** `apidev diff` SHALL выдавать эквивалентный список `REMOVE` по составу и порядку
@@ -49,5 +58,5 @@
 
 #### Scenario: Conflict diagnostics фиксированы для remove-case
 - **WHEN** stale artifact уже отсутствует к моменту apply или нарушает boundary-policy
-- **THEN** система SHALL публиковать явный diagnostic code для remove-конфликта
-- **AND** код и формат diagnostics SHALL быть машинно-парсируемыми и пригодными для CI triage
+- **THEN** система SHALL публиковать `remove-conflict` или `remove-boundary-violation` из канонического каталога
+- **AND** diagnostics SHALL содержать поля `code`, `location`, `detail` в machine-readable формате, пригодном для CI triage

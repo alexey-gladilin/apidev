@@ -15,7 +15,7 @@
 
 ## Риски и rollback
 - Риск: удаление несуществующего файла приводит к нестабильному результату.
-- Rollback: safe-fail с `error` статусом и откатом частичных изменений в рамках транзакции apply (если поддерживается).
+- Rollback/Recovery: транзакционный apply не является предпосылкой в текущем scope; при ошибке используется deterministic safe-fail (`drift-status: error`) с machine-readable diagnostics. Восстановление выполняется повторным запуском после устранения причины ошибки.
 
 ## Quality Gate
 - `gen` корректно применяет remove-only и mixed-планы.
