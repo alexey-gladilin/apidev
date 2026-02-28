@@ -67,7 +67,15 @@ def _run_generate(project_dir: Path) -> None:
     _ = service.run(project_dir)
 
 
-def _write_project_config_with_evolution(project_dir: Path, grace_period_releases: int = 2) -> None:
+def _write_project_config_with_evolution(
+    project_dir: Path,
+    grace_period_releases: int = 2,
+    compatibility_policy: str | None = None,
+) -> None:
+    compatibility_policy_line = ""
+    if compatibility_policy is not None:
+        compatibility_policy_line = f'compatibility_policy = "{compatibility_policy}"\n'
+
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         f"""
@@ -83,7 +91,7 @@ generated_dir = ".apidev/output/api"
 dir = ".apidev/templates"
 
 [evolution]
-grace_period_releases = {grace_period_releases}
+{compatibility_policy_line}grace_period_releases = {grace_period_releases}
 release_state_file = ".apidev/release-state.json"
 """.strip(),
         encoding="utf-8",
@@ -169,6 +177,70 @@ def test_diff_strict_policy_fails_on_breaking_compatibility(tmp_path: Path) -> N
 
     assert result.exit_code == 1
     assert "Compatibility policy gate failed" in result.output
+
+
+def test_diff_uses_config_compatibility_policy_when_cli_omitted(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path, compatibility_policy="strict")
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    result = runner.invoke(app, ["diff", "--project-dir", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "Compatibility policy: strict" in result.output
+    assert "Compatibility policy gate failed" in result.output
+
+
+def test_diff_cli_compatibility_policy_overrides_config_value(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path, compatibility_policy="strict")
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    result = runner.invoke(
+        app,
+        [
+            "diff",
+            "--project-dir",
+            str(tmp_path),
+            "--compatibility-policy",
+            "warn",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert "Compatibility policy: warn" in result.output
+    assert "Compatibility policy gate failed" not in result.output
+
+
+def test_gen_check_uses_config_compatibility_policy_when_cli_omitted(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path, compatibility_policy="strict")
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path), "--check"])
+
+    assert result.exit_code == 1
+    assert "Compatibility policy: strict" in result.output
+    assert "Compatibility policy gate failed" in result.output
+
+
+def test_gen_check_cli_compatibility_policy_overrides_config_value(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path, compatibility_policy="strict")
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "--project-dir",
+            str(tmp_path),
+            "--check",
+            "--compatibility-policy",
+            "warn",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Compatibility policy: warn" in result.output
+    assert "Compatibility policy gate failed" not in result.output
+    assert "Drift detected (drift-status: drift)" in result.output
 
 
 def test_gen_check_warn_policy_keeps_existing_drift_exit_semantics(tmp_path: Path) -> None:
