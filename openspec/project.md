@@ -4,7 +4,6 @@
 `apidev` is a contract-driven API development tool in the dev-tools family.
 Its purpose is to reduce repetitive FastAPI scaffolding while keeping business logic manual and maintainable.
 The tool takes declarative API contracts (YAML) and generates deterministic, safe-to-regenerate code for transport layers (routes/schemas/errors/OpenAPI metadata).
-It is designed to work standalone and optionally integrate with `dbspec` for type/nullability/reference hints.
 
 ## Tech Stack
 - Python 3.11+ for CLI/runtime tooling
@@ -14,7 +13,6 @@ It is designed to work standalone and optionally integrate with `dbspec` for typ
 - YAML contracts as the source format (`.apidev/contracts/**/*.yaml`)
 - TOML config (`.apidev/config.toml`)
 - OpenAPI as generated API documentation output
-- Optional integration with `dbspec` as read-only source of DB metadata
 
 ## Project Conventions
 
@@ -27,7 +25,6 @@ It is designed to work standalone and optionally integrate with `dbspec` for typ
   - `docs/reference/glossary.md`
 
 ### Architecture Patterns
-- Onion-style layering across dev-tools: `uidev -> apidev -> dbspec`.
 - Detailed architecture baseline and rules live in:
   - `docs/architecture/architecture-overview.md`
   - `docs/architecture/architecture-rules.md`
@@ -55,8 +52,6 @@ Each contract describes:
 
 Ownership model:
 - `apidev` owns HTTP/API contract artifacts.
-- `dbspec` owns DB schema artifacts.
-- Integration is optional and read-only from lower layer to upper layer.
 
 ## Important Constraints
 - Regeneration safety is critical: overwrite only generated files; never overwrite manual files.
@@ -70,5 +65,4 @@ Ownership model:
 ## External Dependencies
 - FastAPI runtime in target applications
 - OpenAPI consumers (Swagger UI, client generators, docs pipelines)
-- Optional `dbspec` project data for schema-derived hints (types, nullability, refs, enums)
 - Git for versioning contracts/templates/generated artifacts

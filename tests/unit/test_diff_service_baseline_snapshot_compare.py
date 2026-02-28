@@ -266,66 +266,6 @@ errors: []
     assert "snapshot_source=vcs" in baseline_applied[0].detail
 
 
-def test_diff_service_dbspec_hints_do_not_cause_false_response_field_type_changed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Regression: compatibility uses contract-only model; dbspec hints must not cause false
-    response-field-type-changed when baseline has identical contract."""
-    _write_project_config_with_evolution(tmp_path)
-    contract_body = """
-method: GET
-path: /v1/invoices/{invoice_id}
-auth: bearer
-summary: Get invoice
-description: Get invoice details
-response:
-  status: 200
-  body:
-    type: object
-errors: []
-"""
-    _write_contract(tmp_path, "billing/get_invoice.yaml", contract_body)
-    _write_release_state(tmp_path, baseline_ref="v1.0.0")
-
-    # Add dbspec hints that extend response_body (would change enriched fingerprint).
-    (tmp_path / ".dbspec").mkdir(parents=True)
-    (tmp_path / ".dbspec" / "apidev-hints.json").write_text(
-        """
-{
-  "operations": {
-    "billing_get_invoice": {
-      "response_body": {
-        "type": "object",
-        "properties": {
-          "invoice_id": {"type": "string"},
-          "extra_from_hint": {"type": "string"}
-        }
-      }
-    }
-  }
-}
-""".strip(),
-        encoding="utf-8",
-    )
-
-    service = _create_diff_service()
-
-    def _fake_git_command(project_dir: Path, args: tuple[str, ...]) -> str | None:
-        if args[0] == "ls-tree":
-            return ".apidev/contracts/billing/get_invoice.yaml\n"
-        if args[0] == "show":
-            return contract_body.strip()
-        return None
-
-    monkeypatch.setattr(service, "_run_git_command", _fake_git_command)
-    plan = service.run(tmp_path, compatibility_policy="strict")
-    codes = [item.code for item in plan.compatibility.diagnostics]
-
-    assert "response-field-type-changed" not in codes
-    assert "baseline-invalid" not in codes
-    assert plan.policy_blocked is False
-
-
 def _write_oversized_baseline_cache(
     project_dir: Path, baseline_ref: str, max_size_bytes: int = 5_000_000
 ) -> None:

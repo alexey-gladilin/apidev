@@ -1,13 +1,11 @@
 # Change: Этап D - Contract Evolution & Integrations
 
 ## Почему
-После завершения этапа B проекту нужен формальный переход к управляемой эволюции контрактов: классификация совместимости изменений, формальная deprecation policy и опциональная интеграция с `dbspec`.
 Снимок в `docs/roadmap.md` (27 февраля 2026) фиксирует эти возможности как целевое состояние этапа D.
 
 ## Что изменится
 - Добавляется capability `contract-evolution-integration` с нормативными требованиями для этапа D.
 - Формализуется compatibility classification для `apidev diff` и `apidev gen --check` как основа breaking-aware governance.
-- Формализуется optional read-only integration с `dbspec` для schema hints без обязательной зависимости.
 - Формализуется deprecation policy (маркировка, переходный период, контроль удаления).
 - Определяются артефакты планирования и quality gates для отдельной implement-фазы.
 

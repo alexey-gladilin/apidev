@@ -9,9 +9,6 @@
 - CLI вывод должен содержать агрегированную summary по категориям и детализированные diagnostics по операциям/полям.
 - Для drift-семантики используются нормализованные статусы `drift|no-drift|error` из `docs/reference/cli-contract.md`.
 
-## Optional DBSpec Integration
-- `dbspec` hints используются только как опциональный enrich-layer для type/nullability/reference metadata.
-- При отсутствии или недоступности `dbspec` pipeline продолжает работу в baseline-режиме без hard-fail.
 - Конфликты между contract data и external hints решаются deterministic policy с приоритетом contract данных.
 
 ## Deprecation Lifecycle

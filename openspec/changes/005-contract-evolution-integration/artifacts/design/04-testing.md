@@ -4,7 +4,6 @@
 1. Unit tests
 - compatibility classifier: positive/negative/edge cases по категориям `non-breaking`/`potentially-breaking`/`breaking`;
 - deprecation lifecycle validator: допустимые и запрещенные transitions;
-- dbspec adapter normalization/fallback behavior.
 
 2. Contract tests
 - подтверждение архитектурных правил (core purity, write boundary, layering) при включении новых extension points;
@@ -12,7 +11,6 @@
 
 3. Integration tests
 - end-to-end сценарии изменения контрактов с compatibility summary;
-- сценарии с/без `dbspec` hints при одинаковых контрактах;
 - deprecation-to-removal сценарии с ожидаемым classification и CLI exit behavior.
 
 ## Quality Gates

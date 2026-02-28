@@ -6,10 +6,7 @@
 - Альтернатива: раздельная классификация по командам.
 - Почему отклонено: риск расхождения semantics и дрейфа поведения между командами.
 
-## D2. Optional Read-only DBSpec Adapter
-- Решение: интеграцию с `dbspec` ограничить read-only адаптером с graceful fallback.
 - Причина: `docs/product/vision.md` фиксирует optional nature интеграции.
-- Альтернатива: сделать `dbspec` обязательной зависимостью для совместимости.
 - Почему отклонено: ломает standalone workflow и усложняет onboarding.
 
 ## D3. Explicit Deprecation Lifecycle

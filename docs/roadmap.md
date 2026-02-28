@@ -60,7 +60,6 @@
 ### Этап D — Contract Evolution & Integrations
 
 - compatibility classification;
-- optional `dbspec` integration;
 - formal deprecation policy.
 
 ### Этап E — Productization

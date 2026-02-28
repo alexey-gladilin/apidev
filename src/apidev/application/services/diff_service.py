@@ -1,8 +1,6 @@
 import ast
-import copy
 import hashlib
 import json
-import stat
 import subprocess
 from pathlib import Path
 from typing import cast
@@ -30,8 +28,6 @@ from apidev.core.rules.operation_id import build_operation_id, ensure_unique_ope
 
 
 class DiffService:
-    _DBSPEC_HINTS_RELATIVE_PATH = Path(".dbspec") / "apidev-hints.json"
-    _MAX_OPTIONAL_DBSPEC_HINTS_SIZE_BYTES = 1_000_000
     _MAX_HINT_RECURSION_DEPTH = 64
     _BASELINE_CACHE_RELATIVE_ROOT = Path(".apidev") / "cache" / "baseline"
     _MAX_BASELINE_CACHE_SIZE_BYTES = 5_000_000
@@ -67,7 +63,7 @@ class DiffService:
         if errors:
             raise ValueError("; ".join(errors))
         ordered_operations = sorted(operations, key=lambda op: op.operation_id)
-        enriched_operations = self._merge_optional_dbspec_hints(project_dir, ordered_operations)
+        enriched_operations = ordered_operations
 
         release_number: int | None = None
         deprecated_operations: dict[str, int] = {}
@@ -140,8 +136,8 @@ class DiffService:
             baseline_ref=baseline_ref,
             release_state_baseline_ref=release_state_baseline_ref,
         )
-        # Compatibility comparison uses contract-only model (no dbspec hints) so baseline
-        # from VCS (contract-only) compares symmetrically; generation uses enriched_operations.
+        # Compatibility comparison uses contract-only model so baseline from VCS
+        # compares symmetrically across machines.
         current_normalized_model = self._build_normalized_model(ordered_operations)
         baseline_snapshot, baseline_diagnostic = self._load_baseline_snapshot(
             project_dir=project_dir,
@@ -168,211 +164,6 @@ class DiffService:
         )
 
         return plan
-
-    def _merge_optional_dbspec_hints(
-        self, project_dir: Path, operations: list[Operation]
-    ) -> list[Operation]:
-        hints_payload = self._load_optional_dbspec_hints(project_dir)
-        operation_hints = self._as_dict(hints_payload.get("operations"))
-        if not operation_hints:
-            return operations
-
-        merged_operations: list[Operation] = []
-        for operation in operations:
-            raw_hints = self._as_dict(operation_hints.get(operation.operation_id))
-            if not raw_hints:
-                merged_operations.append(operation)
-                continue
-
-            merged_response_body = self._merge_with_contract_priority(
-                operation.contract.response_body,
-                raw_hints.get("response_body"),
-                depth=0,
-            )
-            merged_errors = self._merge_error_hints(operation.contract.errors, raw_hints.get("errors"))
-            merged_operations.append(
-                Operation(
-                    operation_id=operation.operation_id,
-                    contract=EndpointContract(
-                        source_path=operation.contract.source_path,
-                        method=operation.contract.method,
-                        path=operation.contract.path,
-                        auth=operation.contract.auth,
-                        summary=operation.contract.summary,
-                        description=operation.contract.description,
-                        response_status=operation.contract.response_status,
-                        response_body=self._as_dict(merged_response_body),
-                        errors=merged_errors,
-                    ),
-                    contract_relpath=operation.contract_relpath,
-                )
-            )
-        return merged_operations
-
-    def _load_optional_dbspec_hints(self, project_dir: Path) -> dict[str, object]:
-        hints_path = project_dir / self._DBSPEC_HINTS_RELATIVE_PATH
-        if not self.fs.exists(hints_path):
-            return {}
-
-        try:
-            if not self._is_trusted_optional_hints_path(project_dir, hints_path):
-                return {}
-            if hints_path.stat().st_size > self._MAX_OPTIONAL_DBSPEC_HINTS_SIZE_BYTES:
-                return {}
-            data = json.loads(self.fs.read_text(hints_path))
-        except (OSError, ValueError, json.JSONDecodeError):
-            return {}
-        return self._as_dict(data)
-
-    def _is_trusted_optional_hints_path(self, project_dir: Path, hints_path: Path) -> bool:
-        try:
-            project_root = project_dir.resolve(strict=False)
-            hints_lstat = hints_path.lstat()
-            if not stat.S_ISREG(hints_lstat.st_mode):
-                return False
-
-            resolved_hints_path = hints_path.resolve(strict=True)
-            if not resolved_hints_path.is_relative_to(project_root):
-                return False
-
-            resolved_stat = resolved_hints_path.stat()
-            return stat.S_ISREG(resolved_stat.st_mode)
-        except OSError:
-            return False
-
-    def _merge_error_hints(
-        self, errors: list[dict[str, object]], error_hints: object
-    ) -> list[dict[str, object]]:
-        indexed_hints = self._build_error_hints_index(error_hints)
-        if not indexed_hints:
-            return copy.deepcopy(errors)
-
-        merged: list[dict[str, object]] = []
-        for error in errors:
-            if not isinstance(error, dict):
-                continue
-
-            code = str(error.get("code", "")).strip()
-            http_status = self._coerce_http_status(error.get("http_status"), default=500)
-            hint_body = indexed_hints.get(self._error_hint_key(code, http_status))
-
-            current = copy.deepcopy(error)
-            if hint_body is not None:
-                current["body"] = self._merge_with_contract_priority(
-                    current.get("body", {}), hint_body, depth=0
-                )
-            merged.append(current)
-        return merged
-
-    def _build_error_hints_index(self, error_hints: object) -> dict[str, object]:
-        if isinstance(error_hints, dict):
-            return {str(key): value for key, value in error_hints.items()}
-        if isinstance(error_hints, list):
-            indexed: dict[str, object] = {}
-            for item in error_hints:
-                if not isinstance(item, dict):
-                    continue
-                code = str(item.get("code", "")).strip()
-                http_status = self._coerce_http_status(item.get("http_status"), default=500)
-                indexed[self._error_hint_key(code, http_status)] = item.get("body")
-            return indexed
-        return {}
-
-    def _error_hint_key(self, code: str, http_status: int) -> str:
-        return f"{code}:{http_status}"
-
-    def _as_dict(self, value: object) -> dict[str, object]:
-        if isinstance(value, dict):
-            return {str(key): item for key, item in value.items()}
-        return {}
-
-    def _coerce_http_status(self, value: object, default: int) -> int:
-        if isinstance(value, bool):
-            return int(value)
-        if isinstance(value, int):
-            return value
-        if isinstance(value, str):
-            try:
-                return int(value)
-            except ValueError:
-                return default
-        return default
-
-    def _merge_with_contract_priority(
-        self, contract_value: object, hint_value: object, *, depth: int = 0
-    ) -> object:
-        if depth >= self._MAX_HINT_RECURSION_DEPTH:
-            return copy.deepcopy(contract_value) if contract_value is not None else {}
-
-        if isinstance(contract_value, dict):
-            hint_dict = self._as_dict(hint_value)
-            merged: dict[str, object] = {}
-            keys = sorted(set(contract_value.keys()) | set(hint_dict.keys()), key=str)
-            next_depth = depth + 1
-            for key in keys:
-                if key in contract_value and key in hint_dict:
-                    merged[key] = self._merge_with_contract_priority(
-                        contract_value[key], hint_dict[key], depth=next_depth
-                    )
-                elif key in contract_value:
-                    merged[key] = copy.deepcopy(contract_value[key])
-                else:
-                    merged[key] = self._canonicalize_hint_value(hint_dict[key], depth=next_depth)
-            return merged
-
-        if isinstance(contract_value, list):
-            # Contract list order/shape is the source of truth.
-            return copy.deepcopy(contract_value)
-
-        # Scalar conflict: contract value always wins.
-        return copy.deepcopy(contract_value)
-
-    def _canonicalize_hint_value(self, hint_value: object, *, depth: int = 0) -> object:
-        if depth >= self._MAX_HINT_RECURSION_DEPTH:
-            return self._truncate_at_depth_limit(hint_value)
-
-        if isinstance(hint_value, dict):
-            return {
-                key: self._canonicalize_hint_value(value, depth=depth + 1)
-                for key, value in sorted(hint_value.items(), key=lambda item: str(item[0]))
-            }
-        if isinstance(hint_value, list):
-            canonical_items = [
-                self._canonicalize_hint_value(item, depth=depth + 1) for item in hint_value
-            ]
-            return sorted(
-                canonical_items,
-                key=lambda item: json.dumps(
-                    item,
-                    sort_keys=True,
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                ),
-            )
-        return copy.deepcopy(hint_value)
-
-    def _truncate_at_depth_limit(self, value: object) -> object:
-        """Return a safe copy with nested dict/list replaced by placeholder to avoid deep recursion."""
-        if isinstance(value, dict):
-            return {
-                k: ("<truncated>" if isinstance(v, (dict, list)) else copy.deepcopy(v))
-                for k, v in sorted(value.items(), key=lambda item: str(item[0]))
-            }
-        if isinstance(value, list):
-            truncated = [
-                "<truncated>" if isinstance(item, (dict, list)) else copy.deepcopy(item)
-                for item in value
-            ]
-            return sorted(
-                truncated,
-                key=lambda item: json.dumps(
-                    item,
-                    sort_keys=True,
-                    ensure_ascii=False,
-                    separators=(",", ":"),
-                ),
-            )
-        return copy.deepcopy(value)
 
     def _build_compatibility_summary(
         self,

@@ -25,10 +25,8 @@
 - Валидировать формат snapshot и детерминированную нормализацию модели перед compare.
 - Ввести diagnostics `baseline-missing`/`baseline-invalid`; в `strict` policy фейлить команду.
 
-5. Optional dbspec enrichment
 - Реализовать read-only adapter загрузки hints.
 - Добавить deterministic merge с приоритетом contract data.
-- Гарантировать graceful fallback при недоступности `dbspec`.
 
 6. Deprecation governance
 - Реализовать lifecycle checks `active -> deprecated -> removed`.

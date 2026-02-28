@@ -31,19 +31,6 @@
 - **THEN** система SHALL использовать нормализованные значения `drift|no-drift|error`
 - **AND** `drift` SHALL означать расхождение между ожидаемым generated output и текущими generated artifacts согласно `docs/reference/cli-contract.md` и `docs/reference/glossary.md`
 
-### Requirement: Optional read-only dbspec integration
-APIDev SHALL поддерживать optional integration с `dbspec` как read-only источником schema hints без обязательной зависимости от `dbspec` для baseline workflow.
-
-#### Scenario: Workflow остаётся работоспособным без dbspec
-- **WHEN** артефакты `dbspec` недоступны
-- **THEN** `apidev validate`, `apidev diff` и `apidev gen` SHALL продолжать работу в baseline mode
-- **AND** инструмент SHALL NOT требовать `dbspec` как обязательную зависимость
-
-#### Scenario: Данные контракта имеют приоритет над внешними hints
-- **WHEN** и contract fields, и optional dbspec hints задают значение одного schema attribute
-- **THEN** SHALL применяться детерминированная merge policy
-- **AND** значение, объявленное в контракте, SHALL иметь приоритет
-
 ### Requirement: Формальный deprecation lifecycle и release state
 Система SHALL обеспечивать формальный deprecation lifecycle (`active -> deprecated -> removed`) с релизным состоянием, достаточным для проверки deprecation window.
 

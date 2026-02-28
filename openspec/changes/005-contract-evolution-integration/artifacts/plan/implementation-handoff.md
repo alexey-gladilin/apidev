@@ -6,7 +6,6 @@
 
 ## Recommended Execution Order
 1. Реализовать Phase 01: taxonomy + classification mapping.
-2. Реализовать Phase 02: optional dbspec adapter + deterministic merge.
 3. Реализовать Phase 03: deprecation lifecycle + release-state contract + reporting.
 4. Выполнить Phase 04 blueprint: [phase-04-implementation.md](./phase-04-implementation.md).
 5. Закрыть Verification: unit/contract/integration matrix + docs sync.
@@ -19,6 +18,5 @@
 
 ## Delivery Notes
 - Сохранять strict separation generated/manual code.
-- Не делать `dbspec` обязательной runtime зависимостью.
 - Держать default CLI UX backward-compatible; breaking-aware fail-fast включается через policy `strict` как явную opt-in настройку.
 - Использовать `.apidev/config.toml` как canonical config path; не вводить альтернативный `apidev.toml`.

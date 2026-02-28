@@ -1,10 +1,7 @@
-# Phase 02 - Optional DBSpec Integration Contract
 
 ## Цель
-Определить контракт optional read-only интеграции `dbspec` без разрушения standalone сценариев APIDev.
 
 ## Scope
-- формат и границы использования dbspec hints;
 - fallback behavior при отсутствии/ошибке доступа к hints;
 - deterministic merge policy между контрактом и hints.
 

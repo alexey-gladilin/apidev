@@ -1,20 +1,16 @@
 ## Контекст
-Этап D из `docs/roadmap.md` включает три направления: compatibility classification, optional `dbspec` integration и formal deprecation policy.
 В текущем baseline эти части либо отсутствуют, либо представлены как заготовки (например, `core/rules/compatibility.py`).
 
 ## Цели / Не-цели
 - Цели:
   - определить единый compatibility contract для CLI сценариев `diff` и `gen --check`;
-  - определить границы и формат optional read-only интеграции с `dbspec`;
   - определить формальную deprecation policy для контрактов и generated artifacts.
 - Не-цели:
   - реализация production-кода в рамках proposal-команды;
-  - обязательная зависимость от `dbspec` для базового workflow;
   - генерация бизнес-логики или перенос ownership DB-артефактов в APIDev.
 
 ## Решения
 - Compatibility classification проектируется как отдельный слой правил с прозрачным mapping в CLI diagnostics и exit behavior.
-- Интеграция с `dbspec` остается опциональной и read-only: отсутствие `dbspec` не блокирует `validate/diff/gen`.
 - Deprecation policy фиксирует lifecycle состояний (active -> deprecated -> removed), минимальные сроки и правила контроля breaking transitions.
 
 ## Риски / Компромиссы
@@ -22,7 +18,6 @@
   - Митигация: staged rollout и backward-compatible default behavior.
 - Риск: нестабильные результаты при недетерминированной обработке внешних hints.
   - Митигация: canonical normalization и deterministic merge-priority.
-- Компромисс: ограничиваем первый этап интеграции `dbspec` только metadata hints без runtime coupling.
 
 ## Linked Artifacts
 - Research: [artifacts/research/2026-02-27-contract-evolution-integration-baseline.md](./artifacts/research/2026-02-27-contract-evolution-integration-baseline.md)

@@ -47,9 +47,7 @@ Legacy/internal helpers:
 - `/research-codebase`
 - `/design-feature`
 
-### DBSpec
 
-DBSpec operational команды допустимы как отдельный workflow-слой и не меняют основной OpenSpec pipeline.
 
 ### Prompt workflow
 

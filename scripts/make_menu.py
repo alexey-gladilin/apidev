@@ -80,8 +80,8 @@ def extract_title() -> str:
     for raw in content.splitlines():
         if "echo" not in raw:
             continue
-        # Match "apidev — ..." or "DBSpec ..." style titles
-        for pattern in (r"apidev[^$\"']+", r"DBSpec[^$\"']+"):
+        # Match "apidev — ..." style titles
+        for pattern in (r"apidev[^$\"']+",):
             match = re.search(pattern, raw)
             if match:
                 return match.group(0).strip()

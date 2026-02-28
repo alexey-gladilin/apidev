@@ -1,13 +1,11 @@
 # Research Baseline: Contract Evolution & Integrations (2026-02-27)
 
 ## Scope
-- Зафиксировать фактическое состояние репозитория для этапа D (`compatibility classification`, `optional dbspec integration`, `formal deprecation policy`).
 - Сформировать evidence-only baseline без реализации и без продуктовых рекомендаций.
 
 ## Evidence
 1. `docs/roadmap.md`
 - Этап D определен как `Contract Evolution & Integrations`.
-- Явно перечислены три целевых направления: `compatibility classification`, `optional dbspec integration`, `formal deprecation policy`.
 
 2. `src/apidev/core/rules/compatibility.py`
 - Файл содержит placeholder (`# Placeholder for future backward-compatibility checks.`).
@@ -22,8 +20,6 @@
 - Политики fail-on-breaking и deprecation-specific output в CLI-контрактах не зафиксированы.
 
 5. `docs/product/vision.md`
-- Зафиксировано, что интеграция с `dbspec` рассматривается как опциональная и read-only.
-- Базовый workflow APIDev должен оставаться работоспособным без обязательной связки с `dbspec`.
 
 6. `docs/reference/cli-contract.md` и `docs/reference/contract-format.md`
 - В документации есть текущий CLI/contract baseline (validate/diff/gen), но формализованной deprecation policy и compatibility taxonomy для этапа D нет.
@@ -35,7 +31,6 @@
 ## Baseline Conclusions
 - Этап D на дату снимка (27 февраля 2026) не реализован как формальный capability-пакет.
 - В кодовой базе есть инфраструктурные точки расширения (rules/services/commands/tests), пригодные для implement-фазы.
-- На уровне roadmap/vision уже зафиксированы boundaries: `dbspec` integration optional + read-only.
 
 ## Files reviewed
 - `docs/roadmap.md`
