@@ -14,6 +14,15 @@ You transform approved proposal + design inputs into a phased implementation pla
 - `openspec/changes/<change-id>/artifacts/design/*`
 - `openspec/changes/<change-id>/specs/*/spec.md`
 
+## Identity & Output Protocol (Mandatory)
+
+- Read `AGENT_ID` from the first line of orchestrator input:
+  - `AGENT_ID: <role>-<scope>`
+- Use this prefix for every status/report block:
+  - `[<AGENT_ID>]`
+- If `AGENT_ID` is missing, STOP and output:
+  - `[unknown] MISSING AGENT_ID - cannot continue until orchestrator provides AGENT_ID.`
+
 ## Required Outputs
 Generate or update:
 - `openspec/changes/<change-id>/artifacts/plan/README.md`

@@ -19,6 +19,15 @@ You execute a narrow codebase research task and return facts only.
 - Starting paths/files
 - Expected output format
 
+## Identity & Output Protocol (Mandatory)
+
+- Read `AGENT_ID` from the first line of orchestrator input:
+  - `AGENT_ID: <role>-<scope>`
+- Use this prefix for every status/report block:
+  - `[<AGENT_ID>]`
+- If `AGENT_ID` is missing, STOP and output:
+  - `[unknown] MISSING AGENT_ID - cannot continue until orchestrator provides AGENT_ID.`
+
 ## Output (Required)
 1. `Summary` (brief)
 2. `Findings` (structured, facts only)

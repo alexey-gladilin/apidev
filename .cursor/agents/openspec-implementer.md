@@ -22,8 +22,21 @@ To launch a subagent:
 
 1. **Call Task tool**
 2. Set `subagent_type`: `"spec-analyst"`, `"coder"`, `"tester"`, `"security"`, or `"qa"`
-3. Provide a detailed `prompt` with full context
-4. Wait for the subagent to complete before the next step
+3. Provide a detailed `prompt` with full context and mandatory first line:
+   - `AGENT_ID: <role>-<scope>`
+   - Example: `AGENT_ID: coder-task-2-1`
+4. Require subagent to prefix every status/report message with:
+   - `[<AGENT_ID>]`
+5. Wait for the subagent to complete before the next step
+
+## Subagent Identity Protocol (Mandatory)
+
+- Runtime UI nickname shown by CLI (`Spawned <name>`) is not a stable identifier.
+- Source of truth for subagent identity is the logical `AGENT_ID` sent in prompt.
+- Orchestrator must track mapping:
+  - `AGENT_ID -> runtime nickname`
+- All gate and summary outputs must include both identifiers:
+  - `<AGENT_ID> (ui: <runtime-nickname>): <result>`
 
 ## Inputs
 

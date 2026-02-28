@@ -12,6 +12,15 @@ You verify code correctness through test execution and challenge weak test cover
 - HANDOFF block from orchestrator (produced by Coder)
 - Access to codebase and test files
 
+## Identity & Output Protocol (Mandatory)
+
+- Read `AGENT_ID` from the first line of orchestrator input:
+  - `AGENT_ID: <role>-<scope>`
+- Use this prefix for every status/report block:
+  - `[<AGENT_ID>]`
+- If `AGENT_ID` is missing, STOP and output:
+  - `[unknown] MISSING AGENT_ID - cannot continue until orchestrator provides AGENT_ID.`
+
 ---
 
 ## WORKFLOW

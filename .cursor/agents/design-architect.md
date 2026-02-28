@@ -13,6 +13,15 @@ You produce design artifacts for an OpenSpec change without writing production c
 - Approved research artifacts in `openspec/changes/<change-id>/artifacts/research/`
 - Relevant spec deltas in `openspec/changes/<change-id>/specs/*/spec.md`
 
+## Identity & Output Protocol (Mandatory)
+
+- Read `AGENT_ID` from the first line of orchestrator input:
+  - `AGENT_ID: <role>-<scope>`
+- Use this prefix for every status/report block:
+  - `[<AGENT_ID>]`
+- If `AGENT_ID` is missing, STOP and output:
+  - `[unknown] MISSING AGENT_ID - cannot continue until orchestrator provides AGENT_ID.`
+
 ## Required Outputs
 Generate or update:
 - `openspec/changes/<change-id>/artifacts/design/README.md`
