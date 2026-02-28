@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any, cast
 
 from apidev.application.services.generate_service import GenerateService
+from apidev.application.services.diff_service import DiffService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
@@ -266,6 +267,222 @@ errors: []
     assert drift.drift_status == "drift"
 
 
+def test_generate_apply_removes_stale_generated_artifact_and_reports_no_drift(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path)
+    stale_file = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_file.parent.mkdir(parents=True, exist_ok=True)
+    stale_file.write_text("# stale\n", encoding="utf-8")
+
+    check_result = service.run(tmp_path, check=True)
+    assert check_result.drift_status == "drift"
+
+    apply_result = service.run(tmp_path)
+
+    assert not stale_file.exists()
+    assert apply_result.drift_status == "no-drift"
+    assert apply_result.applied_changes >= 1
+
+
+def test_generate_apply_maps_remove_failure_to_error_status(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path)
+    stale_file = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_file.parent.mkdir(parents=True, exist_ok=True)
+    stale_file.write_text("# stale\n", encoding="utf-8")
+
+    def _raise_remove_error(generated_root: Path, target: Path) -> bool:
+        raise ValueError(f"remove failed for {target}")
+
+    monkeypatch.setattr(service, "_remove_generated_artifact", _raise_remove_error)
+
+    result = service.run(tmp_path)
+
+    assert result.drift_status == "error"
+
+
+def test_generate_remove_contract_roundtrip_diff_check_gen_ends_without_drift(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    contract_path = tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml"
+    contract_path.write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    config_loader = TomlConfigLoader(fs=fs)
+    loader = YamlContractLoader()
+    renderer = JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates")
+    postprocessor = PythonPostprocessor()
+    service = GenerateService(
+        config_loader=config_loader,
+        loader=loader,
+        renderer=renderer,
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=postprocessor,
+    )
+    diff_service = DiffService(
+        config_loader=config_loader,
+        loader=loader,
+        renderer=renderer,
+        fs=fs,
+        postprocessor=postprocessor,
+    )
+
+    first_apply = service.run(tmp_path)
+    assert first_apply.applied_changes >= 1
+    assert first_apply.drift_status == "no-drift"
+
+    contract_path.unlink()
+
+    diff_plan = diff_service.run(tmp_path)
+    diff_changes = [c for c in diff_plan.changes if c.change_type in {"ADD", "UPDATE", "REMOVE"}]
+    assert any(change.change_type == "REMOVE" for change in diff_changes)
+
+    drift_check = service.run(tmp_path, check=True)
+    assert drift_check.drift_status == "drift"
+    assert drift_check.drift_detected
+
+    apply_remove = service.run(tmp_path)
+    assert apply_remove.drift_status == "no-drift"
+    assert apply_remove.applied_changes >= 1
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    assert not (generated_root / "routers" / "billing_get_invoice.py").exists()
+    assert not (generated_root / "transport" / "models" / "billing_get_invoice_request.py").exists()
+    assert not (
+        generated_root / "transport" / "models" / "billing_get_invoice_response.py"
+    ).exists()
+    assert not (generated_root / "transport" / "models" / "billing_get_invoice_error.py").exists()
+
+    post_apply_diff_plan = diff_service.run(tmp_path)
+    post_apply_changes = [
+        c for c in post_apply_diff_plan.changes if c.change_type in {"ADD", "UPDATE", "REMOVE"}
+    ]
+    assert post_apply_changes == []
+
+    post_apply_check = service.run(tmp_path, check=True)
+    assert post_apply_check.drift_status == "no-drift"
+    assert not post_apply_check.drift_detected
+
+    second_apply = service.run(tmp_path)
+    assert second_apply.drift_status == "no-drift"
+    assert second_apply.applied_changes == 0
+
+
 def test_generate_check_detects_drift_for_changed_nested_field_description(tmp_path: Path) -> None:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(
@@ -512,4 +729,3 @@ errors: []
         "status": "deprecated",
         "deprecated_since_release": 2,
     }
-

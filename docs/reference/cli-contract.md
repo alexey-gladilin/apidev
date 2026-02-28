@@ -49,7 +49,7 @@ Compatibility alias:
 ## Контракт кодов выхода
 
 - `0` — успешное выполнение;
-- `1` — бизнес-ошибка, validation failure, drift, invalid input на уровне домена;
+- `1` — бизнес-ошибка, validation failure, blocking drift (например, `gen --check`), invalid input на уровне домена;
 - `2` — ошибка парсинга CLI или неверной сигнатуры команды.
 
 ## Контракт drift-status и exit semantics
@@ -73,6 +73,12 @@ Compatibility alias:
 - `apidev gen`
   - successful apply / no changes -> `no-drift`, exit `0`;
   - `error` -> exit `1`.
+
+Правило для remove-only сценариев:
+
+- `remove-only` изменения считаются `drift`;
+- для `apidev diff` это informational drift с exit `0` (если не сработал compatibility policy gate);
+- для `apidev gen --check` это blocking drift с exit `1`.
 
 ## Контракт compatibility policy и baseline
 

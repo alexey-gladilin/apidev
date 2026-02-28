@@ -180,6 +180,69 @@ errors: []
     assert first_snapshot == second_snapshot
 
 
+def test_diff_service_remove_plan_is_deterministic_with_unstable_glob(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    stale_b = generated_root / "transport" / "models" / "zzz_stale.py"
+    stale_a = generated_root / "transport" / "models" / "aaa_stale.py"
+    stale_b.parent.mkdir(parents=True, exist_ok=True)
+    stale_b.write_text("# stale-b", encoding="utf-8")
+    stale_a.write_text("# stale-a", encoding="utf-8")
+
+    service = _create_diff_service()
+    original_glob = service.fs.glob
+    flip = False
+
+    def unstable_glob(root: Path, pattern: str) -> list[Path]:
+        nonlocal flip
+        paths = original_glob(root, pattern)
+        if root == generated_root and pattern == "**/*.py":
+            stale_paths = [path for path in paths if path.name in {"aaa_stale.py", "zzz_stale.py"}]
+            stable_paths = [path for path in paths if path not in stale_paths]
+            flip = not flip
+            ordered_stale = list(reversed(stale_paths)) if flip else stale_paths
+            return stable_paths + ordered_stale + ordered_stale[:1]
+        return paths
+
+    service.fs.glob = unstable_glob  # type: ignore[method-assign]
+
+    first = service.run(tmp_path)
+    second = service.run(tmp_path)
+
+    first_removes = [
+        change.path.relative_to(generated_root).as_posix()
+        for change in first.changes
+        if change.change_type == "REMOVE"
+    ]
+    second_removes = [
+        change.path.relative_to(generated_root).as_posix()
+        for change in second.changes
+        if change.change_type == "REMOVE"
+    ]
+    assert first_removes == [
+        "transport/models/aaa_stale.py",
+        "transport/models/zzz_stale.py",
+    ]
+    assert second_removes == first_removes
+
+
 def test_diff_service_propagates_examples_into_metadata_and_fingerprint(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     contract_path = tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml"

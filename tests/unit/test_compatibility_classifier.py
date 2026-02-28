@@ -10,7 +10,10 @@ from apidev.core.rules.compatibility import (
 def test_classify_change_uses_taxonomy() -> None:
     assert classify_change("operation-added") == CompatibilityCategory.NON_BREAKING
     assert classify_change("response-required-field-removed") == CompatibilityCategory.BREAKING
-    assert classify_change("request-optional-field-added") == CompatibilityCategory.POTENTIALLY_BREAKING
+    assert (
+        classify_change("request-optional-field-added")
+        == CompatibilityCategory.POTENTIALLY_BREAKING
+    )
 
 
 def test_classify_change_unknown_code_defaults_to_potentially_breaking() -> None:

@@ -23,7 +23,11 @@ from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
 from apidev.core.ports.python_postprocessor import PythonPostprocessMode, PythonPostprocessorPort
 from apidev.core.ports.template_engine import TemplateEnginePort
-from apidev.core.rules.compatibility import CompatibilityChange, CompatibilityCategory, classify_changes
+from apidev.core.rules.compatibility import (
+    CompatibilityChange,
+    CompatibilityCategory,
+    classify_changes,
+)
 from apidev.core.rules.operation_id import build_operation_id, ensure_unique_operation_ids
 
 
@@ -56,7 +60,6 @@ class DiffService:
         config = self.config_loader.load(project_dir)
         paths = resolve_paths(project_dir, config)
         postprocess_mode = config.generator.postprocess
-        existing_operation_ids = self._load_existing_operation_ids(paths.generated_root)
 
         operations = self.loader.load(paths.contracts_dir)
         errors = ensure_unique_operation_ids(operations)
@@ -80,8 +83,7 @@ class DiffService:
         plan = GenerationPlan(generated_root=paths.generated_root)
 
         registry_entries = [
-            self._build_registry_entry(op, deprecated_operations)
-            for op in enriched_operations
+            self._build_registry_entry(op, deprecated_operations) for op in enriched_operations
         ]
         operation_map_target = paths.generated_root / "operation_map.py"
         operation_map_content = self.renderer.render(
@@ -131,6 +133,7 @@ class DiffService:
                     project_dir, model_target, model_content, postprocess_mode
                 )
                 plan.changes.append(self._planned_change(model_target, model_content))
+        plan.changes.extend(self._planned_removes(paths.generated_root, plan.changes))
 
         resolved_baseline_ref, baseline_source = self._resolve_baseline_ref(
             baseline_ref=baseline_ref,
@@ -198,9 +201,7 @@ class DiffService:
                     code=baseline_diagnostic,
                     location="baseline",
                     detail=(
-                        f"baseline_ref={baseline_ref}"
-                        if baseline_ref
-                        else "baseline_ref=<missing>"
+                        f"baseline_ref={baseline_ref}" if baseline_ref else "baseline_ref=<missing>"
                     ),
                 )
             )
@@ -238,9 +239,7 @@ class DiffService:
                 CompatibilityCategory.POTENTIALLY_BREAKING.value: report.counts[
                     CompatibilityCategory.POTENTIALLY_BREAKING
                 ],
-                CompatibilityCategory.BREAKING.value: report.counts[
-                    CompatibilityCategory.BREAKING
-                ],
+                CompatibilityCategory.BREAKING.value: report.counts[CompatibilityCategory.BREAKING],
             },
             diagnostics=[
                 CompatibilityDiagnostic(
@@ -386,7 +385,9 @@ class DiffService:
         )
 
     def _baseline_cache_file(self, project_dir: Path, baseline_ref: str) -> Path:
-        safe_ref = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref)
+        safe_ref = "".join(
+            ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref
+        )
         return project_dir / self._BASELINE_CACHE_RELATIVE_ROOT / f"{safe_ref}.json"
 
     def _load_baseline_snapshot_from_vcs(
@@ -404,7 +405,9 @@ class DiffService:
             return None, "baseline-missing"
 
         baseline_operations: dict[str, str] = {}
-        for entry in [line.strip() for line in listing.splitlines() if line.strip().endswith(".yaml")]:
+        for entry in [
+            line.strip() for line in listing.splitlines() if line.strip().endswith(".yaml")
+        ]:
             content = self._run_git_command(
                 project_dir=project_dir,
                 args=("show", f"{baseline_ref}:{entry}"),
@@ -435,7 +438,9 @@ class DiffService:
         return (
             BaselineSnapshot(
                 baseline_ref=baseline_ref,
-                operations={key: baseline_operations[key] for key in sorted(baseline_operations.keys())},
+                operations={
+                    key: baseline_operations[key] for key in sorted(baseline_operations.keys())
+                },
                 source="vcs",
             ),
             "",
@@ -525,12 +530,26 @@ class DiffService:
                     return {str(key) for key in operation_map.keys()}
         return set()
 
-    def _normalize_policy(self, policy: str) -> CompatibilityPolicy:
-        normalized = str(policy).strip().lower()
+    def _normalize_policy(self, policy: object) -> CompatibilityPolicy:
+        candidate = policy
+        for _ in range(self._MAX_HINT_RECURSION_DEPTH):
+            if candidate is None:
+                return "warn"
+            if isinstance(candidate, str):
+                break
+            default = getattr(candidate, "default", None)
+            if default is candidate:
+                break
+            if default is not None or hasattr(candidate, "default"):
+                candidate = default
+                continue
+            break
+
+        normalized = str(candidate).strip().lower()
         if normalized in {"warn", "strict"}:
             return cast(CompatibilityPolicy, normalized)
         raise ValueError(
-            f"Unknown compatibility policy '{policy}'. Expected one of: warn, strict."
+            f"Unknown compatibility policy '{candidate}'. Expected one of: warn, strict."
         )
 
     def _planned_change(self, target: Path, content: str) -> PlannedChange:
@@ -542,6 +561,49 @@ class DiffService:
             return PlannedChange(path=target, content=content, change_type="UPDATE")
 
         return PlannedChange(path=target, content=content, change_type="SAME")
+
+    def _planned_removes(
+        self, generated_root: Path, plan_changes: list[PlannedChange]
+    ) -> list[PlannedChange]:
+        generated_root_resolved = generated_root.resolve()
+        expected_paths = {change.path.resolve() for change in plan_changes}
+        stale_paths_by_resolved: dict[Path, Path] = {}
+
+        for path in self.fs.glob(generated_root, "**/*.py"):
+            if not path.is_file():
+                continue
+            resolved_path = path.resolve()
+            if resolved_path in expected_paths:
+                continue
+
+            existing = stale_paths_by_resolved.get(resolved_path)
+            if existing is None:
+                stale_paths_by_resolved[resolved_path] = path
+                continue
+
+            existing_key = self._stable_remove_sort_key(existing, generated_root_resolved)
+            candidate_key = self._stable_remove_sort_key(path, generated_root_resolved)
+            if candidate_key < existing_key:
+                stale_paths_by_resolved[resolved_path] = path
+
+        stale_paths = sorted(
+            stale_paths_by_resolved.values(),
+            key=lambda stale_path: self._stable_remove_sort_key(
+                stale_path, generated_root_resolved
+            ),
+        )
+        return [
+            PlannedChange(path=stale_path, content="", change_type="REMOVE")
+            for stale_path in stale_paths
+        ]
+
+    def _stable_remove_sort_key(self, path: Path, generated_root_resolved: Path) -> tuple[str, str]:
+        resolved_path = path.resolve()
+        try:
+            relative_path = resolved_path.relative_to(generated_root_resolved).as_posix()
+        except ValueError:
+            relative_path = path.as_posix()
+        return (relative_path, resolved_path.as_posix())
 
     def _build_registry_entry(
         self, operation: Operation, deprecated_operations: dict[str, int]
@@ -730,13 +792,21 @@ class DiffService:
                 parts.append(f"{key_literal}: {self._stable_python_literal(item, depth=depth + 1)}")
             return "{" + ", ".join(parts) + "}"
         if isinstance(value, list):
-            return "[" + ", ".join(self._stable_python_literal(item, depth=depth + 1) for item in value) + "]"
+            return (
+                "["
+                + ", ".join(self._stable_python_literal(item, depth=depth + 1) for item in value)
+                + "]"
+            )
         if isinstance(value, tuple):
             if not value:
                 return "()"
             if len(value) == 1:
                 return f"({self._stable_python_literal(value[0], depth=depth + 1)},)"
-            return "(" + ", ".join(self._stable_python_literal(item, depth=depth + 1) for item in value) + ")"
+            return (
+                "("
+                + ", ".join(self._stable_python_literal(item, depth=depth + 1) for item in value)
+                + ")"
+            )
         if isinstance(value, str):
             return json.dumps(value, ensure_ascii=False)
         if value is True:

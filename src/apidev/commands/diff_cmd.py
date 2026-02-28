@@ -71,7 +71,9 @@ def diff_command(
         compatibility_policy=resolved_policy,
         baseline_ref=resolved_baseline_ref,
     )
-    changed = [change for change in plan.changes if change.change_type in {"ADD", "UPDATE"}]
+    changed = [
+        change for change in plan.changes if change.change_type in {"ADD", "UPDATE", "REMOVE"}
+    ]
 
     if not changed:
         console.print("No changes")

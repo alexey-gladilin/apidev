@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 from apidev.application.services.diff_service import DiffService
@@ -54,6 +53,10 @@ class RecordingWriter:
     def write(self, generated_root: Path, target: Path, content: str) -> None:
         self.calls.append((generated_root, target))
 
+    def remove(self, generated_root: Path, target: Path) -> bool:
+        self.calls.append((generated_root, target))
+        return True
+
 
 def test_diff_does_not_write_files(tmp_path: Path) -> None:
     _write_minimal_project(tmp_path)
@@ -91,4 +94,3 @@ def test_generate_check_has_no_write_side_effects(tmp_path: Path) -> None:
     assert result.drift_status == "drift"
     assert writer.calls == []
     assert not (tmp_path / "src" / "app" / "api" / "generated").exists()
-

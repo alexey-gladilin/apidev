@@ -178,11 +178,7 @@ release_state_file = ".apidev/release-link.json"
 
 def test_release_state_rejects_oversize_file(tmp_path: Path) -> None:
     oversized_baseline = "v" + ("x" * (2 * 1024 * 1024))
-    payload = (
-        '{"release_number": 1, "baseline_ref": "'
-        + oversized_baseline
-        + '"}'
-    )
+    payload = '{"release_number": 1, "baseline_ref": "' + oversized_baseline + '"}'
     _write_config(
         tmp_path,
         """

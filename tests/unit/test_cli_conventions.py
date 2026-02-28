@@ -1,8 +1,14 @@
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from apidev.cli import app
 
 runner = CliRunner()
+
+
+def _read_cli_contract() -> str:
+    return (Path("docs/reference/cli-contract.md")).read_text(encoding="utf-8")
 
 
 def test_no_args_shows_help_by_default() -> None:
@@ -41,3 +47,16 @@ def test_init_rejects_repair_and_force_together() -> None:
 
     assert result.exit_code == 2
     assert "Use either --repair or --force, not both." in result.output
+
+
+def test_cli_contract_documents_remove_only_exit_semantics() -> None:
+    contract = _read_cli_contract()
+
+    expected_phrases = [
+        "`remove-only` изменения считаются `drift`",
+        "для `apidev diff` это informational drift с exit `0`",
+        "для `apidev gen --check` это blocking drift с exit `1`",
+    ]
+
+    for phrase in expected_phrases:
+        assert phrase in contract

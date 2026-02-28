@@ -9,13 +9,46 @@ class SafeWriter(WriterPort):
         self.fs = fs
 
     def write(self, generated_root: Path, target: Path, content: str) -> None:
+        final = self._resolve_within_generated_root(
+            generated_root=generated_root,
+            target=target,
+            action="write",
+            root_action_message="write to",
+        )
+
+        self.fs.write_text(final, content)
+
+    def remove(self, generated_root: Path, target: Path) -> bool:
+        final = self._resolve_within_generated_root(
+            generated_root=generated_root,
+            target=target,
+            action="remove",
+            root_action_message="remove",
+        )
+
+        if not final.exists():
+            return False
+
+        if final.is_dir():
+            raise ValueError(f"Refusing to remove directory as generated artifact: {final}")
+
+        final.unlink()
+        return True
+
+    def _resolve_within_generated_root(
+        self,
+        generated_root: Path,
+        target: Path,
+        action: str,
+        root_action_message: str,
+    ) -> Path:
         root = generated_root.resolve()
         final = target.resolve()
 
         if root == final:
-            raise ValueError("Refusing to write to generated root path directly")
+            raise ValueError(f"Refusing to {root_action_message} generated root path directly")
 
         if root not in final.parents:
-            raise ValueError(f"Refusing to write outside generated root: {final}")
+            raise ValueError(f"Refusing to {action} outside generated root: {final}")
 
-        self.fs.write_text(final, content)
+        return final

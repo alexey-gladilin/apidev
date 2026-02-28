@@ -4,6 +4,7 @@ from typing import Literal
 
 DriftStatus = Literal["drift", "no-drift", "error"]
 CompatibilityPolicy = Literal["warn", "strict"]
+ChangeType = Literal["ADD", "UPDATE", "REMOVE", "SAME"]
 
 
 @dataclass(slots=True, frozen=True)
@@ -12,6 +13,20 @@ class CompatibilityDiagnostic:
     code: str
     location: str
     detail: str = ""
+
+
+@dataclass(slots=True, frozen=True)
+class GenerationDiagnostic:
+    code: str
+    location: str
+    detail: str = ""
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "code": self.code,
+            "location": self.location,
+            "detail": self.detail,
+        }
 
 
 @dataclass(slots=True)
@@ -31,7 +46,7 @@ class CompatibilitySummary:
 class PlannedChange:
     path: Path
     content: str
-    change_type: str
+    change_type: ChangeType
 
 
 @dataclass(slots=True)
@@ -48,6 +63,7 @@ class GenerateResult:
     applied_changes: int
     drift_status: DriftStatus = "no-drift"
     changed_paths: list[Path] = field(default_factory=list)
+    diagnostics: list[GenerationDiagnostic] = field(default_factory=list)
     compatibility_policy: CompatibilityPolicy = "warn"
     compatibility: CompatibilitySummary = field(default_factory=CompatibilitySummary)
     policy_blocked: bool = False

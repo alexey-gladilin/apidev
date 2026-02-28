@@ -65,9 +65,7 @@ def _write_release_state(project_dir: Path, baseline_ref: str) -> None:
 
 
 def _write_corrupted_baseline_cache(project_dir: Path, baseline_ref: str) -> None:
-    safe_ref = "".join(
-        ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref
-    )
+    safe_ref = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref)
     cache_path = project_dir / ".apidev" / "cache" / "baseline" / f"{safe_ref}.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     # Simulate interrupted/invalid cache write.
@@ -270,9 +268,7 @@ def _write_oversized_baseline_cache(
     project_dir: Path, baseline_ref: str, max_size_bytes: int = 5_000_000
 ) -> None:
     """Write baseline cache file exceeding given size limit."""
-    safe_ref = "".join(
-        ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref
-    )
+    safe_ref = "".join(ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref)
     cache_path = project_dir / ".apidev" / "cache" / "baseline" / f"{safe_ref}.json"
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     padding = "x" * (max_size_bytes + 1024 - 80)
@@ -306,9 +302,7 @@ errors: []
     baseline_ref = "v1.0.0"
     _write_release_state(tmp_path, baseline_ref=baseline_ref)
     # Use small limit (100 bytes) so test runs fast; write cache > 100 bytes.
-    monkeypatch.setattr(
-        DiffService, "_MAX_BASELINE_CACHE_SIZE_BYTES", 100, raising=False
-    )
+    monkeypatch.setattr(DiffService, "_MAX_BASELINE_CACHE_SIZE_BYTES", 100, raising=False)
     _write_oversized_baseline_cache(tmp_path, baseline_ref=baseline_ref, max_size_bytes=100)
 
     service = _create_diff_service()

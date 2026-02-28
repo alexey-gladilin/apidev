@@ -1,5 +1,8 @@
 import typer
 from rich.console import Console
+from typing import cast
+
+from apidev.application.dto.generation_plan import CompatibilityPolicy
 
 
 def parse_compatibility_policy(policy: str | None) -> str | None:
@@ -13,8 +16,21 @@ def parse_compatibility_policy(policy: str | None) -> str | None:
     )
 
 
-def resolve_compatibility_policy(cli_policy: str | None, config_policy: str) -> str:
-    return cli_policy if cli_policy is not None else parse_compatibility_policy(config_policy) or "warn"
+def resolve_compatibility_policy(cli_policy: str | None, config_policy: str) -> CompatibilityPolicy:
+    current: object = cli_policy if cli_policy is not None else config_policy
+    for _ in range(8):
+        if current is None:
+            return "warn"
+        if isinstance(current, str):
+            normalized = parse_compatibility_policy(current) or "warn"
+            if normalized in {"warn", "strict"}:
+                return cast(CompatibilityPolicy, normalized)
+        if hasattr(current, "default"):
+            current = getattr(current, "default")
+            continue
+        break
+    value = str(current).strip().lower()
+    raise ValueError(f"Invalid compatibility policy '{value}'. Expected one of: warn, strict.")
 
 
 def print_compatibility(console: Console, policy: str, compatibility: object) -> None:
@@ -32,8 +48,8 @@ def print_compatibility(console: Console, policy: str, compatibility: object) ->
     )
 
     for diagnostic in diagnostics:
-        category = str(getattr(diagnostic, "category", "potentially-breaking")).upper().replace(
-            "-", "_"
+        category = (
+            str(getattr(diagnostic, "category", "potentially-breaking")).upper().replace("-", "_")
         )
         code = str(getattr(diagnostic, "code", "unknown"))
         location = str(getattr(diagnostic, "location", "unknown"))

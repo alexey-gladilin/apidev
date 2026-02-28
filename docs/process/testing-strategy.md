@@ -102,6 +102,14 @@
 4. не нарушить generated/manual boundary policy;
 5. не оставить несинхронизированные нормативные документы.
 
+## Verification checklist
+
+Для изменений, затрагивающих `REMOVE` в drift/generation pipeline, перед merge обязательны:
+
+- `remove-only` сценарий: `apidev diff` и `apidev gen --check` возвращают `drift` при наличии только `REMOVE` изменений;
+- `remove-conflict` сценарий: apply-режим возвращает `error` со стандартизированным diagnostic code (`remove-conflict` или `remove-boundary-violation`);
+- regression-покрытие remove-roundtrip: после успешного `gen` повторный `gen --check` возвращает `no-drift`.
+
 ## Связь с OpenSpec
 
 - Поведенческие изменения и новые capabilities должны быть отражены в OpenSpec change context.

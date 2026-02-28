@@ -116,9 +116,7 @@ def _write_release_state(
     )
 
 
-def _write_baseline_cache(
-    project_dir: Path, baseline_ref: str, operations: dict[str, str]
-) -> None:
+def _write_baseline_cache(project_dir: Path, baseline_ref: str, operations: dict[str, str]) -> None:
     cache_name = "".join(
         ch if ch.isalnum() or ch in {"-", "_", "."} else "_" for ch in baseline_ref
     )
@@ -278,6 +276,36 @@ def test_gen_check_strict_policy_reports_policy_failure(tmp_path: Path) -> None:
     assert "Compatibility policy gate failed" in result.output
 
 
+def test_diff_reports_drift_for_remove_only_changes(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    _run_generate(tmp_path)
+
+    stale_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_path.write_text("# stale\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["diff", "--project-dir", str(tmp_path)])
+
+    assert result.exit_code == 0
+    assert "Drift status: drift" in result.output
+    assert "REMOVE" in result.output
+    assert stale_path.name in result.output
+
+
+def test_gen_check_fails_on_drift_from_remove_only_changes(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    _run_generate(tmp_path)
+
+    stale_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_path.write_text("# stale\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path), "--check"])
+
+    assert result.exit_code == 1
+    assert "Drift detected (drift-status: drift)" in result.output
+
+
 def test_gen_apply_strict_policy_succeeds_after_writes(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
@@ -297,6 +325,28 @@ def test_gen_apply_strict_policy_succeeds_after_writes(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Applied changes:" in result.output
+
+
+def test_gen_apply_exits_with_error_when_remove_apply_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    _run_generate(tmp_path)
+
+    stale_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_path.write_text("# stale\n", encoding="utf-8")
+
+    def _raise_remove_error(self, generated_root: Path, target: Path) -> bool:
+        raise ValueError(f"remove failed for {target}")
+
+    monkeypatch.setattr(GenerateService, "_remove_generated_artifact", _raise_remove_error)
+
+    result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "Generation failed (drift-status: error)" in result.output
 
 
 def test_diff_rejects_invalid_compatibility_policy_value(tmp_path: Path) -> None:
@@ -388,7 +438,9 @@ def test_diff_and_gen_check_keep_release_state_read_only(tmp_path: Path) -> None
     _write_project_config_with_evolution(tmp_path, grace_period_releases=2)
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
-    _write_release_state(tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2})
+    _write_release_state(
+        tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2}
+    )
     _run_generate(tmp_path)
 
     release_state_path = tmp_path / ".apidev" / "release-state.json"
@@ -408,7 +460,9 @@ def test_diff_baseline_ref_cli_override_has_priority_over_release_state(tmp_path
     _write_project_config_with_evolution(tmp_path, grace_period_releases=2)
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
-    _write_release_state(tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2})
+    _write_release_state(
+        tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2}
+    )
 
     result = runner.invoke(
         app,
@@ -432,7 +486,9 @@ def test_gen_check_baseline_ref_cli_override_has_priority_over_release_state(
     _write_project_config_with_evolution(tmp_path, grace_period_releases=2)
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
-    _write_release_state(tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2})
+    _write_release_state(
+        tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2}
+    )
     _run_generate(tmp_path)
 
     result = runner.invoke(
@@ -476,7 +532,9 @@ def test_gen_apply_baseline_ref_cli_override_applied(tmp_path: Path) -> None:
     _write_project_config_with_evolution(tmp_path, grace_period_releases=2)
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
-    _write_release_state(tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2})
+    _write_release_state(
+        tmp_path, release_number=4, deprecated_operations={"billing_get_invoice": 2}
+    )
 
     result = runner.invoke(
         app,
@@ -555,12 +613,12 @@ def test_diff_strict_reports_baseline_invalid_from_real_git_baseline(tmp_path: P
             "diff",
             "--project-dir",
             str(tmp_path),
-                "--compatibility-policy",
-                "strict",
-                "--baseline-ref",
-                "v1.0.0",
-            ],
-        )
+            "--compatibility-policy",
+            "strict",
+            "--baseline-ref",
+            "v1.0.0",
+        ],
+    )
 
     assert result.exit_code == 1
     assert "baseline-invalid" in result.output

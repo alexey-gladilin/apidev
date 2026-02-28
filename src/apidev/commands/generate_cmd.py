@@ -87,6 +87,10 @@ def generate_command(
         console.print("Drift detected (drift-status: drift)")
         raise SystemExit(1)
 
+    if result.drift_status == "error":
+        console.print("Generation failed (drift-status: error)")
+        raise SystemExit(1)
+
     if check:
         console.print("No drift (drift-status: no-drift)")
         return
