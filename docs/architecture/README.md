@@ -11,6 +11,7 @@
 | `c4-context.md` | системный контекст C4 Level 1 | Reference |
 | `c4-container.md` | контейнерная модель C4 Level 2 | Reference |
 | `c4-components.md` | компонентная модель C4 Level 3 | Reference |
+| `generated-integration.md` | контракт интеграции generated transport с target app | Authoritative |
 | `patterns-and-naming.md` | rationale и фактические паттерны | Reference |
 | `team-conventions.md` | краткие правила для ежедневной работы | Guide |
 | `validation-blueprint.md` | план превращения правил в CI-проверки | Reference |
@@ -21,8 +22,9 @@
 
 1. `architecture-overview.md`
 2. `architecture-rules.md`
-3. `c4-container.md`
-4. `c4-components.md`
+3. `generated-integration.md`
+4. `c4-container.md`
+5. `c4-components.md`
 
 Для изменения архитектурных границ:
 

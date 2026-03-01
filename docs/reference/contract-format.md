@@ -27,6 +27,60 @@
 - `.apidev/contracts/system/health.yaml`
 - `.apidev/contracts/billing/create_invoice.yaml`
 
+## Целевая структура generated output
+
+Для контракта `.apidev/contracts/<domain>/<operation>.yaml` команды `apidev diff` и `apidev gen` работают с domain-first структурой generated-зоны:
+
+```text
+<generated_dir>/
+├── operation_map.py
+├── openapi_docs.py
+└── <domain>/
+    ├── routes/
+    │   └── <operation>.py
+    └── models/
+        ├── <operation>_request.py
+        ├── <operation>_response.py
+        └── <operation>_error.py
+```
+
+Где `<generated_dir>` — значение `generator.generated_dir` из `.apidev/config.toml` (по умолчанию `.apidev/output/api`).
+
+Пример для `billing/get_invoice.yaml`:
+
+```text
+.apidev/output/api/
+├── operation_map.py
+├── openapi_docs.py
+└── billing/
+    ├── routes/
+    │   └── get_invoice.py
+    └── models/
+        ├── get_invoice_request.py
+        ├── get_invoice_response.py
+        └── get_invoice_error.py
+```
+
+## Параметры scaffold-интеграции в config
+
+`apidev init` добавляет в `.apidev/config.toml` параметры scaffold-интеграции:
+
+```toml
+[generator]
+generated_dir = ".apidev/output/api"
+postprocess = "auto"
+scaffold = true
+scaffold_dir = "integration"
+```
+
+Семантика:
+
+- `generator.scaffold`: `boolean`, включает/выключает генерацию integration scaffold по умолчанию.
+- `generator.scaffold_dir`: `string`, относительный путь от `generator.generated_dir` для scaffold-файлов.
+- Абсолютные пути в `generator.scaffold_dir` запрещены.
+- `generator.scaffold_dir` не должен выходить за пределы `generator.generated_dir`.
+- Запись scaffold-файлов выполняется в режиме `create-if-missing` (без перезаписи существующих файлов).
+
 ## Конфигурация Evolution и release-state
 
 Для compatibility/deprecation policy используется `.apidev/config.toml` (секция `[evolution]`) и release-state файл.

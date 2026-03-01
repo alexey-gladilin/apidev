@@ -23,6 +23,7 @@
 - архитектурные инварианты слоев и зависимостей;
 - deterministic generation;
 - конфигурационные пути и single source path policy.
+- integration contract generated/manual (registry/factory, endpoint/auth/error/openapi wiring).
 
 ## Уровни тестирования
 
@@ -86,6 +87,14 @@
 - integration roundtrip tests;
 - при необходимости drift-related regression tests.
 
+### Если меняется integration contract generated/manual
+
+- contract tests на структуру operation registry и metadata wiring (`router_module`, `models`, `bridge`);
+- integration tests на runtime-сборку endpoint-ов через registry/factory pattern;
+- integration tests на auth wiring (`public`/`bearer`) через manual dependencies;
+- integration tests на error mapping wrapper и contract-compatible HTTP responses;
+- integration tests на OpenAPI assembly через generated `build_openapi_paths()`.
+
 ### Если меняется docs-only процесс или policy
 
 - минимум ручная проверка ссылок и консистентности терминов;
@@ -109,6 +118,13 @@
 - `remove-only` сценарий: `apidev diff` и `apidev gen --check` возвращают `drift` при наличии только `REMOVE` изменений;
 - `remove-conflict` сценарий: apply-режим возвращает `error` со стандартизированным diagnostic code (`remove-conflict` или `remove-boundary-violation`);
 - regression-покрытие remove-roundtrip: после успешного `gen` повторный `gen --check` возвращает `no-drift`.
+
+Для изменений, затрагивающих integration contract generated/manual, перед merge обязательны:
+
+- endpoint wiring: operation metadata корректно подключается в runtime router registration;
+- auth wiring: для операций с разным `auth` применяется ожидаемая manual dependency policy;
+- error wiring: доменные исключения маппятся в контрактные HTTP-ошибки через manual mapper;
+- OpenAPI wiring: generated `build_openapi_paths()` детерминированно интегрируется в runtime OpenAPI schema.
 
 ## Связь с OpenSpec
 

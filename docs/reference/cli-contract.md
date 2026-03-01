@@ -23,6 +23,38 @@ Compatibility alias:
 
 Во всех нормативных документах, walkthroughs и примерах должна использоваться команда `apidev gen`. Алиас `apidev generate` упоминается только как compatibility mechanism.
 
+## Контракт структуры generated output
+
+Каноническая структура generated output для `apidev diff`/`apidev gen` — domain-first:
+
+```text
+<generated_dir>/
+├── operation_map.py
+├── openapi_docs.py
+└── <domain>/
+    ├── routes/
+    │   └── <operation>.py
+    └── models/
+        ├── <operation>_request.py
+        ├── <operation>_response.py
+        └── <operation>_error.py
+```
+
+Здесь `<generated_dir>` определяется через `generator.generated_dir` в `.apidev/config.toml`.
+
+## Контракт scaffold-флагов
+
+Для `apidev gen` и `apidev diff` поддерживаются CLI overrides:
+
+- `--scaffold` — включить генерацию integration scaffold в текущем запуске;
+- `--no-scaffold` — отключить генерацию integration scaffold в текущем запуске.
+
+Правила:
+
+- если ни один флаг не указан, используется `generator.scaffold` из `.apidev/config.toml`;
+- при указании флага CLI имеет приоритет над config;
+- scaffold-файлы создаются только в режиме `create-if-missing` (существующие не перезаписываются).
+
 ## Контракт help и UX
 
 Обязательные требования:
@@ -121,3 +153,4 @@ Compatibility alias:
 - `docs/process/testing-strategy.md`
 - `docs/reference/glossary.md`
 - `docs/architecture/architecture-overview.md`
+- `docs/architecture/generated-integration.md`

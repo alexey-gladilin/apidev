@@ -131,6 +131,7 @@ Selective DDD для APIDev — это целевое архитектурное
 
 - `docs/architecture/README.md`
 - `docs/architecture/architecture-rules.md`
+- `docs/architecture/generated-integration.md`
 - `docs/architecture/validation-blueprint.md`
 - `docs/architecture/patterns-and-naming.md`
 - `docs/process/testing-strategy.md`

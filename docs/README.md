@@ -47,6 +47,7 @@
 | Продуктовая рамка и target state | `docs/product/vision.md` | Draft / Vision |
 | Архитектурный обзор текущего состояния | `docs/architecture/architecture-overview.md` | Authoritative |
 | Архитектурные правила | `docs/architecture/architecture-rules.md` | Authoritative |
+| Интеграция generated transport в target app | `docs/architecture/generated-integration.md` | Authoritative |
 | Краткие командные соглашения | `docs/architecture/team-conventions.md` | Guide |
 | Архитектурные паттерны и нейминг | `docs/architecture/patterns-and-naming.md` | Reference |
 | План архитектурной валидации | `docs/architecture/validation-blueprint.md` | Reference |
