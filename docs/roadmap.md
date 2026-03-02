@@ -17,6 +17,7 @@
 - compatibility policy (`warn|strict`), baseline precedence (`CLI -> release-state -> git`) и deprecation lifecycle checks;
 - release-state lifecycle в `gen apply` (auto-create, bump policy, fail-without-write);
 - integration scaffold contract (`--scaffold`, `--no-scaffold`, `create-if-missing`);
+- unified machine-readable diagnostics contract для `validate`, `diff`, `gen --check`, `gen` (единый JSON envelope, стабилизированная taxonomy codes, deterministic ordering);
 - архитектурные guardrails и regression-наборы unit/contract/integration.
 
 ## Закрытые gaps предыдущего среза
@@ -24,6 +25,7 @@
 - gap по отсутствию `REMOVE` в generation plan закрыт;
 - базовый integration contract расширен и закреплен в документации;
 - release-state lifecycle и baseline semantics формализованы и внедрены;
+- Horizon 1 (Diagnostics Contract Hardening) реализован и синхронизирован с docs/tests;
 - roadmap переведен из historical snapshot в рабочий текущий статус.
 
 ## Текущая стадия
@@ -36,7 +38,7 @@
 
 | Этап | Статус на 2 марта 2026 | Что уже реализовано | Фокус следующего шага |
 |---|---|---|---|
-| A — Contract Validation Hardening | `Done` | strict schema checks, semantic baseline, diagnostics foundation | semantic deepening и унификация machine-readable diagnostics |
+| A — Contract Validation Hardening | `Done` | strict schema checks, semantic baseline, unified machine-readable diagnostics contract | semantic deepening правил validation и улучшение triage UX |
 | B — Transport Generation MVP+ | `Done` | domain-first generation, stable operation map, router/models templates, OpenAPI metadata | generated test scaffolds и расширение интеграционных шаблонов |
 | C — Diff/Generate Safety & Drift Governance | `Done` | validate-first, read-only semantics, deterministic `ADD|UPDATE|REMOVE`, write-boundary enforcement | richer reporting для CI и triage |
 | D — Contract Evolution & Integrations | `Done` | compatibility classification, baseline compare, deprecation lifecycle, integration boundary contracts | операционализация policy в release/process контуре |
@@ -44,18 +46,15 @@
 
 ## Ближайшие горизонты
 
-### Horizon 1 — Diagnostics Contract Hardening
+### Horizon 1 — Diagnostics Contract Hardening (`Done`)
 
-Цель: сделать machine-readable сигналы единообразными для всех ключевых режимов CLI.
+Статус: закрыт в change `009-diagnostics-contract`.
 
-- Scope:
-  - унифицировать структуру diagnostics для `validate`, `diff`, `gen --check`, `gen`;
-  - стабилизировать коды и поля для CI-парсинга;
-  - синхронизировать reference-документацию и regression-наборы.
-- Критерии готовности:
-  - один предсказуемый diagnostics contract для всех pipeline режимов;
-  - CI-классификация результатов без ручного разбора логов;
-  - стабильный output на повторных запусках с одинаковым входом.
+Результат:
+- единый machine-readable envelope для `validate`, `diff`, `gen --check`, `gen`;
+- стабилизированная taxonomy `validation.*|compatibility.*|generation.*|runtime.*|config.*`;
+- выравненные drift/policy semantics между text/json режимами;
+- обновленные reference docs и regression matrix.
 
 ### Horizon 2 — Release Automation
 
