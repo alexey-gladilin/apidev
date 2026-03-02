@@ -100,13 +100,18 @@ Transport generation SHALL support configurable integration scaffold generation 
 
 #### Scenario: Scaffold generation writes only missing files
 - **WHEN** scaffold generation is enabled by CLI or config
-- **THEN** tool SHALL create predefined scaffold files for registry/factory/auth/error integration
+- **THEN** tool SHALL create exactly these scaffold files (if missing): `<scaffold_dir>/handler_registry.py`, `<scaffold_dir>/router_factory.py`, `<scaffold_dir>/auth_registry.py`, `<scaffold_dir>/error_mapper.py`
 - **AND** created files SHALL remain inside configured generated root
 
 #### Scenario: Existing scaffold file is not overwritten
 - **WHEN** scaffold generation is enabled and target scaffold file already exists
 - **THEN** tool SHALL keep existing file unchanged
 - **AND** generation SHALL continue without destructive overwrite
+
+#### Scenario: Scaffold inventory is canonical and deterministic
+- **WHEN** scaffold generation is enabled
+- **THEN** generated scaffold inventory SHALL be limited to `handler_registry.py`, `router_factory.py`, `auth_registry.py`, `error_mapper.py` within configured `<scaffold_dir>`
+- **AND** repeated generation on unchanged inputs SHALL not introduce additional scaffold filenames
 
 #### Scenario: Scaffold directory path is relative and bounded
 - **WHEN** `generator.scaffold_dir` is resolved

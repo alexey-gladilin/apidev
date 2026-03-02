@@ -7,7 +7,8 @@
 
 ## Что изменится
 - Модифицируется capability `transport-generation`: generated layout переходит на domain-first структуру.
-- `apidev gen` и `apidev diff` формируют router/model артефакты в доменном корне `<generated_dir>/<domain>/` с подпапками `routes/` и `models/`.
+- `apidev gen` формирует router/model артефакты в доменном корне `<generated_dir>/<domain>/` с подпапками `routes/` и `models/`.
+- `apidev diff` остается read-only командой: вычисляет deterministic generation plan для этого layout без записи файлов в filesystem.
 - Operation registry (`operation_map.py`) и bridge metadata начинают ссылаться на новые domain-qualified module paths.
 - Фиксируется канонический mapping для single-level domain путей и нормализация Python module segments (deterministic и collision-safe).
 - Фиксируется ограничение contract layout: поддерживается только `<domain>/<operation>.yaml`; вложенные домены отклоняются с детерминированной диагностикой.
@@ -27,16 +28,19 @@
 ├── operation_map.py
 ├── openapi_docs.py
 └── <domain>/
+    ├── __init__.py
     ├── routes/
+    │   ├── __init__.py
     │   └── <operation>.py
     └── models/
+        ├── __init__.py
         ├── <operation>_request.py
         ├── <operation>_response.py
         └── <operation>_error.py
 ```
 
 ## Влияние
-- Затронутые спеки: `transport-generation` (MODIFIED).
+- Затронутые спеки: `transport-generation` (MODIFIED), `safety-drift` (ADDED scaffold-aware precedence requirement).
 - Затронутый код (target implement-фазы):
   - `src/apidev/application/services/diff_service.py`
   - `src/apidev/templates/generated_operation_map.py.j2`
@@ -79,7 +83,9 @@
 - Research baseline: [artifacts/research/2026-03-01-domain-layout-gap-baseline.md](./artifacts/research/2026-03-01-domain-layout-gap-baseline.md)
 - Design package: [artifacts/design/README.md](./artifacts/design/README.md)
 - Plan package: [artifacts/plan/README.md](./artifacts/plan/README.md)
-- Spec delta: [specs/transport-generation/spec.md](./specs/transport-generation/spec.md)
+- Spec deltas:
+  - [specs/transport-generation/spec.md](./specs/transport-generation/spec.md)
+  - [specs/safety-drift/spec.md](./specs/safety-drift/spec.md)
 - Target integration docs: `docs/architecture/generated-integration.md`
 
 ## Границы этапа
