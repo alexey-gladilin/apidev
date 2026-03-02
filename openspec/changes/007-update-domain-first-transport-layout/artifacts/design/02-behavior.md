@@ -9,6 +9,8 @@
 
 ## 3. `apidev gen`
 - Записывает generated артефакты только в domain-first структуре путей.
+- Принимает только single-level contract layout `<domain>/<operation>.yaml`; вложенные домены отклоняются deterministic validation error.
+- Создает importable package-структуру с `__init__.py` в `<domain>/`, `<domain>/routes/`, `<domain>/models/`.
 
 ## 4. Registry/Bridge metadata
 - Содержит domain-qualified module references, пригодные для runtime wiring.

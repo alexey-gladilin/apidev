@@ -3,13 +3,15 @@
 ## Почему
 Фактический output `apidev gen` сейчас организован как operation-first (плоские файлы по `operation_id`), например `routers/billing_get_invoice.py` и `transport/models/billing_get_invoice_response.py`.
 
-Это не совпадает с ожидаемой feature/domain-first структурой целевых API-проектов (модуль на домен с вложенными `routes/schemas/wiring`) и усложняет интеграцию generated слоя в существующие кодовые базы, где доменная группировка уже является архитектурным стандартом.
+Это не совпадает с ожидаемой feature/domain-first структурой целевых API-проектов (single-level модуль на домен с `routes/schemas/wiring`) и усложняет интеграцию generated слоя в существующие кодовые базы, где доменная группировка уже является архитектурным стандартом.
 
 ## Что изменится
 - Модифицируется capability `transport-generation`: generated layout переходит на domain-first структуру.
 - `apidev gen` и `apidev diff` формируют router/model артефакты в доменном корне `<generated_dir>/<domain>/` с подпапками `routes/` и `models/`.
 - Operation registry (`operation_map.py`) и bridge metadata начинают ссылаться на новые domain-qualified module paths.
-- Фиксируется канонический mapping для nested domain путей и нормализация Python module segments (deterministic и collision-safe).
+- Фиксируется канонический mapping для single-level domain путей и нормализация Python module segments (deterministic и collision-safe).
+- Фиксируется ограничение contract layout: поддерживается только `<domain>/<operation>.yaml`; вложенные домены отклоняются с детерминированной диагностикой.
+- Фиксируется package policy: генерация создает `__init__.py` для `<domain>/`, `<domain>/routes/`, `<domain>/models/`.
 - Формализуется integration contract для target app: registry/factory wiring, auth integration, error mapping, OpenAPI integration.
 - Добавляется конфигурируемая генерация integration scaffold с точным контрактом:
   - config: `generator.scaffold`, `generator.scaffold_dir`;

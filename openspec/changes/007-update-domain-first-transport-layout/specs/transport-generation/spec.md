@@ -124,21 +124,26 @@ Transport generation SHALL support configurable integration scaffold generation 
 - **AND** remove behavior SHALL remain bounded by generated-root safety policy
 
 ### Requirement: Domain Package Import Policy
-Transport generation SHALL define deterministic import/package policy for nested domain layout.
+Transport generation SHALL define deterministic import/package policy for single-level domain layout.
 
 #### Scenario: Generated domain modules are importable for runtime wiring
-- **WHEN** generation produces nested paths `<domain>/routes/*` and `<domain>/models/*`
+- **WHEN** generation produces paths `<domain>/routes/*` and `<domain>/models/*`
 - **THEN** generated tree SHALL follow one consistent package policy for imports
 - **AND** runtime wiring imports from registry metadata SHALL resolve without manual path hacks
 
-#### Scenario: Nested domain mapping preserves relative hierarchy
+#### Scenario: Nested domain contracts are rejected
 - **WHEN** contract path contains nested domain directories (for example `billing/invoices/get_invoice.yaml`)
-- **THEN** generated router/model files SHALL preserve nested hierarchy under generated root (`billing/invoices/routes/get_invoice.py`, `billing/invoices/models/get_invoice_response.py`)
-- **AND** registry module paths SHALL use the same nested hierarchy (`billing.invoices.routes.get_invoice`)
+- **THEN** generation SHALL fail with deterministic validation diagnostic
+- **AND** diagnostic SHALL explain single-level domain constraint (`<domain>/<operation>.yaml`)
+
+#### Scenario: Domain packages include explicit `__init__.py`
+- **WHEN** generation builds domain transport modules
+- **THEN** tool SHALL create missing `__init__.py` files for importable packages under `<domain>/`, `<domain>/routes/`, and `<domain>/models/`
+- **AND** repeated generation on unchanged inputs SHALL keep package artifacts byte-stable
 
 #### Scenario: Domain segments are normalized deterministically
-- **WHEN** domain or operation segments contain non-Python-safe characters
-- **THEN** generation SHALL normalize segments to Python-safe snake_case deterministically
+- **WHEN** domain or operation segment contains non-Python-safe characters
+- **THEN** generation SHALL normalize segment to Python-safe snake_case deterministically
 - **AND** identical inputs SHALL always produce identical normalized module paths
 
 #### Scenario: Normalized path collision is rejected deterministically
