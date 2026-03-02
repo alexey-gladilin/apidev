@@ -45,7 +45,7 @@ def test_generate_service_remove_conflict_returns_error_with_machine_readable_di
 
     monkeypatch.setattr(service, "_remove_generated_artifact", lambda generated_root, target: False)
 
-    result = service.run(tmp_path)
+    result = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert result.drift_status == "error"
     assert len(result.diagnostics) == 1
@@ -68,7 +68,7 @@ def test_generate_service_remove_boundary_violation_returns_error_with_canonical
 
     monkeypatch.setattr(service, "_remove_generated_artifact", _raise_boundary_error)
 
-    result = service.run(tmp_path)
+    result = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert result.drift_status == "error"
     assert len(result.diagnostics) == 1

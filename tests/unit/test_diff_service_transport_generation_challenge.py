@@ -52,7 +52,9 @@ def test_transport_generation_empty_contract_set_keeps_core_outputs(tmp_path: Pa
     _write_project_config(tmp_path)
 
     plan = _create_diff_service().run(tmp_path)
-    planned_paths = [change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes]
+    planned_paths = [
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    ]
 
     assert planned_paths == ["operation_map.py", "openapi_docs.py"]
 
@@ -77,16 +79,22 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    planned_paths = [change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes]
+    planned_paths = [
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    ]
 
     assert "billing/routes/get_invoice.py" in planned_paths
     assert "billing/models/get_invoice_request.py" in planned_paths
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     assert '"summary": "None"' in operation_map.content
     assert '"description": "None"' in operation_map.content
 
 
-def test_transport_generation_rejects_nested_relpath_for_single_level_layout(tmp_path: Path) -> None:
+def test_transport_generation_rejects_nested_relpath_for_single_level_layout(
+    tmp_path: Path,
+) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,

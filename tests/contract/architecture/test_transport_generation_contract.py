@@ -46,11 +46,9 @@ errors:
         encoding="utf-8",
     )
 
-    generate_command(project_dir=tmp_path, check=False)
+    generate_command(project_dir=tmp_path, check=False, baseline_ref="v1.0.0")
 
-    router_path = (
-        tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "get_invoice.py"
-    )
+    router_path = tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "get_invoice.py"
     domain_init_path = tmp_path / ".apidev" / "output" / "api" / "billing" / "__init__.py"
     routes_init_path = (
         tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "__init__.py"
@@ -98,8 +96,7 @@ errors:
         in operation_map_source
     )
     assert (
-        '"error": "billing.models.get_invoice_error.BillingGetInvoiceError"'
-        in operation_map_source
+        '"error": "billing.models.get_invoice_error.BillingGetInvoiceError"' in operation_map_source
     )
     assert '"summary": "Get invoice"' in router_source
     assert '"description": "Get invoice details"' in router_source

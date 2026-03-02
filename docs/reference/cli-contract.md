@@ -118,8 +118,19 @@ Compatibility alias:
 - В `warn` команда выводит compatibility diagnostics, но не фейлит запуск только из-за policy.
 - В `strict` команда завершает выполнение с `exit 1`, если итоговая compatibility-категория `breaking`.
 - `--baseline-ref` (git tag/commit) переопределяет `baseline_ref` из release-state.
+- Baseline precedence для compare/apply: `CLI --baseline-ref -> release-state.baseline_ref -> git HEAD`.
 - При отсутствии baseline или невалидном baseline используются diagnostics `baseline-missing` и `baseline-invalid`.
 - При применении baseline выводится diagnostic `baseline-ref-applied` с деталями источника (`cli` или `release-state`).
+
+## Контракт release-state lifecycle в `gen apply`
+
+- `apidev diff` и `apidev gen --check` не пишут release-state (strict read-only).
+- `apidev gen` (без `--check`) — единственный CLI-режим, где разрешены create/sync/bump операции release-state.
+- Auto-create: если release-state отсутствует, `gen apply` создает его с `release_number=1` и resolved `baseline_ref` (по precedence).
+- `fail-without-write`: если baseline не удалось резолвить/валидировать, `gen apply` завершается с `error` (`baseline-missing` или `baseline-invalid`) до release-state записи.
+- Bump semantics: `release_number` увеличивается ровно на `1` только при реально примененных drift-изменениях (`ADD|UPDATE|REMOVE`) и только если release-state существовал до запуска apply.
+- Если изменений нет, bump не выполняется.
+- При ошибке записи release-state команда завершается с `error` и diagnostic `release-state-apply-failed`, а release-state откатывается к pre-run состоянию.
 
 ## Контракт deprecation semantics
 

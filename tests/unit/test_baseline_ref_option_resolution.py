@@ -32,11 +32,13 @@ def test_resolve_baseline_ref_valid_string_passes_validation(resolver) -> None:
 
 
 @pytest.mark.parametrize(
-    ("resolver",),
+    ("resolver", "value"),
     [
-        (resolve_baseline_ref,),
+        (resolve_baseline_ref, "bad ref"),
+        (resolve_baseline_ref, "a" * 6),
+        (resolve_baseline_ref, "a" * 41),
     ],
 )
-def test_resolve_baseline_ref_invalid_string_raises_bad_parameter(resolver) -> None:
+def test_resolve_baseline_ref_invalid_string_raises_bad_parameter(resolver, value) -> None:
     with pytest.raises(typer.BadParameter):
-        _ = resolver("bad ref")
+        _ = resolver(value)

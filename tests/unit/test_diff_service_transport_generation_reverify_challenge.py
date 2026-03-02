@@ -68,7 +68,9 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
 
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
@@ -87,7 +89,9 @@ def test_diff_service_handles_empty_contract_directory(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
 
     plan = _create_diff_service().run(tmp_path)
-    planned_paths = [change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes]
+    planned_paths = [
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    ]
 
     assert planned_paths == ["operation_map.py", "openapi_docs.py"]
 
@@ -112,7 +116,9 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
     operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])

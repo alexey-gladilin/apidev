@@ -69,7 +69,9 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
 
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
@@ -79,7 +81,9 @@ errors: []
     assert entry["auth"] == "public"
     assert entry["router_module"] == "catalog.routes.list_items"
     assert entry["models"]["request"] == "catalog.models.list_items_request.CatalogListItemsRequest"
-    assert entry["models"]["response"] == "catalog.models.list_items_response.CatalogListItemsResponse"
+    assert (
+        entry["models"]["response"] == "catalog.models.list_items_response.CatalogListItemsResponse"
+    )
     assert entry["models"]["error"] == "catalog.models.list_items_error.CatalogListItemsError"
 
 
@@ -102,7 +106,9 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
     operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
@@ -139,7 +145,9 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
     operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])

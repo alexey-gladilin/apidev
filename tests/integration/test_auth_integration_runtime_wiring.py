@@ -55,7 +55,7 @@ errors: []
         writer=SafeWriter(fs=fs),
         postprocessor=PythonPostprocessor(),
     )
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
     return tmp_path / ".apidev" / "output" / "api"
 
 
@@ -86,7 +86,9 @@ def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_m
 
         router_factory_module = importlib.import_module("integration.router_factory")
         loaded_modules.append("integration.router_factory")
-        invoke_route_with_context = cast(Any, getattr(router_factory_module, "invoke_route_with_context"))
+        invoke_route_with_context = cast(
+            Any, getattr(router_factory_module, "invoke_route_with_context")
+        )
 
         captured_payload: dict[str, object] = {}
 
@@ -120,7 +122,9 @@ def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_m
 
 def test_auth_integration_generated_route_keeps_token_decode_manual(tmp_path: Path) -> None:
     generated_root = _generate_bearer_contract_project(tmp_path)
-    route_source = (generated_root / "billing" / "routes" / "get_invoice.py").read_text(encoding="utf-8")
+    route_source = (generated_root / "billing" / "routes" / "get_invoice.py").read_text(
+        encoding="utf-8"
+    )
     assert "token" not in route_source.lower()
     assert "authorization" not in route_source.lower()
     assert "jwt" not in route_source.lower()
@@ -189,7 +193,9 @@ def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path:
 
         router_factory_module = importlib.import_module("integration.router_factory")
         loaded_modules.append("integration.router_factory")
-        invoke_route_with_context = cast(Any, getattr(router_factory_module, "invoke_route_with_context"))
+        invoke_route_with_context = cast(
+            Any, getattr(router_factory_module, "invoke_route_with_context")
+        )
 
         captured_payload: dict[str, object] = {}
 

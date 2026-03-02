@@ -3,6 +3,7 @@ import re
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 _GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
+_HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
 _GIT_TAG_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$")
 
 
@@ -10,7 +11,13 @@ def validate_baseline_ref(value: str) -> str:
     normalized = str(value).strip()
     if not normalized:
         raise ValueError("must be a non-empty git tag or commit")
-    if _GIT_SHA_RE.fullmatch(normalized) or _GIT_TAG_RE.fullmatch(normalized):
+    # Hex-only values are interpreted as commit SHAs and must be 7..40 chars.
+    # This avoids accepting ambiguous short/oversized SHA-like refs as tags.
+    if _HEX_RE.fullmatch(normalized):
+        if _GIT_SHA_RE.fullmatch(normalized):
+            return normalized
+        raise ValueError("must be a valid git tag or commit (sha 7-40 hex)")
+    if _GIT_TAG_RE.fullmatch(normalized):
         return normalized
     raise ValueError("must be a valid git tag or commit (sha 7-40 hex)")
 

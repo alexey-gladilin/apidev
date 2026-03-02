@@ -14,7 +14,9 @@ from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 runner = CliRunner()
 
 
-def _write_project(project_dir: Path, scaffold: bool = True, scaffold_dir: str = "integration") -> None:
+def _write_project(
+    project_dir: Path, scaffold: bool = True, scaffold_dir: str = "integration"
+) -> None:
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         f"""
@@ -30,8 +32,7 @@ scaffold_dir = "{scaffold_dir}"
 
 [templates]
 dir = ".apidev/templates"
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (project_dir / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
@@ -45,8 +46,7 @@ response:
   status: 200
   body: {type: object}
 errors: []
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -61,13 +61,16 @@ def _run_generate(project_dir: Path) -> None:
         writer=SafeWriter(fs=fs),
         postprocessor=PythonPostprocessor(),
     )
-    _ = service.run(project_dir)
+    _ = service.run(project_dir, baseline_ref="v1.0.0")
 
 
 def test_gen_cli_scaffold_override_enables_generation(tmp_path: Path) -> None:
     _write_project(tmp_path, scaffold=False)
 
-    result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path), "--scaffold"])
+    result = runner.invoke(
+        app,
+        ["gen", "--project-dir", str(tmp_path), "--scaffold", "--baseline-ref", "v1.0.0"],
+    )
 
     assert result.exit_code == 0
     generated_root = tmp_path / ".apidev" / "output" / "api"
@@ -133,7 +136,10 @@ def test_gen_cli_no_scaffold_override_removes_existing_scaffold_files(tmp_path: 
     custom_scaffold = generated_root / "integration" / "custom_handler.py"
     custom_scaffold.write_text("# stale scaffold\n", encoding="utf-8")
 
-    result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path), "--no-scaffold"])
+    result = runner.invoke(
+        app,
+        ["gen", "--project-dir", str(tmp_path), "--no-scaffold", "--baseline-ref", "v1.0.0"],
+    )
 
     assert result.exit_code == 0
     assert not custom_scaffold.exists()

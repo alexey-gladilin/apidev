@@ -50,8 +50,8 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    first = service.run(tmp_path)
-    second = service.run(tmp_path)
+    first = service.run(tmp_path, baseline_ref="v1.0.0")
+    second = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert first.applied_changes >= 1
     assert second.applied_changes == 0
@@ -107,7 +107,7 @@ errors:
         postprocessor=PythonPostprocessor(),
     )
 
-    result = service.run(tmp_path)
+    result = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert result.applied_changes >= 5
     generated_root = tmp_path / ".apidev" / "output" / "api"
@@ -174,7 +174,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
     generated_root = tmp_path / ".apidev" / "output" / "api"
     assert (generated_root / "billing" / "__init__.py").exists()
@@ -253,7 +253,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
     no_drift = service.run(tmp_path, check=True)
     assert not no_drift.drift_detected
@@ -322,7 +322,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
     no_drift = service.run(tmp_path, check=True)
     assert not no_drift.drift_detected
@@ -392,7 +392,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
     stale_file = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
     stale_file.parent.mkdir(parents=True, exist_ok=True)
     stale_file.write_text("# stale\n", encoding="utf-8")
@@ -400,7 +400,7 @@ errors: []
     check_result = service.run(tmp_path, check=True)
     assert check_result.drift_status == "drift"
 
-    apply_result = service.run(tmp_path)
+    apply_result = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert not stale_file.exists()
     assert apply_result.drift_status == "no-drift"
@@ -452,7 +452,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
     stale_file = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
     stale_file.parent.mkdir(parents=True, exist_ok=True)
     stale_file.write_text("# stale\n", encoding="utf-8")
@@ -462,7 +462,7 @@ errors: []
 
     monkeypatch.setattr(service, "_remove_generated_artifact", _raise_remove_error)
 
-    result = service.run(tmp_path)
+    result = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert result.drift_status == "error"
 
@@ -523,7 +523,7 @@ errors: []
         postprocessor=postprocessor,
     )
 
-    first_apply = service.run(tmp_path)
+    first_apply = service.run(tmp_path, baseline_ref="v1.0.0")
     assert first_apply.applied_changes >= 1
     assert first_apply.drift_status == "no-drift"
 
@@ -537,7 +537,7 @@ errors: []
     assert drift_check.drift_status == "drift"
     assert drift_check.drift_detected
 
-    apply_remove = service.run(tmp_path)
+    apply_remove = service.run(tmp_path, baseline_ref="v1.0.0")
     assert apply_remove.drift_status == "no-drift"
     assert apply_remove.applied_changes >= 1
 
@@ -557,7 +557,7 @@ errors: []
     assert post_apply_check.drift_status == "no-drift"
     assert not post_apply_check.drift_detected
 
-    second_apply = service.run(tmp_path)
+    second_apply = service.run(tmp_path, baseline_ref="v1.0.0")
     assert second_apply.drift_status == "no-drift"
     assert second_apply.applied_changes == 0
 
@@ -610,7 +610,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
     no_drift = service.run(tmp_path, check=True)
     assert not no_drift.drift_detected
@@ -692,7 +692,7 @@ errors:
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
     generated_root = tmp_path / ".apidev" / "output" / "api"
     response_model = generated_root / "billing" / "models" / "get_invoice_response.py"
@@ -765,7 +765,7 @@ errors: []
         postprocessor=PythonPostprocessor(),
     )
 
-    _ = service.run(tmp_path)
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
     generated_root = tmp_path / ".apidev" / "output" / "api"
     operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")

@@ -64,7 +64,7 @@ def _run_generate(project_dir: Path) -> None:
         writer=SafeWriter(fs=fs),
         postprocessor=PythonPostprocessor(),
     )
-    _ = service.run(project_dir)
+    _ = service.run(project_dir, baseline_ref="v1.0.0")
 
 
 def _write_project_config_with_evolution(
@@ -324,11 +324,68 @@ def test_gen_apply_strict_policy_succeeds_after_writes(tmp_path: Path) -> None:
             str(tmp_path),
             "--compatibility-policy",
             "strict",
+            "--baseline-ref",
+            "v1.0.0",
         ],
     )
 
     assert result.exit_code == 0
     assert "Applied changes:" in result.output
+
+
+def test_gen_apply_release_state_lifecycle_auto_create_bump_and_noop(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    first_apply = runner.invoke(
+        app,
+        [
+            "gen",
+            "--project-dir",
+            str(tmp_path),
+            "--baseline-ref",
+            "v1.0.0",
+        ],
+    )
+    assert first_apply.exit_code == 0
+
+    release_state_path = tmp_path / ".apidev" / "release-state.json"
+    first_payload = json.loads(release_state_path.read_text(encoding="utf-8"))
+    assert first_payload["release_number"] == 1
+    assert first_payload["baseline_ref"] == "v1.0.0"
+
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}/details")
+    second_apply = runner.invoke(
+        app,
+        [
+            "gen",
+            "--project-dir",
+            str(tmp_path),
+            "--baseline-ref",
+            "v1.0.0",
+        ],
+    )
+    assert second_apply.exit_code == 0
+
+    second_payload = json.loads(release_state_path.read_text(encoding="utf-8"))
+    assert second_payload["release_number"] == 2
+    assert second_payload["baseline_ref"] == "v1.0.0"
+
+    no_op_apply = runner.invoke(
+        app,
+        [
+            "gen",
+            "--project-dir",
+            str(tmp_path),
+            "--baseline-ref",
+            "v1.0.0",
+        ],
+    )
+    assert no_op_apply.exit_code == 0
+
+    final_payload = json.loads(release_state_path.read_text(encoding="utf-8"))
+    assert final_payload["release_number"] == 2
+    assert final_payload["baseline_ref"] == "v1.0.0"
 
 
 def test_gen_apply_exits_with_error_when_remove_apply_fails(
@@ -353,6 +410,42 @@ def test_gen_apply_exits_with_error_when_remove_apply_fails(
 
     assert result.exit_code == 1
     assert "Generation failed (drift-status: error)" in result.output
+
+
+def test_gen_apply_keeps_release_state_pre_run_payload_when_release_state_bump_write_fails(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    _write_project_config_with_evolution(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    _run_generate(tmp_path)
+    _write_release_state(tmp_path, release_number=3, baseline_ref="v1.0.0")
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}/details")
+
+    release_state_path = tmp_path / ".apidev" / "release-state.json"
+    before_text = release_state_path.read_text(encoding="utf-8")
+    original_write_text = LocalFileSystem.write_text
+
+    def _fail_on_bump_write(self, path: Path, content: str) -> None:
+        if path == release_state_path and '"release_number": 4' in content:
+            raise OSError("simulated release-state write failure")
+        original_write_text(self, path, content)
+
+    monkeypatch.setattr(LocalFileSystem, "write_text", _fail_on_bump_write)
+
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "--project-dir",
+            str(tmp_path),
+            "--baseline-ref",
+            "v2.0.0",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert release_state_path.read_text(encoding="utf-8") == before_text
 
 
 def test_diff_rejects_invalid_compatibility_policy_value(tmp_path: Path) -> None:
@@ -458,6 +551,42 @@ def test_diff_and_gen_check_keep_release_state_read_only(tmp_path: Path) -> None
 
     assert diff_result.exit_code == 0
     assert check_result.exit_code == 0
+    assert release_state_path.read_text(encoding="utf-8") == before_text
+    assert release_state_path.stat().st_mtime_ns == before_mtime
+
+
+def test_diff_strict_failure_keeps_release_state_read_only(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path, compatibility_policy="strict")
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    _run_generate(tmp_path)
+
+    release_state_path = tmp_path / ".apidev" / "release-state.json"
+    before_text = release_state_path.read_text(encoding="utf-8")
+    before_mtime = release_state_path.stat().st_mtime_ns
+
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}/details")
+    result = runner.invoke(app, ["diff", "--project-dir", str(tmp_path)])
+
+    assert result.exit_code == 1
+    assert "Compatibility policy gate failed" in result.output
+    assert release_state_path.read_text(encoding="utf-8") == before_text
+    assert release_state_path.stat().st_mtime_ns == before_mtime
+
+
+def test_gen_check_drift_failure_keeps_release_state_read_only(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    _run_generate(tmp_path)
+
+    release_state_path = tmp_path / ".apidev" / "release-state.json"
+    before_text = release_state_path.read_text(encoding="utf-8")
+    before_mtime = release_state_path.stat().st_mtime_ns
+
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}/details")
+    result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path), "--check"])
+
+    assert result.exit_code == 1
+    assert "Drift detected (drift-status: drift)" in result.output
     assert release_state_path.read_text(encoding="utf-8") == before_text
     assert release_state_path.stat().st_mtime_ns == before_mtime
 
@@ -628,4 +757,44 @@ def test_diff_strict_reports_baseline_invalid_from_real_git_baseline(tmp_path: P
 
     assert result.exit_code == 1
     assert "baseline-invalid" in result.output
+    assert "Compatibility policy gate failed" in result.output
+
+
+def test_diff_strict_reports_baseline_invalid_for_no_git_with_baseline_ref(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    (tmp_path / ".apidev" / "release-state.json").write_text(
+        '{"release_number":2,"baseline_ref":"v1.0.0"}',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["diff", "--project-dir", str(tmp_path), "--compatibility-policy", "strict"],
+    )
+
+    assert result.exit_code == 1
+    assert "baseline-invalid" in result.output
+    assert "baseline-missing" not in result.output
+    assert "Compatibility policy gate failed" in result.output
+
+
+def test_diff_reports_release_state_invalid_with_baseline_missing(tmp_path: Path) -> None:
+    _write_project_config_with_evolution(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+    (tmp_path / ".apidev" / "release-state.json").write_text(
+        '{"release_number":2,"baseline_ref":"bad ref"}',
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app,
+        ["diff", "--project-dir", str(tmp_path), "--compatibility-policy", "strict"],
+    )
+
+    assert result.exit_code == 1
+    assert "release-state-invalid" in result.output
+    assert "baseline-missing" in result.output
     assert "Compatibility policy gate failed" in result.output

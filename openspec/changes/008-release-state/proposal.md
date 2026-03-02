@@ -10,6 +10,7 @@
   - `apidev gen` (apply mode) синхронизирует `baseline_ref` по policy precedence (`CLI -> release-state -> git fallback`).
 - Фиксируется поведение в no-git/no-baseline сценариях:
   - детерминированные diagnostics;
+  - `apidev gen` (apply mode) возвращает `baseline-missing|baseline-invalid` и не выполняет release-state write при нерезолвимом baseline;
   - отсутствие скрытых write в read-only режимах.
 - Контракты документации и тестирования синхронизируются с новой семантикой release-state lifecycle.
 

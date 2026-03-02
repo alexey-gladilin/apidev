@@ -23,8 +23,7 @@ scaffold_dir = "integration"
 
 [templates]
 dir = ".apidev/templates"
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (project_dir / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
@@ -38,8 +37,7 @@ response:
   status: 200
   body: {type: object}
 errors: []
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -48,7 +46,9 @@ def test_diff_command_passes_scaffold_true_override(monkeypatch, tmp_path: Path)
     _write_project(tmp_path, scaffold=False)
     captured: dict[str, object] = {}
 
-    def _fake_run(self, project_dir: Path, compatibility_policy="warn", baseline_ref=None, scaffold=None):
+    def _fake_run(
+        self, project_dir: Path, compatibility_policy="warn", baseline_ref=None, scaffold=None
+    ):
         captured["scaffold"] = scaffold
         return GenerationPlan(generated_root=project_dir / ".apidev" / "output" / "api")
 

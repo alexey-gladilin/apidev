@@ -137,10 +137,7 @@ errors: []
         '"response": "alpha.models.create_item_response.AlphaCreateItemResponse"'
         in operation_map.content
     )
-    assert (
-        '"error": "alpha.models.create_item_error.AlphaCreateItemError"'
-        in operation_map.content
-    )
+    assert '"error": "alpha.models.create_item_error.AlphaCreateItemError"' in operation_map.content
     assert '"callable": "alpha.routes.create_item.route"' in operation_map.content
 
     router = next(change for change in plan.changes if change.path.name == "create_item.py")

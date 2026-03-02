@@ -459,6 +459,8 @@ class DiffService:
             args=("ls-tree", "-r", "--name-only", baseline_ref, "--", contracts_rel),
         )
         if listing is None:
+            if not self._is_git_repository(project_dir):
+                return None, "baseline-invalid"
             return None, "baseline-missing"
 
         baseline_operations: dict[str, str] = {}
@@ -527,16 +529,26 @@ class DiffService:
         )
 
     def _run_git_command(self, project_dir: Path, args: tuple[str, ...]) -> str | None:
-        completed = subprocess.run(
-            ["git", *args],
-            cwd=project_dir,
-            check=False,
-            text=True,
-            capture_output=True,
-        )
+        try:
+            completed = subprocess.run(
+                ["git", *args],
+                cwd=project_dir,
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+        except (FileNotFoundError, OSError):
+            return None
         if completed.returncode != 0:
             return None
         return completed.stdout
+
+    def _is_git_repository(self, project_dir: Path) -> bool:
+        probe = self._run_git_command(
+            project_dir=project_dir,
+            args=("rev-parse", "--is-inside-work-tree"),
+        )
+        return probe is not None and probe.strip().lower() == "true"
 
     def _resolve_baseline_ref(
         self, baseline_ref: str | None, release_state_baseline_ref: str | None
@@ -631,7 +643,9 @@ class DiffService:
             if self.fs.exists(target):
                 # Keep manual scaffold content untouched (create-if-missing policy).
                 planned.append(
-                    PlannedChange(path=target, content=self.fs.read_text(target), change_type="SAME")
+                    PlannedChange(
+                        path=target, content=self.fs.read_text(target), change_type="SAME"
+                    )
                 )
                 continue
 
@@ -877,8 +891,7 @@ class DiffService:
                 continue
             relpaths = sorted(operation.contract_relpath.as_posix() for operation in bucket)
             collisions.append(
-                "target="
-                f"{domain_segment}/{operation_segment},contracts={','.join(relpaths)}"
+                "target=" f"{domain_segment}/{operation_segment},contracts={','.join(relpaths)}"
             )
 
         if collisions:

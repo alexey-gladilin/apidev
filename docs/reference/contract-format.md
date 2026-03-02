@@ -109,8 +109,19 @@ scaffold_dir = "integration"
 
 - Источник `baseline_ref` по умолчанию — `release-state.json`.
 - CLI override `--baseline-ref` имеет приоритет над `release-state baseline_ref`.
+- Для `gen apply` и compare используется единый deterministic precedence: `CLI --baseline-ref -> release-state.baseline_ref -> git HEAD`.
 - Compatibility classification в `diff` и `gen --check` выполняется только при валидном baseline snapshot.
 - Для невалидного/отсутствующего baseline используются diagnostics `baseline-invalid`/`baseline-missing`.
+
+Семантика lifecycle release-state в `gen apply`:
+
+- Write-owner для release-state только `apidev gen` без `--check`; `diff` и `gen --check` остаются read-only.
+- Auto-create: если configured release-state отсутствует, `gen apply` создает JSON `{"release_number": 1, "baseline_ref": <resolved>}` только при успешном resolve baseline по precedence.
+- Baseline sync: если release-state существует и `baseline_ref` отличается от resolved baseline, поле `baseline_ref` обновляется на resolved значение.
+- `fail-without-write`: если baseline нерезолвим/невалиден (`baseline-missing` или `baseline-invalid`), `gen apply` завершается с ошибкой и не создает/не изменяет release-state.
+- Bump semantics: `release_number` увеличивается на `1` только когда в apply действительно были изменения (`ADD|UPDATE|REMOVE`) и release-state существовал до запуска apply.
+- No-op semantics: при отсутствии примененных изменений (`SAME`/пустой plan) `release_number` не меняется.
+- Ошибка записи release-state после начала apply приводит к `release-state-apply-failed`; pre-run snapshot release-state восстанавливается (включая удаление auto-created файла, если его не было до запуска).
 
 Семантика deprecation lifecycle:
 

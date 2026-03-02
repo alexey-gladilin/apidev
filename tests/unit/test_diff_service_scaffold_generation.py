@@ -10,7 +10,9 @@ from apidev.infrastructure.output.python_postprocessor import PythonPostprocesso
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 
 
-def _write_project(project_dir: Path, scaffold: bool = True, scaffold_dir: str = "integration") -> None:
+def _write_project(
+    project_dir: Path, scaffold: bool = True, scaffold_dir: str = "integration"
+) -> None:
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         f"""
@@ -26,8 +28,7 @@ scaffold_dir = "{scaffold_dir}"
 
 [templates]
 dir = ".apidev/templates"
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (project_dir / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
@@ -41,8 +42,7 @@ response:
   status: 200
   body: {type: object}
 errors: []
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -63,7 +63,9 @@ def test_diff_service_plans_scaffold_files_when_enabled(tmp_path: Path) -> None:
 
     plan = _create_service().run(tmp_path)
 
-    planned_relpaths = {change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes}
+    planned_relpaths = {
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    }
     assert "integration/handler_registry.py" in planned_relpaths
     assert "integration/router_factory.py" in planned_relpaths
     assert "integration/auth_registry.py" in planned_relpaths
@@ -75,7 +77,9 @@ def test_diff_service_does_not_plan_scaffold_when_disabled(tmp_path: Path) -> No
 
     plan = _create_service().run(tmp_path)
 
-    planned_relpaths = {change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes}
+    planned_relpaths = {
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    }
     assert "integration/handler_registry.py" not in planned_relpaths
 
 
