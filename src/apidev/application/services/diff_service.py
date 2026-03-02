@@ -36,6 +36,12 @@ class DiffService:
     _MAX_HINT_RECURSION_DEPTH = 64
     _BASELINE_CACHE_RELATIVE_ROOT = Path(".apidev") / "cache" / "baseline"
     _MAX_BASELINE_CACHE_SIZE_BYTES = 5_000_000
+    _SCAFFOLD_TEMPLATES: tuple[tuple[str, str], ...] = (
+        ("handler_registry.py", "integration_handler_registry.py.j2"),
+        ("router_factory.py", "integration_router_factory.py.j2"),
+        ("auth_registry.py", "integration_auth_registry.py.j2"),
+        ("error_mapper.py", "integration_error_mapper.py.j2"),
+    )
 
     def __init__(
         self,
@@ -56,11 +62,17 @@ class DiffService:
         project_dir: Path,
         compatibility_policy: CompatibilityPolicy = "warn",
         baseline_ref: str | None = None,
+        scaffold: bool | None = None,
     ) -> GenerationPlan:
         normalized_policy = self._normalize_policy(compatibility_policy)
         config = self.config_loader.load(project_dir)
         paths = resolve_paths(project_dir, config)
         postprocess_mode = config.generator.postprocess
+        effective_scaffold = config.generator.scaffold if scaffold is None else scaffold
+        scaffold_root = self._resolve_scaffold_root(
+            generated_root=paths.generated_root,
+            raw_scaffold_dir=config.generator.scaffold_dir,
+        )
 
         operations = self.loader.load(paths.contracts_dir)
         errors = ensure_unique_operation_ids(operations)
@@ -159,7 +171,26 @@ class DiffService:
                     project_dir, model_target, model_content, postprocess_mode
                 )
                 plan.changes.append(self._planned_change(model_target, model_content))
-        plan.changes.extend(self._planned_removes(paths.generated_root, plan.changes))
+        if effective_scaffold:
+            plan.changes.extend(
+                self._planned_scaffold_changes(
+                    project_dir=project_dir,
+                    scaffold_root=scaffold_root,
+                    postprocess_mode=postprocess_mode,
+                )
+            )
+        protected_roots = (scaffold_root,) if effective_scaffold else ()
+        required_remove_paths = (
+            self._scaffold_template_targets(scaffold_root) if not effective_scaffold else ()
+        )
+        plan.changes.extend(
+            self._planned_removes(
+                paths.generated_root,
+                plan.changes,
+                protected_roots=protected_roots,
+                required_remove_paths=required_remove_paths,
+            )
+        )
 
         resolved_baseline_ref, baseline_source = self._resolve_baseline_ref(
             baseline_ref=baseline_ref,
@@ -588,10 +619,62 @@ class DiffService:
 
         return PlannedChange(path=target, content=content, change_type="SAME")
 
+    def _planned_scaffold_changes(
+        self,
+        project_dir: Path,
+        scaffold_root: Path,
+        postprocess_mode: PythonPostprocessMode,
+    ) -> list[PlannedChange]:
+        planned: list[PlannedChange] = []
+        for filename, template_name in self._SCAFFOLD_TEMPLATES:
+            target = scaffold_root / filename
+            if self.fs.exists(target):
+                # Keep manual scaffold content untouched (create-if-missing policy).
+                planned.append(
+                    PlannedChange(path=target, content=self.fs.read_text(target), change_type="SAME")
+                )
+                continue
+
+            content = self.renderer.render(template_name, {})
+            content = self._postprocess_python(project_dir, target, content, postprocess_mode)
+            planned.append(PlannedChange(path=target, content=content, change_type="ADD"))
+        return planned
+
+    def _resolve_scaffold_root(self, generated_root: Path, raw_scaffold_dir: str) -> Path:
+        scaffold_dir = raw_scaffold_dir.strip()
+        if not scaffold_dir:
+            raise ValueError("Invalid generator.scaffold_dir: must be a non-empty path.")
+
+        candidate = Path(scaffold_dir)
+        if candidate.is_absolute():
+            raise ValueError(
+                f"Invalid generator.scaffold_dir '{raw_scaffold_dir}': "
+                "absolute paths are not allowed."
+            )
+
+        generated_root_resolved = generated_root.resolve()
+        scaffold_root = (generated_root_resolved / candidate).resolve(strict=False)
+        try:
+            scaffold_root.relative_to(generated_root_resolved)
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid generator.scaffold_dir '{raw_scaffold_dir}': "
+                "path must stay inside generated root."
+            ) from exc
+        return scaffold_root
+
+    def _scaffold_template_targets(self, scaffold_root: Path) -> tuple[Path, ...]:
+        return tuple(scaffold_root / filename for filename, _ in self._SCAFFOLD_TEMPLATES)
+
     def _planned_removes(
-        self, generated_root: Path, plan_changes: list[PlannedChange]
+        self,
+        generated_root: Path,
+        plan_changes: list[PlannedChange],
+        protected_roots: tuple[Path, ...] = (),
+        required_remove_paths: tuple[Path, ...] = (),
     ) -> list[PlannedChange]:
         generated_root_resolved = generated_root.resolve()
+        protected_root_resolved = tuple(root.resolve(strict=False) for root in protected_roots)
         expected_paths = {change.path.resolve() for change in plan_changes}
         stale_paths_by_resolved: dict[Path, Path] = {}
 
@@ -599,7 +682,32 @@ class DiffService:
             if not path.is_file():
                 continue
             resolved_path = path.resolve()
+            if self._is_protected_remove_path(resolved_path, protected_root_resolved):
+                continue
             if resolved_path in expected_paths:
+                continue
+
+            existing = stale_paths_by_resolved.get(resolved_path)
+            if existing is None:
+                stale_paths_by_resolved[resolved_path] = path
+                continue
+
+            existing_key = self._stable_remove_sort_key(existing, generated_root_resolved)
+            candidate_key = self._stable_remove_sort_key(path, generated_root_resolved)
+            if candidate_key < existing_key:
+                stale_paths_by_resolved[resolved_path] = path
+
+        for path in required_remove_paths:
+            if not self.fs.exists(path) or not path.is_file():
+                continue
+            resolved_path = path.resolve()
+            if self._is_protected_remove_path(resolved_path, protected_root_resolved):
+                continue
+            if resolved_path in expected_paths:
+                continue
+            try:
+                resolved_path.relative_to(generated_root_resolved)
+            except ValueError:
                 continue
 
             existing = stale_paths_by_resolved.get(resolved_path)
@@ -622,6 +730,17 @@ class DiffService:
             PlannedChange(path=stale_path, content="", change_type="REMOVE")
             for stale_path in stale_paths
         ]
+
+    def _is_protected_remove_path(
+        self, resolved_path: Path, protected_roots: tuple[Path, ...]
+    ) -> bool:
+        for root in protected_roots:
+            try:
+                resolved_path.relative_to(root)
+                return True
+            except ValueError:
+                continue
+        return False
 
     def _stable_remove_sort_key(self, path: Path, generated_root_resolved: Path) -> tuple[str, str]:
         resolved_path = path.resolve()
@@ -651,6 +770,7 @@ class DiffService:
             "auth": operation.contract.auth,
             "summary": operation.contract.summary,
             "description": operation.contract.description,
+            "response_status": operation.contract.response_status,
             "deprecation_status": deprecation["status"],
             "deprecated_since_release": deprecation["deprecated_since_release"],
             "deprecated_since_release_literal": self._python_literal(

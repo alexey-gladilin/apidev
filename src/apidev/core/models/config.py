@@ -10,6 +10,15 @@ class ContractsConfig(BaseModel):
 class GeneratorConfig(BaseModel):
     generated_dir: str = ".apidev/output/api"
     postprocess: Literal["auto", "none", "ruff", "black"] = "auto"
+    scaffold: bool = True
+    scaffold_dir: str = "integration"
+
+    @field_validator("scaffold_dir")
+    @classmethod
+    def _validate_scaffold_dir(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("must be a non-empty path")
+        return value
 
 
 class TemplatesConfig(BaseModel):

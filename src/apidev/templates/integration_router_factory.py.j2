@@ -1,0 +1,34 @@
+"""Manual integration scaffold: build runtime routers from operation registry."""
+
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Any
+
+from operation_map import OPERATION_MAP
+
+
+def build_router() -> list[dict[str, Any]]:
+    return [dict(entry) for entry in OPERATION_MAP.values()]
+
+
+def enrich_payload_with_user_context(
+    payload: Mapping[str, object] | None,
+    *,
+    current_user: Any = None,
+) -> dict[str, object]:
+    enriched_payload = dict(payload or {})
+    # Trust boundary: user context must come only from the integration layer argument.
+    enriched_payload.pop("current_user", None)
+    if current_user is not None:
+        enriched_payload["current_user"] = current_user
+    return enriched_payload
+
+
+async def invoke_route_with_context(
+    *,
+    route_callable: Callable[..., Awaitable[Any]],
+    handler: Any,
+    payload: Mapping[str, object] | None,
+    current_user: Any = None,
+) -> Any:
+    enriched_payload = enrich_payload_with_user_context(payload, current_user=current_user)
+    return await route_callable(payload=enriched_payload, handler=handler)

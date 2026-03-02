@@ -112,6 +112,10 @@ errors: []
         "zeta/models/get_status_request.py",
         "zeta/models/get_status_response.py",
         "zeta/models/get_status_error.py",
+        "integration/handler_registry.py",
+        "integration/router_factory.py",
+        "integration/auth_registry.py",
+        "integration/error_mapper.py",
     ]
 
     operation_map = next(
@@ -121,6 +125,7 @@ errors: []
     assert '"path": "/v1/items"' in operation_map.content
     assert '"summary": "Create item"' in operation_map.content
     assert '"description": "Creates item"' in operation_map.content
+    assert '"response_status": 201' in operation_map.content
     assert '"contract_fingerprint": "' in operation_map.content
     assert '"auth": "bearer"' in operation_map.content
     assert '"router_module": "alpha.routes.create_item"' in operation_map.content
@@ -159,6 +164,8 @@ errors: []
     openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
     assert '"summary": str(entry.get("summary", ""))' in openapi_docs.content
     assert '"description": str(entry.get("description", ""))' in openapi_docs.content
+    assert 'response_status = str(int(entry.get("response_status", 200)))' in openapi_docs.content
+    assert "response_status: {" in openapi_docs.content
 
 
 def test_diff_service_transport_generation_is_deterministic(tmp_path: Path) -> None:

@@ -22,6 +22,8 @@ dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
+scaffold = false
+scaffold_dir = "integration"
 
 [templates]
 dir = ".apidev/templates"

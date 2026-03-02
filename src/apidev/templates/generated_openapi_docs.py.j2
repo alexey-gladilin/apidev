@@ -12,6 +12,7 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
         method = str(entry["method"]).lower()
         response_schema = entry.get("response_schema", {})
         response_example = entry.get("response_example")
+        response_status = str(int(entry.get("response_status", 200)))
         operation = {
             "operationId": operation_id,
             "summary": str(entry.get("summary", "")),
@@ -22,7 +23,7 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
                 "deprecated_since_release": entry.get("deprecated_since_release"),
             },
             "responses": {
-                "200": {
+                response_status: {
                     "description": "Success",
                     "content": {
                         "application/json": {

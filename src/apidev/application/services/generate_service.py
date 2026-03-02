@@ -42,11 +42,13 @@ class GenerateService:
         check: bool = False,
         compatibility_policy: CompatibilityPolicy = "warn",
         baseline_ref: str | None = None,
+        scaffold: bool | None = None,
     ) -> GenerateResult:
         plan = self.diff_service.run(
             project_dir,
             compatibility_policy=compatibility_policy,
             baseline_ref=baseline_ref,
+            scaffold=scaffold,
         )
         drift_changes = [c for c in plan.changes if c.change_type in {"ADD", "UPDATE", "REMOVE"}]
         writable_changes = [c for c in plan.changes if c.change_type in {"ADD", "UPDATE"}]

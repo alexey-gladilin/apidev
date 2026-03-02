@@ -21,8 +21,33 @@ from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 console = Console()
 
 
+def _normalize_flag(value: object) -> bool:
+    candidate = value
+    for _ in range(64):
+        if isinstance(candidate, bool):
+            return candidate
+        default = getattr(candidate, "default", None)
+        if default is candidate:
+            break
+        if default is not None or hasattr(candidate, "default"):
+            candidate = default
+            continue
+        break
+    return bool(candidate)
+
+
 def diff_command(
     project_dir: Path = Path("."),
+    scaffold: bool = typer.Option(
+        False,
+        "--scaffold",
+        help="Enable scaffold generation for this run.",
+    ),
+    no_scaffold: bool = typer.Option(
+        False,
+        "--no-scaffold",
+        help="Disable scaffold generation for this run.",
+    ),
     compatibility_policy: str | None = typer.Option(
         None,
         "--compatibility-policy",
@@ -40,6 +65,11 @@ def diff_command(
         callback=parse_baseline_ref,
     ),
 ) -> None:
+    scaffold_enabled = _normalize_flag(scaffold)
+    no_scaffold_enabled = _normalize_flag(no_scaffold)
+    if scaffold_enabled and no_scaffold_enabled:
+        raise typer.BadParameter("Options --scaffold and --no-scaffold are mutually exclusive.")
+
     root = project_dir.resolve()
     resolved_baseline_ref = resolve_baseline_ref(baseline_ref)
     _, paths = load_runtime(root)
@@ -50,6 +80,12 @@ def diff_command(
         cli_policy=compatibility_policy,
         config_policy=config.evolution.compatibility_policy,
     )
+    scaffold_override: bool | None = None
+    if scaffold_enabled:
+        scaffold_override = True
+    elif no_scaffold_enabled:
+        scaffold_override = False
+
     contract_loader = YamlContractLoader()
     validation = ValidateService(
         loader=contract_loader,
@@ -70,6 +106,7 @@ def diff_command(
         root,
         compatibility_policy=resolved_policy,
         baseline_ref=resolved_baseline_ref,
+        scaffold=scaffold_override,
     )
     changed = [
         change for change in plan.changes if change.change_type in {"ADD", "UPDATE", "REMOVE"}

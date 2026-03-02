@@ -1,0 +1,11 @@
+"""Manual integration scaffold: resolve auth dependencies by auth mode."""
+
+from typing import Any
+
+
+def resolve_auth_dependency(auth_mode: str) -> Any:
+    if auth_mode == "public":
+        return None
+    raise NotImplementedError(
+        "Implement auth resolver in integration/auth_registry.py for protected endpoints."
+    )

@@ -10,6 +10,7 @@ OPERATION_MAP = {
         "auth": {{ entry.auth | tojson }},
         "summary": {{ entry.summary | tojson }},
         "description": {{ entry.description | tojson }},
+        "response_status": {{ entry.response_status }},
         "deprecation_status": {{ entry.deprecation_status | tojson }},
         "deprecated_since_release": {{ entry.deprecated_since_release_literal }},
         "contract_fingerprint": {{ entry.contract_fingerprint | tojson }},

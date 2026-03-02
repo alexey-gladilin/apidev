@@ -1,0 +1,9 @@
+"""Manual integration scaffold: resolve domain handlers by operation id."""
+
+from typing import Any
+
+
+def resolve_handler(operation_id: str) -> Any:
+    raise NotImplementedError(
+        f"Define handler mapping in integration/handler_registry.py for operation '{operation_id}'."
+    )
