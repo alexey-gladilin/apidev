@@ -1,6 +1,7 @@
 import ast
 import hashlib
 import json
+import re
 import subprocess
 from pathlib import Path
 from typing import cast
@@ -67,6 +68,7 @@ class DiffService:
             raise ValueError("; ".join(errors))
         ordered_operations = sorted(operations, key=lambda op: op.operation_id)
         enriched_operations = ordered_operations
+        transport_segments = self._build_transport_segment_index(enriched_operations)
 
         release_number: int | None = None
         deprecated_operations: dict[str, int] = {}
@@ -83,7 +85,8 @@ class DiffService:
         plan = GenerationPlan(generated_root=paths.generated_root)
 
         registry_entries = [
-            self._build_registry_entry(op, deprecated_operations) for op in enriched_operations
+            self._build_registry_entry(op, deprecated_operations, transport_segments)
+            for op in enriched_operations
         ]
         operation_map_target = paths.generated_root / "operation_map.py"
         operation_map_content = self.renderer.render(
@@ -110,9 +113,28 @@ class DiffService:
         )
         plan.changes.append(self._planned_change(openapi_docs_target, openapi_docs_content))
 
+        for domain_segment in sorted({segments[0] for segments in transport_segments.values()}):
+            for package_suffix in ("", "routes", "models"):
+                package_dir = paths.generated_root / domain_segment
+                if package_suffix:
+                    package_dir = package_dir / package_suffix
+                init_target = package_dir / "__init__.py"
+                init_content = self._postprocess_python(
+                    project_dir=project_dir,
+                    target=init_target,
+                    content=self._generated_package_init_content(
+                        domain_segment=domain_segment,
+                        package_suffix=package_suffix,
+                    ),
+                    mode=postprocess_mode,
+                )
+                plan.changes.append(self._planned_change(init_target, init_content))
+
         for op in enriched_operations:
-            domain_segment, operation_segment = self._transport_path_segments(op)
-            bridge_contract = self._build_bridge_contract(op, deprecated_operations)
+            domain_segment, operation_segment = transport_segments[op.operation_id]
+            bridge_contract = self._build_bridge_contract(
+                op, deprecated_operations, transport_segments
+            )
             target = paths.generated_root / domain_segment / "routes" / f"{operation_segment}.py"
             content = self.renderer.render(
                 "generated_router.py.j2",
@@ -610,9 +632,12 @@ class DiffService:
         return (relative_path, resolved_path.as_posix())
 
     def _build_registry_entry(
-        self, operation: Operation, deprecated_operations: dict[str, int]
+        self,
+        operation: Operation,
+        deprecated_operations: dict[str, int],
+        transport_segments: dict[str, tuple[str, str]],
     ) -> dict[str, object]:
-        domain_segment, operation_segment = self._transport_path_segments(operation)
+        domain_segment, operation_segment = transport_segments[operation.operation_id]
         module_root = f"{domain_segment}.models.{operation_segment}"
         class_base = self._class_base(operation.operation_id)
         error_details = self._error_details(operation)
@@ -651,9 +676,12 @@ class DiffService:
         }
 
     def _build_bridge_contract(
-        self, operation: Operation, deprecated_operations: dict[str, int]
+        self,
+        operation: Operation,
+        deprecated_operations: dict[str, int],
+        transport_segments: dict[str, tuple[str, str]],
     ) -> dict[str, str | int | None]:
-        domain_segment, operation_segment = self._transport_path_segments(operation)
+        domain_segment, operation_segment = transport_segments[operation.operation_id]
         class_base = self._class_base(operation.operation_id)
         deprecation = self._deprecation_metadata(operation.operation_id, deprecated_operations)
         return {
@@ -699,13 +727,58 @@ class DiffService:
 
     def _transport_path_segments(self, operation: Operation) -> tuple[str, str]:
         parts = operation.contract_relpath.parts
-        if len(parts) >= 2:
-            return parts[0], Path(parts[-1]).stem
-        domain = operation.contract_relpath.parent.as_posix()
-        if domain in {"", "."}:
-            domain = operation.operation_id
-        operation_segment = operation.contract_relpath.stem or operation.operation_id
-        return domain, operation_segment
+        if len(parts) != 2:
+            raise ValueError(
+                "Invalid contract path layout "
+                f"'{operation.contract_relpath.as_posix()}': expected single-level "
+                "path '<domain>/<operation>.yaml'."
+            )
+
+        raw_domain = parts[0]
+        raw_operation = Path(parts[1]).stem
+        domain_segment = self._normalize_module_segment(raw_domain, "domain")
+        operation_segment = self._normalize_module_segment(raw_operation, "operation")
+        return domain_segment, operation_segment
+
+    def _build_transport_segment_index(
+        self, operations: list[Operation]
+    ) -> dict[str, tuple[str, str]]:
+        index: dict[str, tuple[str, str]] = {}
+        by_target: dict[tuple[str, str], list[Operation]] = {}
+
+        for operation in sorted(operations, key=lambda item: item.contract_relpath.as_posix()):
+            segments = self._transport_path_segments(operation)
+            index[operation.operation_id] = segments
+            by_target.setdefault(segments, []).append(operation)
+
+        collisions: list[str] = []
+        for (domain_segment, operation_segment), bucket in sorted(by_target.items()):
+            if len(bucket) < 2:
+                continue
+            relpaths = sorted(operation.contract_relpath.as_posix() for operation in bucket)
+            collisions.append(
+                "target="
+                f"{domain_segment}/{operation_segment},contracts={','.join(relpaths)}"
+            )
+
+        if collisions:
+            raise ValueError(
+                "Normalized transport path collision detected: "
+                + "; ".join(collisions)
+                + ". Ensure each contract maps to a unique '<domain>/<operation>.yaml' target."
+            )
+
+        return index
+
+    def _normalize_module_segment(self, raw: str, kind: str) -> str:
+        lowered = raw.strip().lower()
+        replaced = re.sub(r"[^a-z0-9_]+", "_", lowered)
+        collapsed = re.sub(r"_+", "_", replaced).strip("_")
+        if not collapsed:
+            collapsed = f"{kind}_segment"
+        if collapsed[0].isdigit():
+            collapsed = f"_{collapsed}"
+        return collapsed
 
     def _deprecation_metadata(
         self, operation_id: str, deprecated_operations: dict[str, int]
@@ -722,7 +795,10 @@ class DiffService:
         }
 
     def _class_base(self, operation_id: str) -> str:
-        return "".join(part.capitalize() for part in operation_id.split("_"))
+        parts = [part for part in re.split(r"[^a-zA-Z0-9]+", operation_id) if part]
+        if not parts:
+            return "Operation"
+        return "".join(part[:1].upper() + part[1:] for part in parts)
 
     def _error_details(self, operation: Operation) -> list[dict[str, object]]:
         details = [
@@ -841,4 +917,13 @@ class DiffService:
             target_path=target,
             content=content,
             mode=mode,
+        )
+
+    def _generated_package_init_content(self, domain_segment: str, package_suffix: str) -> str:
+        package_name = domain_segment
+        if package_suffix:
+            package_name = f"{domain_segment}.{package_suffix}"
+        return (
+            f'"""Generated package marker for {package_name}. Do not edit manually."""\n\n'
+            "__all__: tuple[str, ...] = ()\n"
         )

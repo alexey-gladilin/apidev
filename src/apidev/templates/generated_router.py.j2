@@ -2,9 +2,9 @@
 
 from typing import Protocol
 
-from {{ bridge.request_module }} import {{ bridge.request_class }}
-from {{ bridge.response_module }} import {{ bridge.response_class }}
-from {{ bridge.error_module }} import {{ bridge.error_class }}
+from ..models.{{ bridge.request_module.split(".")[-1] }} import {{ bridge.request_class }}
+from ..models.{{ bridge.response_module.split(".")[-1] }} import {{ bridge.response_class }}
+from ..models.{{ bridge.error_module.split(".")[-1] }} import {{ bridge.error_class }}
 
 # operation_id: {{ operation.operation_id }}
 
@@ -34,3 +34,6 @@ ROUTE_METADATA = {
     "response_model": {{ bridge.response_class | tojson }},
     "error_model": {{ bridge.error_class | tojson }},
 }
+
+
+__all__ = ("HandlerBridge", "route", "ROUTE_METADATA")

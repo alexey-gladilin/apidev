@@ -1,5 +1,7 @@
 import json
+import importlib
 from pathlib import Path
+import sys
 from typing import Any, cast
 
 from apidev.application.services.generate_service import GenerateService
@@ -127,6 +129,85 @@ errors:
     compile(response_model.read_text(encoding="utf-8"), str(response_model), "exec")
     compile(error_model.read_text(encoding="utf-8"), str(error_model), "exec")
     assert '"description": "Invoice identifier"' in response_model.read_text(encoding="utf-8")
+
+
+def test_generate_creates_domain_package_markers_and_runtime_imports(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path)
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    assert (generated_root / "billing" / "__init__.py").exists()
+    assert (generated_root / "billing" / "routes" / "__init__.py").exists()
+    assert (generated_root / "billing" / "models" / "__init__.py").exists()
+
+    inserted = str(generated_root)
+    loaded_modules: list[str] = []
+    sys.path.insert(0, inserted)
+    try:
+        operation_map_module = importlib.import_module("operation_map")
+        loaded_modules.append("operation_map")
+        operation_map = cast(dict[str, Any], operation_map_module.OPERATION_MAP)
+        entry = cast(dict[str, Any], operation_map["billing_get_invoice"])
+
+        router_module_name = str(entry["router_module"])
+        importlib.import_module(router_module_name)
+        loaded_modules.append(router_module_name)
+
+        callable_path = str(cast(dict[str, Any], entry["bridge"])["callable"])
+        callable_module_name, callable_attr = callable_path.rsplit(".", 1)
+        callable_module = importlib.import_module(callable_module_name)
+        loaded_modules.append(callable_module_name)
+        route_callable = getattr(callable_module, callable_attr)
+        assert callable(route_callable)
+    finally:
+        if sys.path and sys.path[0] == inserted:
+            sys.path.pop(0)
+        for module_name in loaded_modules:
+            sys.modules.pop(module_name, None)
+        sys.modules.pop("billing", None)
+        sys.modules.pop("billing.routes", None)
+        sys.modules.pop("billing.models", None)
 
 
 def test_generate_check_detects_drift_for_changed_contract(tmp_path: Path) -> None:
@@ -461,12 +542,10 @@ errors: []
     assert apply_remove.applied_changes >= 1
 
     generated_root = tmp_path / ".apidev" / "output" / "api"
-    assert not (generated_root / "routers" / "billing_get_invoice.py").exists()
-    assert not (generated_root / "transport" / "models" / "billing_get_invoice_request.py").exists()
-    assert not (
-        generated_root / "transport" / "models" / "billing_get_invoice_response.py"
-    ).exists()
-    assert not (generated_root / "transport" / "models" / "billing_get_invoice_error.py").exists()
+    assert not (generated_root / "billing" / "routes" / "get_invoice.py").exists()
+    assert not (generated_root / "billing" / "models" / "get_invoice_request.py").exists()
+    assert not (generated_root / "billing" / "models" / "get_invoice_response.py").exists()
+    assert not (generated_root / "billing" / "models" / "get_invoice_error.py").exists()
 
     post_apply_diff_plan = diff_service.run(tmp_path)
     post_apply_changes = [

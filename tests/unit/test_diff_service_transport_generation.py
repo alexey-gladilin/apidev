@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 from apidev.application.services.diff_service import DiffService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
@@ -96,6 +98,12 @@ errors: []
     assert planned_paths == [
         "operation_map.py",
         "openapi_docs.py",
+        "alpha/__init__.py",
+        "alpha/routes/__init__.py",
+        "alpha/models/__init__.py",
+        "zeta/__init__.py",
+        "zeta/routes/__init__.py",
+        "zeta/models/__init__.py",
         "alpha/routes/create_item.py",
         "alpha/models/create_item_request.py",
         "alpha/models/create_item_response.py",
@@ -179,6 +187,192 @@ errors: []
     first_snapshot = [(change.path.as_posix(), change.content) for change in first.changes]
     second_snapshot = [(change.path.as_posix(), change.content) for change in second.changes]
     assert first_snapshot == second_snapshot
+
+
+def test_diff_service_normalizes_single_level_domain_and_operation_segments(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "Billing-Domain/Get Invoice!.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    planned_paths = [
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    ]
+    assert "billing_domain/routes/get_invoice.py" in planned_paths
+    assert "billing_domain/models/get_invoice_request.py" in planned_paths
+    assert "billing_domain/models/get_invoice_response.py" in planned_paths
+    assert "billing_domain/models/get_invoice_error.py" in planned_paths
+
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    assert '"router_module": "billing_domain.routes.get_invoice"' in operation_map.content
+    assert (
+        '"request": "billing_domain.models.get_invoice_request.BillingDomainGetInvoiceRequest"'
+        in operation_map.content
+    )
+
+
+def test_diff_service_rejects_nested_contract_paths_for_single_level_layout(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/invoices/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    with pytest.raises(ValueError, match="single-level"):
+        _create_diff_service().run(tmp_path)
+
+
+def test_diff_service_fails_fast_on_normalized_transport_path_collision(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get-invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice A
+description: Get invoice A
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice B
+description: Get invoice B
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    with pytest.raises(ValueError, match="collision"):
+        _create_diff_service().run(tmp_path)
+
+
+def test_diff_service_normalizes_empty_segments_to_deterministic_fallback_names(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "!/!.yaml",
+        """
+method: GET
+path: /v1/fallback
+auth: bearer
+summary: Fallback names
+description: Fallback names
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    planned_paths = [
+        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+    ]
+    assert "domain_segment/routes/operation_segment.py" in planned_paths
+    assert "domain_segment/models/operation_segment_request.py" in planned_paths
+    assert "domain_segment/models/operation_segment_response.py" in planned_paths
+    assert "domain_segment/models/operation_segment_error.py" in planned_paths
+
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    assert '"router_module": "domain_segment.routes.operation_segment"' in operation_map.content
+    assert '"request": "domain_segment.models.operation_segment_request.OperationRequest"' in (
+        operation_map.content
+    )
+
+
+def test_diff_service_collision_diagnostic_is_deterministic_for_empty_normalized_segments(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "!/!.yaml",
+        """
+method: GET
+path: /v1/fallback-a
+auth: bearer
+summary: Fallback A
+description: Fallback A
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+    _write_contract(
+        tmp_path,
+        "??/??.yaml",
+        """
+method: GET
+path: /v1/fallback-b
+auth: bearer
+summary: Fallback B
+description: Fallback B
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    with pytest.raises(ValueError, match="Normalized transport path collision detected") as exc:
+        _create_diff_service().run(tmp_path)
+
+    message = str(exc.value)
+    assert "target=domain_segment/operation_segment" in message
+    assert "contracts=!/!.yaml,??/??.yaml" in message
 
 
 def test_diff_service_remove_plan_is_deterministic_with_unstable_glob(tmp_path: Path) -> None:

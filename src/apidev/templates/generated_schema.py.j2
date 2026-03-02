@@ -33,3 +33,12 @@ ERROR_STATUS_BY_CODE = {
     {{ error.code | tojson }}: {{ error.http_status }},
 {% endfor %}
 }
+
+
+__all__ = (
+    {{ model.class_name | tojson }},
+    "SCHEMA_FRAGMENT",
+    "SCHEMA_EXAMPLE",
+    "ERROR_CODES",
+    "ERROR_STATUS_BY_CODE",
+)

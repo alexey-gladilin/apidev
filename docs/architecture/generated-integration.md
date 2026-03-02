@@ -18,9 +18,12 @@
 ├── operation_map.py
 ├── openapi_docs.py
 └── <domain>/
+    ├── __init__.py
     ├── routes/
+    │   ├── __init__.py
     │   └── <operation>.py
     └── models/
+        ├── __init__.py
         ├── <operation>_request.py
         ├── <operation>_response.py
         └── <operation>_error.py
@@ -33,9 +36,12 @@
 ├── operation_map.py
 ├── openapi_docs.py
 └── billing/
+    ├── __init__.py
     ├── routes/
+    │   ├── __init__.py
     │   └── get_invoice.py
     └── models/
+        ├── __init__.py
         ├── get_invoice_request.py
         ├── get_invoice_response.py
         └── get_invoice_error.py
@@ -58,6 +64,9 @@
 |---|---|---|---|
 | `<generated_dir>/operation_map.py` | Generated | Да | Реестр операций и metadata для wiring |
 | `<generated_dir>/openapi_docs.py` | Generated | Да | Детерминированный builder OpenAPI `paths` |
+| `<generated_dir>/<domain>/__init__.py` | Generated | Да | Package marker для стабильного runtime import |
+| `<generated_dir>/<domain>/routes/__init__.py` | Generated | Да | Package marker для routes namespace |
+| `<generated_dir>/<domain>/models/__init__.py` | Generated | Да | Package marker для models namespace |
 | `<generated_dir>/<domain>/routes/*.py` | Generated | Да | Transport adapter и bridge contract |
 | `<generated_dir>/<domain>/models/*.py` | Generated | Да | Request/response/error transport models |
 | `<generated_dir>/<scaffold_dir>/handler_registry.py` | Generated scaffold | Только create-if-missing | Каркас маппинга `operation_id -> handler` |
@@ -84,6 +93,13 @@
 - `AuthRegistry` (manual): маппинг `auth type -> dependency/provider`.
 - `ErrorMapper` (manual): маппинг исключений в контрактные HTTP-ошибки.
 - `RouterFactory` (manual): сборка FastAPI endpoint-ов на основе generated metadata.
+
+### Package/import policy (single-level domain layout)
+
+- references в `operation_map.py` строятся как module paths относительно `generated_root` (`<domain>.routes.*`, `<domain>.models.*`);
+- generated router использует относительные импорты вида `from ..models.<operation>_request import ...`;
+- generator всегда создает `__init__.py` в `<domain>/`, `<domain>/routes/`, `<domain>/models/`;
+- runtime wiring должен импортировать модули только через metadata из `operation_map.py`, без ручного дописывания domain-specific путей.
 
 ### Поток регистрации endpoint-ов
 

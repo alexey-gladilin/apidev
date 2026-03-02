@@ -51,6 +51,13 @@ errors:
     router_path = (
         tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "get_invoice.py"
     )
+    domain_init_path = tmp_path / ".apidev" / "output" / "api" / "billing" / "__init__.py"
+    routes_init_path = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "__init__.py"
+    )
+    models_init_path = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "models" / "__init__.py"
+    )
     operation_map_path = tmp_path / ".apidev" / "output" / "api" / "operation_map.py"
     openapi_docs_path = tmp_path / ".apidev" / "output" / "api" / "openapi_docs.py"
 
@@ -65,9 +72,12 @@ errors:
     assert "async def route(" in router_source
     assert "payload: dict[str, object]" in router_source
     assert "handler: HandlerBridge" in router_source
-    assert "from billing.models.get_invoice_request import BillingGetInvoiceRequest" in router_source
-    assert "from billing.models.get_invoice_response import BillingGetInvoiceResponse" in router_source
-    assert "from billing.models.get_invoice_error import BillingGetInvoiceError" in router_source
+    assert "from ..models.get_invoice_request import BillingGetInvoiceRequest" in router_source
+    assert "from ..models.get_invoice_response import BillingGetInvoiceResponse" in router_source
+    assert "from ..models.get_invoice_error import BillingGetInvoiceError" in router_source
+    assert domain_init_path.exists()
+    assert routes_init_path.exists()
+    assert models_init_path.exists()
 
     assert '"method": "GET"' in operation_map_source
     assert '"path": "/v1/invoices/{invoice_id}"' in operation_map_source

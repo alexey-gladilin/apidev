@@ -84,7 +84,7 @@ errors: []
     assert '"description": "None"' in operation_map.content
 
 
-def test_transport_generation_nested_relpath_uses_domain_and_leaf_stem(tmp_path: Path) -> None:
+def test_transport_generation_rejects_nested_relpath_for_single_level_layout(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,
@@ -103,12 +103,8 @@ errors: []
 """,
     )
 
-    plan = _create_diff_service().run(tmp_path)
-    planned_paths = [change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes]
-
-    assert "billing/routes/get_invoice.py" in planned_paths
-    assert "billing/models/get_invoice_request.py" in planned_paths
-    assert "billing/invoices/routes/get_invoice.py" not in planned_paths
+    with pytest.raises(ValueError, match="single-level"):
+        _create_diff_service().run(tmp_path)
 
 
 def test_transport_generation_reports_invalid_yaml(tmp_path: Path) -> None:
