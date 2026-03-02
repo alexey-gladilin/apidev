@@ -101,17 +101,37 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Blocked Tasks: <count of [BLOCKED - NEEDS HUMAN REVIEW] items>
    ```
 
-7. Run mandatory spec readiness gate before coding:
+7. Resolve current-truth sources for readiness consistency check (mandatory):
+   - Preferred source: canonical specs under `openspec/specs/*`.
+   - Fallback source (when preferred is empty): capability specs from completed changes under `openspec/changes/*/specs/*/spec.md` relevant to the current change dependencies.
+   - If `openspec/specs/*` is empty, this MUST be treated as a transitional repository state, not an automatic blocker.
+   - Block only when BOTH are missing for relevant capabilities:
+     - no canonical `openspec/specs/*`, AND
+     - no relevant fallback specs from completed changes.
+   - Output evidence before readiness gate:
+
+     ```
+     Current Truth Source: <canonical|fallback|mixed>
+     Canonical specs found: <count>
+     Fallback specs found: <count>
+     Relevant capabilities resolved: <list>
+     ```
+
+8. Run mandatory spec readiness gate before coding:
    - Call Task tool with:
      - `subagent_type`: `"spec-analyst"`
      - `description`: `"Validate OpenSpec readiness"`
-     - `prompt`: include full change context (`proposal.md`, `design.md` if exists, `tasks.md`, delta specs, relevant base specs)
+     - `prompt`: include full change context (`proposal.md`, `design.md` if exists, `tasks.md`, delta specs, and resolved current-truth sources from Step 7)
+   - Instruct spec-analyst explicitly:
+     - use canonical `openspec/specs/*` when available;
+     - otherwise use fallback completed-change capability specs for consistency checks;
+     - do NOT reject solely because `openspec/specs/*` is empty when fallback evidence exists.
    - Wait for `SPEC READY` or `SPEC REJECTED`
    - If `SPEC REJECTED` → STOP workflow before coding
    - If `SPEC READY` → proceed
    - Log subagent execution evidence in output (agent/tool used + verdict token).
 
-8. Determine execution mode (mandatory):
+9. Determine execution mode (mandatory):
    - Default mode: `AUTO`
    - Use `STRICT` if any high-risk trigger is present:
      - security/auth/crypto/secrets/permissions changes
@@ -126,7 +146,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      Reason: <risk heuristic or default>
      ```
 
-9. Execute implementation loop based on selected mode:
+10. Execute implementation loop based on selected mode:
 
    **AUTO mode (default, checkpoint-based)**
    - Group pending tasks into logical waves using section/task prefixes from `tasks.md` (for example `1.*`, `2.*`, `3.*`).
@@ -164,7 +184,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - If final gate passes, mark completed batch tasks as `[x]`.
      - If final gate fails, mark affected tasks as rejected/blocked per escalation rules and route fixes via `STRICT` mode until resolved.
 
-10. **STRICT single-task execution details (used only in STRICT mode):**
+11. **STRICT single-task execution details (used only in STRICT mode):**
 
    For each pending task in tasks.md:
    - Find first `[ ]` task (skip `[BLOCKED - NEEDS HUMAN REVIEW]`, `[x]`)
@@ -213,7 +233,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - If REJECTED → Increment rejection count
      - If 3 rejections → Mark as `[BLOCKED - NEEDS HUMAN REVIEW]`
    - Continue with next task
-11. After all tasks complete or blocked:
+12. After all tasks complete or blocked:
    - Detect project quality gates from project docs/config (`AGENTS.md`, `README`, CI workflow, Makefile/package manager/python config`)
    - Run quality gates:
 
@@ -224,9 +244,9 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      ```
 
    - If any fail → Report issues and mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`
-12. Generate completion summary (see format below)
+13. Generate completion summary (see format below)
 
-13. Mandatory orchestration audit (before final answer):
+14. Mandatory orchestration audit (before final answer):
    - Confirm at least one invocation for each required stage:
      - readiness: `spec-analyst`
      - implementation: `coder`
