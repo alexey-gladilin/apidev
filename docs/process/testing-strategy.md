@@ -68,6 +68,13 @@
 - тест compatibility alias, если он затрагивается;
 - проверка кодов выхода, если меняется error handling.
 
+Если изменение затрагивает machine-readable diagnostics contract, дополнительно обязательны:
+
+- тесты формы JSON envelope для `validate|diff|gen --check|gen`;
+- тесты обязательных полей diagnostics item (`code`, `severity`, `location`, `message`);
+- тесты детерминированного порядка diagnostics и `summary` счетчиков;
+- тесты согласованности drift-status и exit semantics между text/json режимами.
+
 ## Минимальный набор тестов для изменения
 
 ### Если меняется CLI contract

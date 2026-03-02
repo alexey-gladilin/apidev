@@ -84,6 +84,107 @@ Compatibility alias:
 - `1` — бизнес-ошибка, validation failure, blocking drift (например, `gen --check`), invalid input на уровне домена;
 - `2` — ошибка парсинга CLI или неверной сигнатуры команды.
 
+## Контракт machine-readable diagnostics (JSON)
+
+Цель этого контракта — обеспечить единый и предсказуемый формат для CI/automation.
+Human-readable вывод остается default-режимом CLI.
+
+### Envelope (верхний уровень)
+
+Machine-readable payload должен быть валидным JSON-объектом с полями:
+
+- `command`: строка, одно из `validate`, `diff`, `gen`;
+- `mode`: строка, одно из `apply`, `check`, `preview`, `validate`;
+- `summary`: объект агрегатов;
+- `diagnostics`: массив diagnostics item;
+- `drift_status`: строка `drift | no-drift | error` (для `diff` и `gen`);
+- `compatibility`: объект compatibility summary (для `diff` и `gen`);
+- `meta`: объект технических метаданных (опционально).
+
+Минимальный пример:
+
+```json
+{
+  "command": "gen",
+  "mode": "check",
+  "drift_status": "drift",
+  "summary": {
+    "status": "failed",
+    "errors": 1,
+    "warnings": 0,
+    "diagnostics_total": 1
+  },
+  "diagnostics": [
+    {
+      "code": "generation.drift-detected",
+      "severity": "error",
+      "location": "generated-root",
+      "message": "Drift detected in check mode",
+      "category": "generation",
+      "detail": "ADD=1,UPDATE=0,REMOVE=0",
+      "source": "generate-service"
+    }
+  ],
+  "compatibility": {
+    "policy": "warn",
+    "overall": "non-breaking",
+    "counts": {
+      "non-breaking": 0,
+      "potentially-breaking": 0,
+      "breaking": 0
+    },
+    "diagnostics": []
+  }
+}
+```
+
+### Diagnostics item schema
+
+Обязательные поля каждого diagnostics item:
+
+- `code`: строка, стабильный diagnostic identifier;
+- `severity`: строка `error | warning | info`;
+- `location`: строка, logical location или путь;
+- `message`: строка, краткое человеко-читаемое описание.
+
+Опциональные стандартизованные поля:
+
+- `category`: строка (например, `validation`, `compatibility`, `generation`, `runtime`, `config`);
+- `detail`: строка с расширенным контекстом;
+- `source`: строка источника (`validate-service`, `diff-service`, `generate-service`, `cli`);
+- `rule`: строка идентификатора правила (главным образом для schema/semantic validation);
+- `hint`: строка с рекомендуемым следующим шагом.
+
+### Таксономия diagnostic codes
+
+Коды должны быть стабильны и принадлежать одному namespace:
+
+- `validation.*` — schema/semantic ошибки контрактов;
+- `compatibility.*` — baseline/policy/deprecation классификация;
+- `generation.*` — generation/apply/remove/check сценарии;
+- `runtime.*` — runtime ошибки pipeline;
+- `config.*` — config/release-state ошибки.
+
+### Summary schema
+
+`summary` должен содержать:
+
+- `status`: `ok | failed`;
+- `errors`: integer >= 0;
+- `warnings`: integer >= 0;
+- `diagnostics_total`: integer >= 0.
+
+Для `gen` (apply mode) дополнительно может включаться:
+
+- `applied_changes`: integer >= 0.
+
+### Exit code matrix для machine-readable режима
+
+- `validate`: `status=failed` с `errors > 0` -> exit `1`, иначе `0`.
+- `diff`: `drift_status=drift` -> exit `0` (preview), `error` -> exit `1`, strict policy gate -> exit `1`.
+- `gen --check`: `drift_status=drift|error` -> exit `1`, `no-drift` -> exit `0`.
+- `gen` (apply): `error` -> exit `1`, успешное применение/отсутствие drift -> exit `0`.
+
 ## Контракт drift-status и exit semantics
 
 Нормализованные drift-статусы:

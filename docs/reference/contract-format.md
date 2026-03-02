@@ -15,6 +15,14 @@
 
 Один файл контракта = одна операция.
 
+## Канонические форматы контрактов в APIDev
+
+В проекте используются три нормативных формата контрактов:
+
+- API contract: YAML-файл операции в `.apidev/contracts/<domain>/<operation>.yaml` (этот документ).
+- Evolution contract: JSON release-state в `.apidev/release-state.json` (раздел ниже).
+- CLI diagnostics contract: machine-readable JSON envelope для `validate|diff|gen` в [docs/reference/cli-contract.md](docs/reference/cli-contract.md).
+
 ## Размещение файлов
 
 - Базовая директория контрактов: `.apidev/contracts` (или кастомная `contracts.dir` в `.apidev/config.toml`).
@@ -356,6 +364,8 @@ Root-level блок `examples` в контракте не поддерживае
 - `message`
 - `location`
 - `rule`
+
+Нормативный cross-command формат machine-readable diagnostics для всех ключевых CLI-режимов (`validate|diff|gen`) задается в [docs/reference/cli-contract.md](docs/reference/cli-contract.md), раздел `Контракт machine-readable diagnostics (JSON)`.
 
 ## Примеры невалидных сценариев
 
