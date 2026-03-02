@@ -1,13 +1,21 @@
-"""Manual integration scaffold: build runtime routers from operation registry."""
+"""Manual integration scaffold: build runtime routes from generated operation map."""
 
 from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
 
 from operation_map import OPERATION_MAP
+from .auth_registry import resolve_auth_dependency
+from .handler_registry import resolve_handler
 
 
 def build_router() -> list[dict[str, Any]]:
-    return [dict(entry) for entry in OPERATION_MAP.values()]
+    routes: list[dict[str, Any]] = []
+    for operation_id in sorted(OPERATION_MAP):
+        meta = dict(OPERATION_MAP[operation_id])
+        meta["handler"] = resolve_handler(operation_id)
+        meta["auth_dependency"] = resolve_auth_dependency(str(meta.get("auth", "public")))
+        routes.append(meta)
+    return routes
 
 
 def enrich_payload_with_user_context(
