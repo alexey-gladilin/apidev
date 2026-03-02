@@ -74,9 +74,9 @@ def test_diff_service_handles_null_release_state_baseline_ref_as_invalid(tmp_pat
     plan = _create_diff_service().run(tmp_path, compatibility_policy="strict")
     codes = [item.code for item in plan.compatibility.diagnostics]
 
-    assert "release-state-invalid" in codes
-    assert "baseline-missing" in codes
-    assert "operation-added" not in codes
+    assert "compatibility.release-state-invalid" in codes
+    assert "compatibility.baseline-missing" in codes
+    assert "compatibility.operation-added" not in codes
     assert plan.policy_blocked is True
 
 
@@ -91,9 +91,9 @@ def test_diff_service_handles_empty_release_state_baseline_ref_as_invalid(tmp_pa
     plan = _create_diff_service().run(tmp_path, compatibility_policy="strict")
     codes = [item.code for item in plan.compatibility.diagnostics]
 
-    assert "release-state-invalid" in codes
-    assert "baseline-missing" in codes
-    assert "response-field-type-changed" not in codes
+    assert "compatibility.release-state-invalid" in codes
+    assert "compatibility.baseline-missing" in codes
+    assert "compatibility.response-field-type-changed" not in codes
     assert plan.policy_blocked is True
 
 
@@ -131,8 +131,8 @@ errors: []
     plan = service.run(tmp_path, compatibility_policy="strict")
     codes = [item.code for item in plan.compatibility.diagnostics]
 
-    assert "baseline-invalid" in codes
-    assert "operation-added" not in codes
+    assert "compatibility.baseline-invalid" in codes
+    assert "compatibility.operation-added" not in codes
     assert plan.policy_blocked is True
 
 
@@ -170,6 +170,6 @@ errors: []
     plan = service.run(tmp_path, compatibility_policy="warn")
     codes = [item.code for item in plan.compatibility.diagnostics]
 
-    assert "baseline-invalid" in codes
-    assert "operation-added" not in codes
+    assert "compatibility.baseline-invalid" in codes
+    assert "compatibility.operation-added" not in codes
     assert plan.policy_blocked is False

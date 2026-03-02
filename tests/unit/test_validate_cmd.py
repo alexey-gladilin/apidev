@@ -62,7 +62,7 @@ errors: []
     payload = json.loads(result.output)
     assert payload["summary"]["status"] == "failed"
     assert payload["summary"]["errors"] >= 1
-    assert payload["diagnostics"][0]["code"].startswith("SCHEMA_")
+    assert payload["diagnostics"][0]["code"].startswith("validation.")
 
 
 def test_validate_human_output_remains_default(tmp_path: Path) -> None:

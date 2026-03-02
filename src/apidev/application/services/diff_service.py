@@ -301,13 +301,19 @@ class DiffService:
             diagnostics=[
                 CompatibilityDiagnostic(
                     category=item.category.value,
-                    code=item.code,
+                    code=self._normalize_compatibility_code(item.code),
                     location=item.location,
                     detail=item.detail,
                 )
                 for item in report.items
             ],
         )
+
+    def _normalize_compatibility_code(self, code: str) -> str:
+        candidate = str(code).strip().lower().replace("_", "-")
+        if candidate.startswith("compatibility."):
+            return candidate
+        return f"compatibility.{candidate}"
 
     def _compare_normalized_models(
         self,

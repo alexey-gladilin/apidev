@@ -70,7 +70,7 @@ def test_generate_apply_does_not_create_release_state_with_empty_baseline_ref(
     release_state_path = tmp_path / ".apidev" / "release-state.json"
     assert not release_state_path.exists()
     assert result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in result.diagnostics] == ["baseline-invalid"]
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["config.baseline-invalid"]
 
 
 def test_generate_apply_does_not_create_release_state_with_out_of_range_sha_lengths(
@@ -84,12 +84,12 @@ def test_generate_apply_does_not_create_release_state_with_out_of_range_sha_leng
     release_state_path = tmp_path / ".apidev" / "release-state.json"
     assert not release_state_path.exists()
     assert first_result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in first_result.diagnostics] == ["baseline-invalid"]
+    assert [diagnostic.code for diagnostic in first_result.diagnostics] == ["config.baseline-invalid"]
 
     second_result = service.run(tmp_path, check=False, baseline_ref="a" * 41)
     assert not release_state_path.exists()
     assert second_result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in second_result.diagnostics] == ["baseline-invalid"]
+    assert [diagnostic.code for diagnostic in second_result.diagnostics] == ["config.baseline-invalid"]
 
 
 def test_generate_apply_does_not_crash_or_overwrite_invalid_release_state_json_on_bump(
@@ -118,7 +118,7 @@ def test_generate_apply_does_not_crash_or_overwrite_invalid_release_state_json_o
     result = service.run(tmp_path, check=False)
 
     assert result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in result.diagnostics] == ["baseline-invalid"]
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["config.baseline-invalid"]
     assert release_state_path.read_text(encoding="utf-8") == "{invalid-json"
 
 
@@ -140,5 +140,5 @@ def test_generate_apply_returns_baseline_invalid_when_git_missing_and_release_st
     result = service.run(tmp_path, check=False)
 
     assert result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in result.diagnostics] == ["baseline-invalid"]
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["config.baseline-invalid"]
     assert release_state_path.read_text(encoding="utf-8") == "{invalid-json"

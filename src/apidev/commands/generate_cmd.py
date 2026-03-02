@@ -1,12 +1,16 @@
+import json
 from pathlib import Path
 
 import typer
 from rich.console import Console
 
+from apidev.application.dto.diagnostics import build_envelope, serialize_validation_diagnostic
 from apidev.application.services.generate_service import GenerateService
 from apidev.application.services.validate_service import ValidateService
 from apidev.commands.common.baseline_ref import parse_baseline_ref, resolve_baseline_ref
 from apidev.commands.common.compatibility import (
+    build_compatibility_payload,
+    compatibility_diagnostics_unified,
     parse_compatibility_policy,
     print_compatibility,
     resolve_compatibility_policy,
@@ -40,6 +44,7 @@ def _normalize_flag(value: object) -> bool:
 def generate_command(
     project_dir: Path = Path("."),
     check: bool = False,
+    json_output: bool = typer.Option(False, "--json", help="Print diagnostics as JSON."),
     scaffold: bool = typer.Option(
         False,
         "--scaffold",
@@ -94,6 +99,23 @@ def generate_command(
         config_loader=config_loader,
     ).run(root)
     if validation.has_errors:
+        if json_output:
+            payload = build_envelope(
+                command="gen",
+                mode="check" if check else "apply",
+                drift_status="error",
+                diagnostics=[
+                    serialize_validation_diagnostic(diagnostic, source="validate-service")
+                    for diagnostic in validation.diagnostics
+                ],
+                compatibility=build_compatibility_payload(
+                    policy=resolved_policy,
+                    compatibility={},
+                    source="generate-service",
+                ),
+            )
+            typer.echo(json.dumps(payload, ensure_ascii=False))
+            raise SystemExit(1)
         console.print("Validation failed. Run `apidev validate` for details.")
         raise SystemExit(1)
 
@@ -112,6 +134,71 @@ def generate_command(
         baseline_ref=resolved_baseline_ref,
         scaffold=scaffold_override,
     )
+
+    if json_output:
+        diagnostics: list[dict[str, object]] = compatibility_diagnostics_unified(
+            compatibility=result.compatibility,
+            source="generate-service",
+        )
+        diagnostics.extend(
+            [
+            diagnostic.as_unified_dict() for diagnostic in result.diagnostics
+            ]
+        )
+        if result.drift_status == "drift":
+            diagnostics.append(
+                {
+                    "code": "generation.drift-detected",
+                    "severity": "error" if check else "warning",
+                    "location": "generated-root",
+                    "message": (
+                        "Drift detected in check mode."
+                        if check
+                        else "Drift detected during generation."
+                    ),
+                    "category": "generation",
+                    "source": "generate-service",
+                    "detail": f"check={str(check).lower()}",
+                }
+            )
+        if check and result.policy_blocked:
+            diagnostics.append(
+                {
+                    "code": "compatibility.policy-blocked",
+                    "severity": "error",
+                    "location": "compatibility-policy",
+                    "message": "Compatibility policy gate failed.",
+                    "category": "compatibility",
+                    "source": "generate-service",
+                    "detail": (
+                        f"policy={result.compatibility_policy},"
+                        f"overall={result.compatibility.overall}"
+                    ),
+                }
+            )
+        compatibility_payload = build_compatibility_payload(
+            policy=result.compatibility_policy,
+            compatibility=result.compatibility,
+            source="generate-service",
+        )
+        payload = build_envelope(
+            command="gen",
+            mode="check" if check else "apply",
+            drift_status=result.drift_status,
+            diagnostics=diagnostics,
+            compatibility=compatibility_payload,
+            summary_extras={"applied_changes": result.applied_changes},
+        )
+        typer.echo(json.dumps(payload, ensure_ascii=False))
+
+        should_fail_on_policy = check and result.policy_blocked
+        if should_fail_on_policy:
+            raise SystemExit(1)
+        if result.drift_status == "drift":
+            raise SystemExit(1)
+        if result.drift_status == "error":
+            raise SystemExit(1)
+        return
 
     print_compatibility(console, result.compatibility_policy, result.compatibility)
 

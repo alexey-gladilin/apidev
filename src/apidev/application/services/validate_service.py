@@ -37,5 +37,7 @@ class ValidateService:
 
         result.operations = operations
         result.diagnostics.extend(validate_semantic_rules(operations))
-        result.diagnostics.sort(key=lambda diagnostic: (diagnostic.location, diagnostic.code))
+        result.diagnostics.sort(
+            key=lambda diagnostic: (diagnostic.location, diagnostic.normalized_code())
+        )
         return result

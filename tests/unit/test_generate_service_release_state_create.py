@@ -100,7 +100,7 @@ def test_generate_apply_returns_baseline_missing_and_does_not_create_release_sta
     release_state_path = tmp_path / ".apidev" / "release-state.json"
     assert not release_state_path.exists()
     assert result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in result.diagnostics] == ["baseline-missing"]
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["config.baseline-missing"]
 
 
 def test_generate_apply_returns_deterministic_diagnostic_when_git_missing(
@@ -121,7 +121,7 @@ def test_generate_apply_returns_deterministic_diagnostic_when_git_missing(
     release_state_path = tmp_path / ".apidev" / "release-state.json"
     assert not release_state_path.exists()
     assert result.drift_status == "error"
-    assert [diagnostic.code for diagnostic in result.diagnostics] == ["baseline-missing"]
+    assert [diagnostic.code for diagnostic in result.diagnostics] == ["config.baseline-missing"]
 
 
 def test_generate_apply_bumps_release_number_when_add_update_or_remove_applied(

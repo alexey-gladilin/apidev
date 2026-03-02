@@ -18,11 +18,11 @@ from apidev.core.ports.writer import WriterPort
 
 
 class GenerateService:
-    _REMOVE_CONFLICT_CODE = "remove-conflict"
-    _REMOVE_BOUNDARY_VIOLATION_CODE = "remove-boundary-violation"
-    _BASELINE_MISSING_CODE = "baseline-missing"
-    _BASELINE_INVALID_CODE = "baseline-invalid"
-    _RELEASE_STATE_APPLY_FAILED_CODE = "release-state-apply-failed"
+    _REMOVE_CONFLICT_CODE = "generation.remove-conflict"
+    _REMOVE_BOUNDARY_VIOLATION_CODE = "generation.remove-boundary-violation"
+    _BASELINE_MISSING_CODE = "config.baseline-missing"
+    _BASELINE_INVALID_CODE = "config.baseline-invalid"
+    _RELEASE_STATE_APPLY_FAILED_CODE = "config.release-state-apply-failed"
 
     def __init__(
         self,

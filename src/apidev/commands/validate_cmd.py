@@ -4,6 +4,10 @@ from pathlib import Path
 import typer
 from rich.console import Console
 
+from apidev.application.dto.diagnostics import (
+    build_envelope,
+    serialize_validation_diagnostic,
+)
 from apidev.application.services.validate_service import ValidateService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
@@ -24,10 +28,13 @@ def validate_command(
     result = service.run(root)
 
     if json_output:
-        payload = {
-            "diagnostics": [diagnostic.as_dict() for diagnostic in result.diagnostics],
-            "summary": result.summary(),
-        }
+        payload = build_envelope(
+            command="validate",
+            mode="validate",
+            diagnostics=[
+                serialize_validation_diagnostic(diagnostic) for diagnostic in result.diagnostics
+            ],
+        )
         typer.echo(json.dumps(payload, ensure_ascii=False))
     elif result.diagnostics:
         for diagnostic in result.diagnostics:

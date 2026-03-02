@@ -50,7 +50,7 @@ def test_generate_service_remove_conflict_returns_error_with_machine_readable_di
     assert result.drift_status == "error"
     assert len(result.diagnostics) == 1
     diagnostic = result.diagnostics[0]
-    assert diagnostic.code == "remove-conflict"
+    assert diagnostic.code == "generation.remove-conflict"
     assert diagnostic.location == remove_path.as_posix()
     assert "missing" in diagnostic.detail
     assert set(diagnostic.as_dict().keys()) == {"code", "location", "detail"}
@@ -73,7 +73,7 @@ def test_generate_service_remove_boundary_violation_returns_error_with_canonical
     assert result.drift_status == "error"
     assert len(result.diagnostics) == 1
     diagnostic = result.diagnostics[0]
-    assert diagnostic.code == "remove-boundary-violation"
+    assert diagnostic.code == "generation.remove-boundary-violation"
     assert diagnostic.location == remove_path.as_posix()
     assert "outside generated root" in diagnostic.detail
     assert set(diagnostic.as_dict().keys()) == {"code", "location", "detail"}

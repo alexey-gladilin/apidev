@@ -1,12 +1,16 @@
+import json
 from pathlib import Path
 
 import typer
 from rich.console import Console
 
+from apidev.application.dto.diagnostics import build_envelope, serialize_validation_diagnostic
 from apidev.application.services.diff_service import DiffService
 from apidev.application.services.validate_service import ValidateService
 from apidev.commands.common.baseline_ref import parse_baseline_ref, resolve_baseline_ref
 from apidev.commands.common.compatibility import (
+    build_compatibility_payload,
+    compatibility_diagnostics_unified,
     parse_compatibility_policy,
     print_compatibility,
     resolve_compatibility_policy,
@@ -38,6 +42,7 @@ def _normalize_flag(value: object) -> bool:
 
 def diff_command(
     project_dir: Path = Path("."),
+    json_output: bool = typer.Option(False, "--json", help="Print diagnostics as JSON."),
     scaffold: bool = typer.Option(
         False,
         "--scaffold",
@@ -92,6 +97,23 @@ def diff_command(
         config_loader=config_loader,
     ).run(root)
     if validation.has_errors:
+        if json_output:
+            payload = build_envelope(
+                command="diff",
+                mode="preview",
+                drift_status="error",
+                diagnostics=[
+                    serialize_validation_diagnostic(diagnostic, source="validate-service")
+                    for diagnostic in validation.diagnostics
+                ],
+                compatibility=build_compatibility_payload(
+                    policy=resolved_policy,
+                    compatibility={},
+                    source="diff-service",
+                ),
+            )
+            typer.echo(json.dumps(payload, ensure_ascii=False))
+            raise SystemExit(1)
         console.print("Validation failed. Run `apidev validate` for details.")
         raise SystemExit(1)
 
@@ -111,6 +133,58 @@ def diff_command(
     changed = [
         change for change in plan.changes if change.change_type in {"ADD", "UPDATE", "REMOVE"}
     ]
+    drift_status = "drift" if changed else "no-drift"
+
+    if json_output:
+        diagnostics: list[dict[str, object]] = compatibility_diagnostics_unified(
+            compatibility=plan.compatibility,
+            source="diff-service",
+        )
+        if changed:
+            diagnostics.append(
+                {
+                    "code": "generation.drift-detected",
+                    "severity": "info",
+                    "location": "generated-root",
+                    "message": "Drift detected in preview mode.",
+                    "category": "generation",
+                    "source": "diff-service",
+                    "detail": (
+                        "ADD="
+                        f"{sum(1 for c in changed if c.change_type == 'ADD')},"
+                        f"UPDATE={sum(1 for c in changed if c.change_type == 'UPDATE')},"
+                        f"REMOVE={sum(1 for c in changed if c.change_type == 'REMOVE')}"
+                    ),
+                }
+            )
+        if plan.policy_blocked:
+            diagnostics.append(
+                {
+                    "code": "compatibility.policy-blocked",
+                    "severity": "error",
+                    "location": "compatibility-policy",
+                    "message": "Compatibility policy gate failed.",
+                    "category": "compatibility",
+                    "source": "diff-service",
+                    "detail": f"policy={plan.compatibility_policy},overall={plan.compatibility.overall}",
+                }
+            )
+        compatibility_payload = build_compatibility_payload(
+            policy=plan.compatibility_policy,
+            compatibility=plan.compatibility,
+            source="diff-service",
+        )
+        payload = build_envelope(
+            command="diff",
+            mode="preview",
+            drift_status=drift_status,
+            diagnostics=diagnostics,
+            compatibility=compatibility_payload,
+        )
+        typer.echo(json.dumps(payload, ensure_ascii=False))
+        if plan.policy_blocked:
+            raise SystemExit(1)
+        return
 
     if not changed:
         console.print("No changes")

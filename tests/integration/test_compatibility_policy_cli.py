@@ -798,3 +798,60 @@ def test_diff_reports_release_state_invalid_with_baseline_missing(tmp_path: Path
     assert "release-state-invalid" in result.output
     assert "baseline-missing" in result.output
     assert "Compatibility policy gate failed" in result.output
+
+
+def test_diff_json_includes_compatibility_diagnostics_in_unified_envelope(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    result = runner.invoke(
+        app,
+        [
+            "diff",
+            "--project-dir",
+            str(tmp_path),
+            "--compatibility-policy",
+            "strict",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    top_level_codes = [item["code"] for item in payload["diagnostics"]]
+    compatibility_codes = [item["code"] for item in payload["compatibility"]["diagnostics"]]
+
+    assert "compatibility.baseline-missing" in compatibility_codes
+    assert "compatibility.baseline-missing" in top_level_codes
+    assert payload["summary"]["diagnostics_total"] == len(payload["diagnostics"])
+
+
+def test_gen_check_json_includes_compatibility_diagnostics_in_unified_envelope(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
+
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "--project-dir",
+            str(tmp_path),
+            "--check",
+            "--compatibility-policy",
+            "strict",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    top_level_codes = [item["code"] for item in payload["diagnostics"]]
+    compatibility_codes = [item["code"] for item in payload["compatibility"]["diagnostics"]]
+
+    assert "compatibility.baseline-missing" in compatibility_codes
+    assert "compatibility.baseline-missing" in top_level_codes
+    assert payload["summary"]["diagnostics_total"] == len(payload["diagnostics"])

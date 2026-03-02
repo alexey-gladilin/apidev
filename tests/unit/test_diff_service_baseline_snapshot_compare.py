@@ -107,10 +107,10 @@ errors: []
     plan = _create_diff_service().run(tmp_path, compatibility_policy="strict")
     codes = [item.code for item in plan.compatibility.diagnostics]
 
-    assert "baseline-missing" in codes
-    assert "operation-added" not in codes
-    assert "response-field-type-changed" not in codes
-    assert "operation-removed" not in codes
+    assert "compatibility.baseline-missing" in codes
+    assert "compatibility.operation-added" not in codes
+    assert "compatibility.response-field-type-changed" not in codes
+    assert "compatibility.operation-removed" not in codes
     assert plan.policy_blocked is True
 
 
@@ -149,8 +149,8 @@ errors: []
     plan = service.run(tmp_path, compatibility_policy="strict")
     codes = [item.code for item in plan.compatibility.diagnostics]
 
-    assert "baseline-invalid" in codes
-    assert "operation-added" not in codes
+    assert "compatibility.baseline-invalid" in codes
+    assert "compatibility.operation-added" not in codes
     assert plan.policy_blocked is True
 
 
@@ -200,10 +200,12 @@ errors: []
     plan = service.run(tmp_path, compatibility_policy="strict")
     diagnostics = plan.compatibility.diagnostics
     codes = [item.code for item in diagnostics]
-    baseline_applied = [item for item in diagnostics if item.code == "baseline-ref-applied"]
+    baseline_applied = [
+        item for item in diagnostics if item.code == "compatibility.baseline-ref-applied"
+    ]
 
-    assert "baseline-missing" not in codes
-    assert "baseline-invalid" not in codes
+    assert "compatibility.baseline-missing" not in codes
+    assert "compatibility.baseline-invalid" not in codes
     assert baseline_applied
     assert "snapshot_source=vcs" in baseline_applied[0].detail
 
@@ -256,10 +258,12 @@ errors: []
     plan = service.run(tmp_path, compatibility_policy="strict")
     diagnostics = plan.compatibility.diagnostics
     codes = [item.code for item in diagnostics]
-    baseline_applied = [item for item in diagnostics if item.code == "baseline-ref-applied"]
+    baseline_applied = [
+        item for item in diagnostics if item.code == "compatibility.baseline-ref-applied"
+    ]
 
-    assert "baseline-missing" not in codes
-    assert "baseline-invalid" not in codes
+    assert "compatibility.baseline-missing" not in codes
+    assert "compatibility.baseline-invalid" not in codes
     assert baseline_applied
     assert "snapshot_source=vcs" in baseline_applied[0].detail
 
@@ -329,9 +333,11 @@ errors: []
     plan = service.run(tmp_path, compatibility_policy="strict")
     diagnostics = plan.compatibility.diagnostics
     codes = [item.code for item in diagnostics]
-    baseline_applied = [item for item in diagnostics if item.code == "baseline-ref-applied"]
+    baseline_applied = [
+        item for item in diagnostics if item.code == "compatibility.baseline-ref-applied"
+    ]
 
-    assert "baseline-missing" not in codes
-    assert "baseline-invalid" not in codes
+    assert "compatibility.baseline-missing" not in codes
+    assert "compatibility.baseline-invalid" not in codes
     assert baseline_applied
     assert "snapshot_source=vcs" in baseline_applied[0].detail

@@ -74,6 +74,8 @@
 - тесты обязательных полей diagnostics item (`code`, `severity`, `location`, `message`);
 - тесты детерминированного порядка diagnostics и `summary` счетчиков;
 - тесты согласованности drift-status и exit semantics между text/json режимами.
+- тесты того, что compatibility diagnostics для `diff|gen --check|gen` присутствуют и в `compatibility.diagnostics`, и в top-level `diagnostics`;
+- тесты preflight JSON failure behavior для `diff --json` и `gen --json`/`gen --check --json` (`drift_status=error`, `summary.status=failed`, validation taxonomy).
 
 ## Минимальный набор тестов для изменения
 
@@ -81,6 +83,7 @@
 
 - `tests/unit/test_cli_conventions.py`
 - релевантные integration tests, если меняется пользовательский сценарий
+- при изменениях unified diagnostics contract: регрессионная матрица `validate/diff/gen/gen --check` (success/drift/error/preflight).
 
 ### Если меняется architecture rule или layering
 
