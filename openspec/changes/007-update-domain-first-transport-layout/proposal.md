@@ -57,6 +57,24 @@
 - В части stale-remove policy change дополняет safety семантику `006-safety-drift`: scaffold-поддерево регулируется отдельным правилом keep/remove в зависимости от `scaffold` effective mode.
 - В части compatibility/deprecation metadata change должен оставаться согласованным с `005-contract-evolution-integration` (без изменения стабильности `operation_id` и baseline-driven governance).
 
+## Dependency Order
+1. `002-transport-generation` является базовым контрактом transport-capability (исходный ownership boundary, stable registry, transport generation contract).
+2. `007-update-domain-first-transport-layout` выполняет layout-level replacement внутри `transport-generation` и вводит domain-first canonical mapping.
+3. `006-safety-drift` применяется поверх нового layout как remove-governance слой; `007` добавляет scoped-правило для scaffold subtree при сохранении boundary-инвариантов `006`.
+4. `005-contract-evolution-integration` остается governance-слоем совместимости поверх обоих изменений; физический layout не меняет identity/compatibility baseline.
+
+## Точки замещения/дополнения соседних change-контрактов
+- `002-transport-generation` (замещение):
+  - замещается path-semantics для generation artifacts: operation-first -> domain-first (`<domain>/routes`, `<domain>/models`);
+  - замещается module-path contract в registry: plain transport refs -> domain-qualified refs (`<domain>.routes.*`, `<domain>.models.*`);
+  - сохраняются без изменений: отсутствие business logic в generated transport и manual ownership boundary.
+- `006-safety-drift` (дополнение):
+  - дополняется remove-semantics для scaffold subtree: при enabled scaffold файлы исключаются из stale-remove, при disabled (`--no-scaffold`/`generator.scaffold=false`) снова считаются stale в пределах generated-root;
+  - сохраняются без изменений: канонические diagnostics (`remove-conflict`, `remove-boundary-violation`) и machine-readable поля (`code`, `location`, `detail`).
+- `005-contract-evolution-integration` (совместимость без замещения):
+  - подтверждается стабильность `operation_id` и baseline-driven classification независимо от физического layout generated файлов;
+  - change `007` не изменяет policy/exit semantics `warn|strict`, deprecation lifecycle и release-state контракт `005`.
+
 ## Linked Artifacts
 - Research baseline: [artifacts/research/2026-03-01-domain-layout-gap-baseline.md](./artifacts/research/2026-03-01-domain-layout-gap-baseline.md)
 - Design package: [artifacts/design/README.md](./artifacts/design/README.md)

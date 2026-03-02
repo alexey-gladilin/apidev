@@ -96,14 +96,14 @@ errors: []
     assert planned_paths == [
         "operation_map.py",
         "openapi_docs.py",
-        "routers/alpha_create_item.py",
-        "transport/models/alpha_create_item_request.py",
-        "transport/models/alpha_create_item_response.py",
-        "transport/models/alpha_create_item_error.py",
-        "routers/zeta_get_status.py",
-        "transport/models/zeta_get_status_request.py",
-        "transport/models/zeta_get_status_response.py",
-        "transport/models/zeta_get_status_error.py",
+        "alpha/routes/create_item.py",
+        "alpha/models/create_item_request.py",
+        "alpha/models/create_item_response.py",
+        "alpha/models/create_item_error.py",
+        "zeta/routes/get_status.py",
+        "zeta/models/get_status_request.py",
+        "zeta/models/get_status_response.py",
+        "zeta/models/get_status_error.py",
     ]
 
     operation_map = next(
@@ -114,35 +114,36 @@ errors: []
     assert '"summary": "Create item"' in operation_map.content
     assert '"description": "Creates item"' in operation_map.content
     assert '"contract_fingerprint": "' in operation_map.content
-    assert '"router_module": "routers.alpha_create_item"' in operation_map.content
+    assert '"auth": "bearer"' in operation_map.content
+    assert '"router_module": "alpha.routes.create_item"' in operation_map.content
     assert (
-        '"request": "transport.models.alpha_create_item_request.AlphaCreateItemRequest"'
+        '"request": "alpha.models.create_item_request.AlphaCreateItemRequest"'
         in operation_map.content
     )
     assert (
-        '"response": "transport.models.alpha_create_item_response.AlphaCreateItemResponse"'
+        '"response": "alpha.models.create_item_response.AlphaCreateItemResponse"'
         in operation_map.content
     )
     assert (
-        '"error": "transport.models.alpha_create_item_error.AlphaCreateItemError"'
+        '"error": "alpha.models.create_item_error.AlphaCreateItemError"'
         in operation_map.content
     )
-    assert '"callable": "routers.alpha_create_item.route"' in operation_map.content
+    assert '"callable": "alpha.routes.create_item.route"' in operation_map.content
 
-    router = next(change for change in plan.changes if change.path.name == "alpha_create_item.py")
+    router = next(change for change in plan.changes if change.path.name == "create_item.py")
     assert '"summary": "Create item"' in router.content
     assert '"description": "Creates item"' in router.content
     assert '"contract_fingerprint": "' in router.content
 
     request_model = next(
-        change for change in plan.changes if change.path.name == "alpha_create_item_request.py"
+        change for change in plan.changes if change.path.name == "create_item_request.py"
     )
     assert 'summary: str = "Create item"' in request_model.content
     assert 'description: str = "Creates item"' in request_model.content
     assert "contract_fingerprint: str" in request_model.content
 
     response_model = next(
-        change for change in plan.changes if change.path.name == "alpha_create_item_response.py"
+        change for change in plan.changes if change.path.name == "create_item_response.py"
     )
     assert "SCHEMA_FRAGMENT = " in response_model.content
     assert '"description": "Item identifier"' in response_model.content

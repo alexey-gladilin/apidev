@@ -111,8 +111,9 @@ class DiffService:
         plan.changes.append(self._planned_change(openapi_docs_target, openapi_docs_content))
 
         for op in enriched_operations:
+            domain_segment, operation_segment = self._transport_path_segments(op)
             bridge_contract = self._build_bridge_contract(op, deprecated_operations)
-            target = paths.generated_root / "routers" / f"{op.operation_id}.py"
+            target = paths.generated_root / domain_segment / "routes" / f"{operation_segment}.py"
             content = self.renderer.render(
                 "generated_router.py.j2",
                 {
@@ -126,7 +127,10 @@ class DiffService:
             for kind in ("request", "response", "error"):
                 model = self._build_transport_model(op, kind, deprecated_operations)
                 model_target = (
-                    paths.generated_root / "transport" / "models" / f"{op.operation_id}_{kind}.py"
+                    paths.generated_root
+                    / domain_segment
+                    / "models"
+                    / f"{operation_segment}_{kind}.py"
                 )
                 model_content = self.renderer.render("generated_schema.py.j2", {"model": model})
                 model_content = self._postprocess_python(
@@ -608,6 +612,8 @@ class DiffService:
     def _build_registry_entry(
         self, operation: Operation, deprecated_operations: dict[str, int]
     ) -> dict[str, object]:
+        domain_segment, operation_segment = self._transport_path_segments(operation)
+        module_root = f"{domain_segment}.models.{operation_segment}"
         class_base = self._class_base(operation.operation_id)
         error_details = self._error_details(operation)
         error_schemas = self._error_schemas(operation)
@@ -617,6 +623,7 @@ class DiffService:
             "operation_id": operation.operation_id,
             "method": operation.contract.method,
             "path": operation.contract.path,
+            "auth": operation.contract.auth,
             "summary": operation.contract.summary,
             "description": operation.contract.description,
             "deprecation_status": deprecation["status"],
@@ -631,18 +638,14 @@ class DiffService:
             "error_examples_literal": self._python_literal(
                 [item["example"] for item in error_schemas]
             ),
-            "router_module": f"routers.{operation.operation_id}",
+            "router_module": f"{domain_segment}.routes.{operation_segment}",
             "models": {
-                "request": (
-                    f"transport.models.{operation.operation_id}_request.{class_base}Request"
-                ),
-                "response": (
-                    f"transport.models.{operation.operation_id}_response.{class_base}Response"
-                ),
-                "error": f"transport.models.{operation.operation_id}_error.{class_base}Error",
+                "request": f"{module_root}_request.{class_base}Request",
+                "response": f"{module_root}_response.{class_base}Response",
+                "error": f"{module_root}_error.{class_base}Error",
             },
             "bridge": {
-                "callable": f"routers.{operation.operation_id}.route",
+                "callable": f"{domain_segment}.routes.{operation_segment}.route",
             },
             "error_codes": [detail["code"] for detail in error_details],
         }
@@ -650,14 +653,15 @@ class DiffService:
     def _build_bridge_contract(
         self, operation: Operation, deprecated_operations: dict[str, int]
     ) -> dict[str, str | int | None]:
+        domain_segment, operation_segment = self._transport_path_segments(operation)
         class_base = self._class_base(operation.operation_id)
         deprecation = self._deprecation_metadata(operation.operation_id, deprecated_operations)
         return {
-            "request_module": f"transport.models.{operation.operation_id}_request",
+            "request_module": f"{domain_segment}.models.{operation_segment}_request",
             "request_class": f"{class_base}Request",
-            "response_module": f"transport.models.{operation.operation_id}_response",
+            "response_module": f"{domain_segment}.models.{operation_segment}_response",
             "response_class": f"{class_base}Response",
-            "error_module": f"transport.models.{operation.operation_id}_error",
+            "error_module": f"{domain_segment}.models.{operation_segment}_error",
             "error_class": f"{class_base}Error",
             "contract_fingerprint": self._contract_fingerprint(operation),
             "deprecation_status": str(deprecation["status"]),
@@ -692,6 +696,16 @@ class DiffService:
             "schema_example_literal": self._python_literal(self._schema_example(schema_fragment)),
             "error_details": error_details,
         }
+
+    def _transport_path_segments(self, operation: Operation) -> tuple[str, str]:
+        parts = operation.contract_relpath.parts
+        if len(parts) >= 2:
+            return parts[0], Path(parts[-1]).stem
+        domain = operation.contract_relpath.parent.as_posix()
+        if domain in {"", "."}:
+            domain = operation.operation_id
+        operation_segment = operation.contract_relpath.stem or operation.operation_id
+        return domain, operation_segment
 
     def _deprecation_metadata(
         self, operation_id: str, deprecated_operations: dict[str, int]

@@ -109,11 +109,11 @@ errors:
 
     assert result.applied_changes >= 5
     generated_root = tmp_path / ".apidev" / "output" / "api"
-    router = generated_root / "routers" / "billing_get_invoice.py"
+    router = generated_root / "billing" / "routes" / "get_invoice.py"
     openapi_docs = generated_root / "openapi_docs.py"
-    request_model = generated_root / "transport" / "models" / "billing_get_invoice_request.py"
-    response_model = generated_root / "transport" / "models" / "billing_get_invoice_response.py"
-    error_model = generated_root / "transport" / "models" / "billing_get_invoice_error.py"
+    request_model = generated_root / "billing" / "models" / "get_invoice_request.py"
+    response_model = generated_root / "billing" / "models" / "get_invoice_response.py"
+    error_model = generated_root / "billing" / "models" / "get_invoice_error.py"
 
     assert router.exists()
     assert openapi_docs.exists()
@@ -616,7 +616,7 @@ errors:
     _ = service.run(tmp_path)
 
     generated_root = tmp_path / ".apidev" / "output" / "api"
-    response_model = generated_root / "transport" / "models" / "billing_get_invoice_response.py"
+    response_model = generated_root / "billing" / "models" / "get_invoice_response.py"
     operation_map = generated_root / "operation_map.py"
     openapi_docs = generated_root / "openapi_docs.py"
 
@@ -698,12 +698,12 @@ errors: []
 
     generated_root = tmp_path / ".apidev" / "output" / "api"
     operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
-    router_source = (generated_root / "routers" / "billing_get_invoice.py").read_text(
+    router_source = (generated_root / "billing" / "routes" / "get_invoice.py").read_text(
         encoding="utf-8"
     )
-    response_source = (
-        generated_root / "transport" / "models" / "billing_get_invoice_response.py"
-    ).read_text(encoding="utf-8")
+    response_source = (generated_root / "billing" / "models" / "get_invoice_response.py").read_text(
+        encoding="utf-8"
+    )
     openapi_docs = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
 
     assert '"deprecation_status": "deprecated"' in operation_map_source

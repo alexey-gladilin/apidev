@@ -2,9 +2,9 @@
 
 from typing import Protocol
 
-from ..{{ bridge.request_module }} import {{ bridge.request_class }}
-from ..{{ bridge.response_module }} import {{ bridge.response_class }}
-from ..{{ bridge.error_module }} import {{ bridge.error_class }}
+from {{ bridge.request_module }} import {{ bridge.request_class }}
+from {{ bridge.response_module }} import {{ bridge.response_class }}
+from {{ bridge.error_module }} import {{ bridge.error_class }}
 
 # operation_id: {{ operation.operation_id }}
 

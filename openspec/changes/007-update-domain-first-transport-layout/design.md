@@ -27,6 +27,24 @@
 - Интеграция в target app фиксируется через manual `registry/factory` паттерн: generated metadata + manual handlers/auth/error wiring.
 - `operation_id` остается стабильным идентификатором operation contract и не становится функцией generated layout.
 
+## Dependency Order
+1. Сначала принимается baseline `002-transport-generation` как источник исходного transport-контракта и ownership-границ.
+2. Затем `007-update-domain-first-transport-layout` выполняет targeted replacement только layout/module-path части capability `transport-generation`.
+3. После фиксации нового layout применяется `006-safety-drift`: remove-governance и diagnostics остаются каноничными, `007` добавляет scaffold-aware branch для stale-remove.
+4. Поверх этого сохраняется совместимость с `005-contract-evolution-integration`: compatibility/deprecation governance работает по неизменному identity (`operation_id`) и baseline snapshot.
+
+## Точки замещения/дополнения соседних change-контрактов
+- Точки замещения `002-transport-generation`:
+  - `Transport Model Generation`: замещение target-path контракта на `<domain>/models/<operation>_{request|response|error}.py`;
+  - `Stable Operation Registry Contract`: замещение формата ссылок на domain-qualified module paths;
+  - `Minimal Runnable Transport Layer`: уточнение router layout на `<domain>/routes/<operation>.py` без расширения ownership generated/manual.
+- Точки дополнения `006-safety-drift`:
+  - добавляется scoped-rule для scaffold subtree в stale-remove plan (`keep` при scaffold enabled, `remove` при scaffold disabled);
+  - сохраняются неизменными каталоги diagnostic codes и write-boundary инварианты `REMOVE`.
+- Точки совместимости `005-contract-evolution-integration`:
+  - layout refactor не изменяет identity операции (`operation_id`) и не вносит churn в compatibility classification;
+  - deprecation lifecycle, `baseline_ref`, release-state storage и policy precedence (`CLI -> config -> default`) остаются под контрактом `005` без замещения.
+
 ## Риски / Компромиссы
 - Риск: breaking для интеграций, которые импортируют старые module paths.
   - Митигация: явно зафиксированный clean break в proposal/spec/docs.

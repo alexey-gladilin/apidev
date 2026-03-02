@@ -49,7 +49,9 @@ errors: []
 
     generate_command(project_dir=tmp_path, check=False)
 
-    generated_router = tmp_path / "build" / "generated" / "routers" / "billing_get_invoice.py"
+    generated_router = (
+        tmp_path / "build" / "generated" / "billing" / "routes" / "get_invoice.py"
+    )
     assert generated_router.exists()
     assert "# custom-template" in generated_router.read_text(encoding="utf-8")
     assert not (tmp_path / "src" / "app" / "api" / "generated").exists()

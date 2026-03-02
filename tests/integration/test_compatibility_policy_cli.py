@@ -281,7 +281,9 @@ def test_diff_reports_drift_for_remove_only_changes(tmp_path: Path) -> None:
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
 
-    stale_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_path = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "obsolete_route.py"
+    )
     stale_path.write_text("# stale\n", encoding="utf-8")
 
     result = runner.invoke(app, ["diff", "--project-dir", str(tmp_path)])
@@ -289,7 +291,7 @@ def test_diff_reports_drift_for_remove_only_changes(tmp_path: Path) -> None:
     assert result.exit_code == 0
     assert "Drift status: drift" in result.output
     assert "REMOVE" in result.output
-    assert stale_path.name in result.output
+    assert stale_path.name in result.output.replace("\n", "")
 
 
 def test_gen_check_fails_on_drift_from_remove_only_changes(tmp_path: Path) -> None:
@@ -297,7 +299,9 @@ def test_gen_check_fails_on_drift_from_remove_only_changes(tmp_path: Path) -> No
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
 
-    stale_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_path = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "obsolete_route.py"
+    )
     stale_path.write_text("# stale\n", encoding="utf-8")
 
     result = runner.invoke(app, ["gen", "--project-dir", str(tmp_path), "--check"])
@@ -335,7 +339,9 @@ def test_gen_apply_exits_with_error_when_remove_apply_fails(
     _write_contract(tmp_path, "/v1/invoices/{invoice_id}")
     _run_generate(tmp_path)
 
-    stale_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "obsolete_route.py"
+    stale_path = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "obsolete_route.py"
+    )
     stale_path.write_text("# stale\n", encoding="utf-8")
 
     def _raise_remove_error(self, generated_root: Path, target: Path) -> bool:

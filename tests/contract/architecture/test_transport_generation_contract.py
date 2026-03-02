@@ -48,7 +48,9 @@ errors:
 
     generate_command(project_dir=tmp_path, check=False)
 
-    router_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "billing_get_invoice.py"
+    router_path = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "routes" / "get_invoice.py"
+    )
     operation_map_path = tmp_path / ".apidev" / "output" / "api" / "operation_map.py"
     openapi_docs_path = tmp_path / ".apidev" / "output" / "api" / "openapi_docs.py"
 
@@ -63,6 +65,9 @@ errors:
     assert "async def route(" in router_source
     assert "payload: dict[str, object]" in router_source
     assert "handler: HandlerBridge" in router_source
+    assert "from billing.models.get_invoice_request import BillingGetInvoiceRequest" in router_source
+    assert "from billing.models.get_invoice_response import BillingGetInvoiceResponse" in router_source
+    assert "from billing.models.get_invoice_error import BillingGetInvoiceError" in router_source
 
     assert '"method": "GET"' in operation_map_source
     assert '"path": "/v1/invoices/{invoice_id}"' in operation_map_source
@@ -71,18 +76,19 @@ errors:
     assert '"deprecation_status": "active"' in operation_map_source
     assert '"deprecated_since_release": None' in operation_map_source
     assert '"contract_fingerprint": "' in operation_map_source
-    assert '"router_module": "routers.billing_get_invoice"' in operation_map_source
-    assert '"callable": "routers.billing_get_invoice.route"' in operation_map_source
+    assert '"auth": "bearer"' in operation_map_source
+    assert '"router_module": "billing.routes.get_invoice"' in operation_map_source
+    assert '"callable": "billing.routes.get_invoice.route"' in operation_map_source
     assert (
-        '"request": "transport.models.billing_get_invoice_request.BillingGetInvoiceRequest"'
+        '"request": "billing.models.get_invoice_request.BillingGetInvoiceRequest"'
         in operation_map_source
     )
     assert (
-        '"response": "transport.models.billing_get_invoice_response.BillingGetInvoiceResponse"'
+        '"response": "billing.models.get_invoice_response.BillingGetInvoiceResponse"'
         in operation_map_source
     )
     assert (
-        '"error": "transport.models.billing_get_invoice_error.BillingGetInvoiceError"'
+        '"error": "billing.models.get_invoice_error.BillingGetInvoiceError"'
         in operation_map_source
     )
     assert '"summary": "Get invoice"' in router_source
