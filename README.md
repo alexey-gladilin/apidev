@@ -12,6 +12,10 @@ Binary CLI tool for contract-driven API scaffolding.
 Compatibility alias:
 - `apidev generate` (legacy alias for `apidev gen`)
 
+## Development
+
+- `make test` - запуск тестов с отчетом по покрытию (`pytest-cov`)
+
 ## Endpoint фильтры для `gen`
 
 `apidev gen` поддерживает repeatable-флаги:

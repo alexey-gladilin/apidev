@@ -81,16 +81,16 @@ lint: ## Static analysis (Flake8 + Pyright)
 	fi
 	@echo "$(GREEN)Lint passed$(NC)"
 
-test: ## Run tests (pytest)
+test: ## Run tests with coverage (pytest + pytest-cov)
 	@echo "$(YELLOW)Running tests...$(NC)"
 	@if [ ! -d .venv ]; then \
 		echo "$(RED)Virtual environment not found. Run: uv venv$(NC)"; \
 		exit 1; \
 	fi
 	@if [ -f .venv/bin/pytest ]; then \
-		.venv/bin/pytest tests/ -v; \
+		.venv/bin/pytest tests/ -v --cov=apidev --cov-report=term-missing; \
 	elif [ -f .venv/Scripts/pytest.exe ]; then \
-		.venv/Scripts/pytest.exe tests/ -v; \
+		.venv/Scripts/pytest.exe tests/ -v --cov=apidev --cov-report=term-missing; \
 	else \
 		echo "$(RED)pytest not found. Install: uv pip install -r requirements/test.txt$(NC)"; \
 		echo "  (if test.txt missing: uv pip compile requirements/test.in -o requirements/test.txt)"; \
