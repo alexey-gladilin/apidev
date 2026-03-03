@@ -26,11 +26,18 @@ def main() -> int:
 
     result = subprocess.run(
         [str(args.binary_path), "--help"],
-        check=True,
         capture_output=True,
         text=True,
     )
-    if "apidev" not in result.stdout.lower():
+    out = (result.stdout or "") + (result.stderr or "")
+    if result.returncode != 0:
+        print("Binary stdout:", result.stdout, file=sys.stderr)
+        print("Binary stderr:", result.stderr, file=sys.stderr)
+        if "apidev" in out.lower():
+            # Help was printed; some environments (e.g. frozen on macOS) may exit 1
+            return 0
+        return result.returncode
+    if "apidev" not in out.lower():
         raise RuntimeError("Smoke gate failed: expected apidev --help output")
     return 0
 

@@ -1,3 +1,5 @@
+import sys
+
 from typer import Context, Exit, Typer, echo
 
 from apidev.commands.diff_cmd import diff_command
@@ -26,7 +28,10 @@ app.command("generate", hidden=True)(generate_command)
 
 
 def main() -> None:
-    app()
+    try:
+        app()
+    except Exit as e:
+        sys.exit(e.exit_code)
 
 
 if __name__ == "__main__":
