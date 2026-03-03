@@ -89,9 +89,9 @@ def test_makefile_contract_rejects_missing_release_package_target(
         tmp_path,
         "\n".join(
             [
-                "release-build:",
+                "build-binary:",
                 '\t@echo "build"',
-                "release-smoke:",
+                "smoke-binary:",
                 '\t@echo "smoke"',
             ]
         )
@@ -99,5 +99,5 @@ def test_makefile_contract_rejects_missing_release_package_target(
     )
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(AssertionError, match="Makefile must define 'release-package' target"):
-        target.test_makefile_exposes_release_build_smoke_package_targets()
+    with pytest.raises(AssertionError, match="Makefile must define 'package-binary' target"):
+        target.test_makefile_exposes_build_smoke_package_binary_targets()

@@ -98,14 +98,14 @@ def test_smoke_script_contains_apidev_help_gate() -> None:
     ), "Smoke helper script must enforce apidev --help gate"
 
 
-def test_makefile_exposes_release_build_smoke_package_targets() -> None:
+def test_makefile_exposes_build_smoke_package_binary_targets() -> None:
     makefile_path = Path("Makefile")
     assert makefile_path.exists(), "Expected Makefile in project root"
     content = makefile_path.read_text(encoding="utf-8")
 
-    assert "release-build:" in content, "Makefile must define 'release-build' target"
-    assert "release-smoke:" in content, "Makefile must define 'release-smoke' target"
-    assert "release-package:" in content, "Makefile must define 'release-package' target"
+    assert "build-binary:" in content, "Makefile must define 'build-binary' target"
+    assert "smoke-binary:" in content, "Makefile must define 'smoke-binary' target"
+    assert "package-binary:" in content, "Makefile must define 'package-binary' target"
 
 
 def test_makefile_release_package_passes_runner_metadata() -> None:
@@ -115,10 +115,10 @@ def test_makefile_release_package_passes_runner_metadata() -> None:
 
     assert (
         "--runner-os" in content
-    ), "Makefile release-package target must pass --runner-os to package script"
+    ), "Makefile package-binary target must pass --runner-os to package script"
     assert (
         "--runner-arch" in content
-    ), "Makefile release-package target must pass --runner-arch to package script"
+    ), "Makefile package-binary target must pass --runner-arch to package script"
 
 
 def test_release_workflow_pins_setup_python_action_to_full_commit_sha() -> None:

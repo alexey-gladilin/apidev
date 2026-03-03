@@ -2,7 +2,7 @@
 # Makefile for apidev
 # =============================================================================
 
-.PHONY: help menu install-deps format lint test architecture-test docs-check release-build release-smoke release-package
+.PHONY: help menu install-deps format lint test test-length-report architecture-test docs-check build-binary package-binary smoke-binary release
 
 .DEFAULT_GOAL := help
 
@@ -98,6 +98,9 @@ test: ## Run tests (pytest)
 	fi
 	@echo "$(GREEN)Tests passed$(NC)"
 
+test-length-report: ## Report large test files/functions (non-blocking)
+	@python scripts/test_length_report.py
+
 architecture-test: ## Run architecture guardrail tests only
 	@echo "$(YELLOW)Running architecture tests...$(NC)"
 	@if [ ! -d .venv ]; then \
@@ -132,13 +135,33 @@ docs-check: ## Run documentation consistency checks
 	fi
 	@echo "$(GREEN)Documentation checks passed$(NC)"
 
-release-build: ## Build standalone release binary with PyInstaller
-	@python scripts/release/build_binary.py
+##@ Packaging
 
-release-smoke: ## Smoke-check standalone release binary (`apidev --help`)
-	@python scripts/release/smoke_binary.py
+build-binary: ## Build standalone CLI binary with PyInstaller
+	@if [ ! -d .venv ]; then \
+		echo "$(RED)Virtual environment not found. Run: make install-deps$(NC)"; \
+		exit 1; \
+	fi
+	@uv pip install pyinstaller==6.18.0 --quiet 2>/dev/null || true
+	@if [ -f .venv/bin/python ]; then \
+		.venv/bin/python scripts/release/build_binary.py; \
+	elif [ -f .venv/Scripts/python.exe ]; then \
+		.venv/Scripts/python.exe scripts/release/build_binary.py; \
+	else \
+		echo "$(RED)Could not find .venv Python$(NC)"; exit 1; \
+	fi
 
-release-package: ## Package standalone release binary to dist/release
+package-binary: ## Package release artifacts and checksums (auto-detects OS/arch if not provided)
 	@runner_os="$${RUNNER_OS:-$$(python -c 'import platform; print(platform.system())')}"; \
 	 runner_arch="$${RUNNER_ARCH:-$$(python -c 'import platform; print(platform.machine())')}"; \
 	 python scripts/release/package_binary.py --runner-os "$$runner_os" --runner-arch "$$runner_arch"
+
+smoke-binary: ## Smoke test built binary (auto-detects OS if not provided)
+	@python scripts/release/smoke_binary.py
+
+release: ## Create git tag + GitHub release using gh (TAG=v0.1.0 required)
+	@if [ -z "$$TAG" ]; then \
+		echo "$(RED)TAG is required. Example: make release TAG=v0.1.0$(NC)"; \
+		exit 1; \
+	fi; \
+	git tag "$$TAG" && gh release create "$$TAG" --generate-notes
