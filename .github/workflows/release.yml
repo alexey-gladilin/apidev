@@ -55,9 +55,9 @@ jobs:
           fi
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@19e4675e06535f6b54e894da5c1f044400bb4996
         with:
-          python-version: "3.11"
+          python-version: "3.13"
           check-latest: false
 
       - name: Install release build dependencies
@@ -158,13 +158,55 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.package_metadata.outputs.archive_path }}" --clobber
 
+      - name: Build standalone binary (onedir for Homebrew)
+        if: ${{ runner.os == 'macOS' }}
+        run: python scripts/release/build_binary.py --mode onedir
+
+      - name: Smoke check standalone binary (onedir for Homebrew)
+        if: ${{ runner.os == 'macOS' }}
+        run: python scripts/release/smoke_binary.py --mode onedir
+
+      - name: Package standalone binary (onedir for Homebrew)
+        if: ${{ runner.os == 'macOS' }}
+        run: python scripts/release/package_binary.py --runner-os "${{ runner.os }}" --runner-arch "${{ runner.arch }}" --version "${{ steps.resolve_release_version.outputs.release_version }}" --mode onedir
+
+      - name: Capture packaged artifact metadata (onedir for Homebrew)
+        if: ${{ runner.os == 'macOS' }}
+        id: package_metadata_onedir
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_path="$(find dist/release -maxdepth 1 -type f -name 'apidev-*-onedir.tar.gz' | head -n 1)"
+          if [ -z "$archive_path" ]; then
+            echo "No onedir packaged artifact found in dist/release"
+            exit 1
+          fi
+          archive_name="$(basename "$archive_path")"
+          archive_stem="${archive_name%.tar.gz}"
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
+          echo "archive_stem=$archive_stem" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packaged workflow artifact (onedir for Homebrew)
+        if: ${{ runner.os == 'macOS' }}
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: ${{ steps.package_metadata_onedir.outputs.archive_stem }}
+          path: ${{ steps.package_metadata_onedir.outputs.archive_path }}
+          if-no-files-found: error
+
+      - name: Upload packaged GitHub Release asset (onedir for Homebrew)
+        if: ${{ runner.os == 'macOS' && github.event_name == 'release' && github.event.action == 'published' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.package_metadata_onedir.outputs.archive_path }}" --clobber
+
   publish-homebrew:
     name: publish-homebrew
     runs-on: ubuntu-latest
     needs: release
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     permissions:
-      contents: write
+      contents: read
     env:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
@@ -182,7 +224,7 @@ jobs:
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
 
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
         with:
           pattern: apidev-*
           merge-multiple: true

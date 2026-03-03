@@ -23,6 +23,7 @@ class MacosArtifact:
     arch: str
     binary_name: str
     checksum: str
+    package_kind: str
 
 
 def _normalize_version(value: str) -> str:
@@ -94,27 +95,37 @@ def sha256sum(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _parse_macos_artifact_name(version: str, binary_name: str) -> str | None:
+def _parse_macos_artifact_name(version: str, binary_name: str) -> tuple[str, str] | None:
     prefix = f"apidev-{version}-macos-"
     if not binary_name.startswith(prefix):
         return None
-    if not binary_name.endswith(".tar.gz"):
+    tail = binary_name.removeprefix(prefix)
+    if tail.endswith("-onedir.tar.gz"):
+        arch = tail.removesuffix("-onedir.tar.gz")
+        return normalize_arch(arch), "onedir"
+    if not tail.endswith(".tar.gz"):
         return None
-    arch = binary_name.removeprefix(prefix).removesuffix(".tar.gz")
-    return normalize_arch(arch)
+    arch = tail.removesuffix(".tar.gz")
+    return normalize_arch(arch), "onefile"
 
 
 def collect_macos_artifacts(version: str, release_dir: Path) -> dict[str, MacosArtifact]:
     result: dict[str, MacosArtifact] = {}
     for artifact_path in sorted(release_dir.glob(f"apidev-{version}-macos-*.tar.gz")):
-        arch = _parse_macos_artifact_name(version, artifact_path.name)
-        if arch is None:
+        parsed = _parse_macos_artifact_name(version, artifact_path.name)
+        if parsed is None:
             continue
-        result[arch] = MacosArtifact(
+        arch, package_kind = parsed
+        candidate = MacosArtifact(
             arch=arch,
             binary_name=artifact_path.name,
             checksum=sha256sum(artifact_path),
+            package_kind=package_kind,
         )
+        existing = result.get(arch)
+        # Prefer onedir for Homebrew startup performance.
+        if existing is None or (existing.package_kind == "onefile" and package_kind == "onedir"):
+            result[arch] = candidate
     if not result:
         raise ValueError(f"No macOS artifacts found in {release_dir}")
     return result
@@ -144,6 +155,22 @@ def render_formula(
     arm_artifact = artifacts_by_arch.get("arm64")
     intel_artifact = artifacts_by_arch.get("x86_64")
 
+    def _install_lines(artifact: MacosArtifact, *, indent: str = "    ") -> list[str]:
+        if artifact.package_kind == "onedir":
+            return [
+                f'{indent}candidate = Dir["**/{formula_name}"].find {{ |p| File.file?(p) }}',
+                f"{indent}odie \"Could not find executable {formula_name} inside onedir artifact\" unless candidate",
+                f"{indent}runtime_dir = Pathname.new(candidate).dirname",
+                f'{indent}dest_dir = libexec/"{formula_name}_runtime"',
+                f"{indent}dest_dir.mkpath",
+                f"{indent}runtime_dir.children.each do |entry|",
+                f"{indent}  cp_r entry, dest_dir",
+                f"{indent}end",
+                f'{indent}target = dest_dir/"{formula_name}"',
+                f'{indent}bin.install_symlink target => "{formula_name}"',
+            ]
+        return [f'{indent}bin.install "{formula_name}"']
+
     if arm_artifact and intel_artifact:
         lines.extend(
             [
@@ -156,6 +183,15 @@ def render_formula(
                 "  end",
             ]
         )
+        install_lines = [
+            "  def install",
+            "    if Hardware::CPU.arm?",
+            *_install_lines(arm_artifact, indent="      "),
+            "    else",
+            *_install_lines(intel_artifact, indent="      "),
+            "    end",
+            "  end",
+        ]
     else:
         artifact = artifacts_by_arch.get(default_arch) or next(iter(artifacts_by_arch.values()))
         lines.extend(
@@ -164,13 +200,16 @@ def render_formula(
                 f'  sha256 "{artifact.checksum}"',
             ]
         )
+        install_lines = [
+            "  def install",
+            *_install_lines(artifact, indent="    "),
+            "  end",
+        ]
 
     lines.extend(
         [
             "",
-            "  def install",
-            f'    bin.install "{formula_name}"',
-            "  end",
+            *install_lines,
             "",
             "  test do",
             f'    assert_match "{formula_name}", shell_output("#{{bin}}/{formula_name} --help")',

@@ -35,6 +35,10 @@ def _default_binary_path() -> Path:
     return Path("dist/bin") / executable_name
 
 
+def _default_onedir_dir_path() -> Path:
+    return Path("dist/bin") / "apidev"
+
+
 def _normalize_runner_value(name: str, value: str, aliases: dict[str, str]) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} must be a non-empty string")
@@ -68,9 +72,13 @@ def _resolve_archive_name(
     runner_arch: str,
     archive_name_override: str | None,
     release_version: str | None = None,
+    mode: str = "onefile",
 ) -> str:
     os_name = _normalize_runner_value("runner_os", runner_os, _RUNNER_OS_ALIASES)
     arch = _normalize_runner_value("runner_arch", runner_arch, _RUNNER_ARCH_ALIASES)
+
+    if mode not in {"onefile", "onedir"}:
+        raise ValueError(f"Unsupported mode: {mode}")
 
     if archive_name_override is not None:
         return _validate_archive_name_override(archive_name_override)
@@ -80,17 +88,23 @@ def _resolve_archive_name(
             raise ValueError("release version must be a non-empty string")
         if not _VERSION_PATTERN.fullmatch(release_version):
             raise ValueError("release version contains unsupported characters")
+        if mode == "onedir":
+            return f"apidev-{release_version}-{os_name}-{arch}-onedir.tar.gz"
         if os_name == "windows":
             return f"apidev-{release_version}-{os_name}-{arch}.zip"
         return f"apidev-{release_version}-{os_name}-{arch}.tar.gz"
 
+    if mode == "onedir":
+        return f"apidev-{os_name}-{arch}-onedir.tar.gz"
     if os_name == "windows":
         return f"apidev-{os_name}-{arch}.zip"
     return f"apidev-{os_name}-{arch}.tar.gz"
 
 
-def _default_archive_name(runner_os: str, runner_arch: str, release_version: str | None) -> str:
-    return _resolve_archive_name(runner_os, runner_arch, None, release_version)
+def _default_archive_name(
+    runner_os: str, runner_arch: str, release_version: str | None, mode: str
+) -> str:
+    return _resolve_archive_name(runner_os, runner_arch, None, release_version, mode=mode)
 
 
 def main() -> int:
@@ -101,24 +115,44 @@ def main() -> int:
     parser.add_argument("--runner-arch", default=os.environ.get("RUNNER_ARCH", platform.machine()))
     parser.add_argument("--archive-name", default=None)
     parser.add_argument("--version", default=os.environ.get("RELEASE_VERSION"))
+    parser.add_argument(
+        "--mode",
+        choices=["onefile", "onedir"],
+        default="onefile",
+        help="Artifact mode to package",
+    )
+    parser.add_argument(
+        "--onedir-path",
+        type=Path,
+        default=_default_onedir_dir_path(),
+        help="Path to onedir output (used when --mode=onedir).",
+    )
     args = parser.parse_args()
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    archive_name = _resolve_archive_name(
+        args.runner_os, args.runner_arch, args.archive_name, args.version, mode=args.mode
+    )
+    archive_path = args.output_dir / archive_name
+
+    if args.mode == "onedir":
+        if not args.onedir_path.is_dir():
+            raise FileNotFoundError(f"Onedir artifact directory not found: {args.onedir_path}")
+        with tarfile.open(archive_path, "w:gz") as tarred:
+            tarred.add(args.onedir_path, arcname="apidev")
+        return 0
 
     if not args.binary_path.exists():
         raise FileNotFoundError(f"Standalone binary not found: {args.binary_path}")
 
-    args.output_dir.mkdir(parents=True, exist_ok=True)
-    archive_name = _resolve_archive_name(
-        args.runner_os, args.runner_arch, args.archive_name, args.version
-    )
-    archive_path = args.output_dir / archive_name
     binary_name = args.binary_path.name
-
     if archive_path.suffix == ".zip":
         with zipfile.ZipFile(archive_path, "w", compression=zipfile.ZIP_DEFLATED) as zipped:
             zipped.write(args.binary_path, arcname=binary_name)
-    else:
-        with tarfile.open(archive_path, "w:gz") as tarred:
-            tarred.add(args.binary_path, arcname=binary_name)
+        return 0
+
+    with tarfile.open(archive_path, "w:gz") as tarred:
+        tarred.add(args.binary_path, arcname=binary_name)
 
     return 0
 

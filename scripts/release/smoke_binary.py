@@ -11,6 +11,11 @@ def _default_binary_path() -> Path:
     return Path("dist/bin") / executable_name
 
 
+def _default_onedir_binary_path() -> Path:
+    executable_name = "apidev.exe" if sys.platform.startswith("win") else "apidev"
+    return Path("dist/bin") / "apidev" / executable_name
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -19,13 +24,23 @@ def main() -> int:
         default=_default_binary_path(),
         help="Path to standalone apidev binary",
     )
+    parser.add_argument(
+        "--mode",
+        choices=["onefile", "onedir"],
+        default="onefile",
+        help="Binary layout mode to test",
+    )
     args = parser.parse_args()
 
-    if not args.binary_path.exists():
-        raise FileNotFoundError(f"Standalone binary not found: {args.binary_path}")
+    binary_path = args.binary_path
+    if args.mode == "onedir" and binary_path == _default_binary_path():
+        binary_path = _default_onedir_binary_path()
+
+    if not binary_path.exists():
+        raise FileNotFoundError(f"Standalone binary not found: {binary_path}")
 
     result = subprocess.run(
-        [str(args.binary_path), "--help"],
+        [str(binary_path), "--help"],
         capture_output=True,
         text=True,
     )
