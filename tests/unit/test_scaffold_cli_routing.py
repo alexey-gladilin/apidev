@@ -76,6 +76,7 @@ def test_generate_command_passes_scaffold_false_override(monkeypatch, tmp_path: 
         compatibility_policy="warn",
         baseline_ref=None,
         scaffold=None,
+        endpoint_filters=None,
     ):
         captured["scaffold"] = scaffold
         return GenerateResult(applied_changes=0)

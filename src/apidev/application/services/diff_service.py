@@ -1,4 +1,5 @@
 import ast
+import fnmatch
 import hashlib
 import json
 import re
@@ -12,6 +13,8 @@ from apidev.application.dto.generation_plan import (
     CompatibilityDiagnostic,
     CompatibilityPolicy,
     CompatibilitySummary,
+    EndpointFilters,
+    GenerationDiagnostic,
     GenerationPlan,
     PlannedChange,
 )
@@ -42,6 +45,8 @@ class DiffService:
         ("auth_registry.py", "integration_auth_registry.py.j2"),
         ("error_mapper.py", "integration_error_mapper.py.j2"),
     )
+    _INVALID_FILTER_PATTERN_CODE = "generation.invalid-endpoint-pattern"
+    _EMPTY_FILTER_SET_CODE = "generation.empty-endpoint-selection"
 
     def __init__(
         self,
@@ -63,8 +68,10 @@ class DiffService:
         compatibility_policy: CompatibilityPolicy = "warn",
         baseline_ref: str | None = None,
         scaffold: bool | None = None,
+        endpoint_filters: EndpointFilters | None = None,
     ) -> GenerationPlan:
         normalized_policy = self._normalize_policy(compatibility_policy)
+        effective_filters = endpoint_filters or EndpointFilters()
         config = self.config_loader.load(project_dir)
         paths = resolve_paths(project_dir, config)
         postprocess_mode = config.generator.postprocess
@@ -79,7 +86,32 @@ class DiffService:
         if errors:
             raise ValueError("; ".join(errors))
         ordered_operations = sorted(operations, key=lambda op: op.operation_id)
-        enriched_operations = ordered_operations
+        filter_diagnostics = self._validate_endpoint_filters(effective_filters)
+        if filter_diagnostics:
+            return GenerationPlan(
+                generated_root=paths.generated_root,
+                diagnostics=filter_diagnostics,
+                compatibility_policy=normalized_policy,
+            )
+
+        enriched_operations = self._apply_endpoint_filters(ordered_operations, effective_filters)
+        if effective_filters.enabled and not enriched_operations:
+            return GenerationPlan(
+                generated_root=paths.generated_root,
+                diagnostics=[
+                    GenerationDiagnostic(
+                        code=self._EMPTY_FILTER_SET_CODE,
+                        location="endpoint-filters",
+                        detail=(
+                            "include="
+                            f"{','.join(effective_filters.include) or '<none>'};"
+                            "exclude="
+                            f"{','.join(effective_filters.exclude) or '<none>'}"
+                        ),
+                    )
+                ],
+                compatibility_policy=normalized_policy,
+            )
         transport_segments = self._build_transport_segment_index(enriched_operations)
 
         release_number: int | None = None
@@ -189,6 +221,12 @@ class DiffService:
                 plan.changes,
                 protected_roots=protected_roots,
                 required_remove_paths=required_remove_paths,
+                remove_scope_roots=self._resolve_remove_scope_roots(
+                    generated_root=paths.generated_root,
+                    operations=enriched_operations,
+                    endpoint_filters=effective_filters,
+                    transport_segments=transport_segments,
+                ),
             )
         )
 
@@ -224,6 +262,118 @@ class DiffService:
         )
 
         return plan
+
+    def _validate_endpoint_filters(
+        self,
+        endpoint_filters: EndpointFilters,
+    ) -> list[GenerationDiagnostic]:
+        diagnostics: list[GenerationDiagnostic] = []
+        for index, pattern in enumerate(endpoint_filters.include):
+            if not pattern:
+                diagnostics.append(
+                    GenerationDiagnostic(
+                        code=self._INVALID_FILTER_PATTERN_CODE,
+                        location=f"include-endpoint[{index}]",
+                        detail="pattern must be non-empty",
+                    )
+                )
+                continue
+            if self._has_malformed_glob(pattern):
+                diagnostics.append(
+                    GenerationDiagnostic(
+                        code=self._INVALID_FILTER_PATTERN_CODE,
+                        location=f"include-endpoint[{index}]",
+                        detail="malformed glob pattern",
+                    )
+                )
+        for index, pattern in enumerate(endpoint_filters.exclude):
+            if not pattern:
+                diagnostics.append(
+                    GenerationDiagnostic(
+                        code=self._INVALID_FILTER_PATTERN_CODE,
+                        location=f"exclude-endpoint[{index}]",
+                        detail="pattern must be non-empty",
+                    )
+                )
+                continue
+            if self._has_malformed_glob(pattern):
+                diagnostics.append(
+                    GenerationDiagnostic(
+                        code=self._INVALID_FILTER_PATTERN_CODE,
+                        location=f"exclude-endpoint[{index}]",
+                        detail="malformed glob pattern",
+                    )
+                )
+        return diagnostics
+
+    def _has_malformed_glob(self, pattern: str) -> bool:
+        inside_class = False
+        escaped = False
+        for char in pattern:
+            if escaped:
+                escaped = False
+                continue
+            if char == "\\":
+                escaped = True
+                continue
+            if char == "[":
+                inside_class = True
+                continue
+            if char == "]" and inside_class:
+                inside_class = False
+        return inside_class
+
+    def _apply_endpoint_filters(
+        self,
+        operations: list[Operation],
+        endpoint_filters: EndpointFilters,
+    ) -> list[Operation]:
+        if endpoint_filters.include:
+            included = [
+                operation
+                for operation in operations
+                if any(
+                    self._operation_matches_pattern(operation, pattern)
+                    for pattern in endpoint_filters.include
+                )
+            ]
+        else:
+            included = list(operations)
+
+        if not endpoint_filters.exclude:
+            return included
+
+        return [
+            operation
+            for operation in included
+            if not any(
+                self._operation_matches_pattern(operation, pattern)
+                for pattern in endpoint_filters.exclude
+            )
+        ]
+
+    def _operation_matches_pattern(self, operation: Operation, pattern: str) -> bool:
+        return fnmatch.fnmatchcase(operation.operation_id, pattern) or fnmatch.fnmatchcase(
+            operation.contract_relpath.as_posix(), pattern
+        )
+
+    def _resolve_remove_scope_roots(
+        self,
+        generated_root: Path,
+        operations: list[Operation],
+        endpoint_filters: EndpointFilters,
+        transport_segments: dict[str, tuple[str, str]],
+    ) -> tuple[Path, ...] | None:
+        if not endpoint_filters.enabled:
+            return None
+        selected_domains = sorted(
+            {
+                transport_segments[operation.operation_id][0]
+                for operation in operations
+                if operation.operation_id in transport_segments
+            }
+        )
+        return tuple(generated_root / domain for domain in selected_domains)
 
     def _build_compatibility_summary(
         self,
@@ -692,9 +842,15 @@ class DiffService:
         plan_changes: list[PlannedChange],
         protected_roots: tuple[Path, ...] = (),
         required_remove_paths: tuple[Path, ...] = (),
+        remove_scope_roots: tuple[Path, ...] | None = None,
     ) -> list[PlannedChange]:
         generated_root_resolved = generated_root.resolve()
         protected_root_resolved = tuple(root.resolve(strict=False) for root in protected_roots)
+        remove_scope_roots_resolved = (
+            tuple(root.resolve(strict=False) for root in remove_scope_roots)
+            if remove_scope_roots is not None
+            else None
+        )
         expected_paths = {change.path.resolve() for change in plan_changes}
         stale_paths_by_resolved: dict[Path, Path] = {}
 
@@ -702,6 +858,10 @@ class DiffService:
             if not path.is_file():
                 continue
             resolved_path = path.resolve()
+            if remove_scope_roots_resolved is not None and not self._is_path_within_any_root(
+                resolved_path, remove_scope_roots_resolved
+            ):
+                continue
             if self._is_protected_remove_path(resolved_path, protected_root_resolved):
                 continue
             if resolved_path in expected_paths:
@@ -757,6 +917,15 @@ class DiffService:
         for root in protected_roots:
             try:
                 resolved_path.relative_to(root)
+                return True
+            except ValueError:
+                continue
+        return False
+
+    def _is_path_within_any_root(self, path: Path, roots: tuple[Path, ...]) -> bool:
+        for root in roots:
+            try:
+                path.relative_to(root)
                 return True
             except ValueError:
                 continue

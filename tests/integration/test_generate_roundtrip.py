@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 from typing import Any, cast
 
+from apidev.application.dto.generation_plan import EndpointFilters
 from apidev.application.services.generate_service import GenerateService
 from apidev.application.services.diff_service import DiffService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
@@ -639,6 +640,83 @@ errors: []
     drift = service.run(tmp_path, check=True)
     assert drift.drift_detected
     assert drift.drift_status == "drift"
+
+
+def test_generate_filtered_scope_does_not_remove_artifacts_outside_selected_endpoints(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "contracts" / "users").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    users_contract = tmp_path / ".apidev" / "contracts" / "users" / "get_user.yaml"
+    users_contract.write_text(
+        """
+method: GET
+path: /v1/users/{user_id}
+auth: bearer
+summary: Get user
+description: Get user details
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    users_route = tmp_path / ".apidev" / "output" / "api" / "users" / "routes" / "get_user.py"
+    assert users_route.exists()
+
+    users_contract.unlink()
+
+    result = service.run(
+        tmp_path,
+        baseline_ref="v1.0.0",
+        endpoint_filters=EndpointFilters(include=("billing_*",), exclude=()),
+    )
+
+    assert result.drift_status == "no-drift"
+    assert users_route.exists()
 
 
 def test_generate_emits_schema_example_and_openapi_example_metadata(tmp_path: Path) -> None:

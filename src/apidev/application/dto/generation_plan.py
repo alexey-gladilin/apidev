@@ -69,6 +69,26 @@ class GenerationDiagnostic:
         return payload
 
 
+@dataclass(slots=True, frozen=True)
+class EndpointFilters:
+    include: tuple[str, ...] = ()
+    exclude: tuple[str, ...] = ()
+
+    @classmethod
+    def from_cli(
+        cls,
+        include: tuple[str, ...] | list[str],
+        exclude: tuple[str, ...] | list[str],
+    ) -> "EndpointFilters":
+        normalized_include = tuple(str(item).strip() for item in include)
+        normalized_exclude = tuple(str(item).strip() for item in exclude)
+        return cls(include=normalized_include, exclude=normalized_exclude)
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.include or self.exclude)
+
+
 @dataclass(slots=True)
 class CompatibilitySummary:
     overall: str = "non-breaking"
@@ -93,6 +113,7 @@ class PlannedChange:
 class GenerationPlan:
     generated_root: Path
     changes: list[PlannedChange] = field(default_factory=list)
+    diagnostics: list[GenerationDiagnostic] = field(default_factory=list)
     compatibility_policy: CompatibilityPolicy = "warn"
     compatibility: CompatibilitySummary = field(default_factory=CompatibilitySummary)
     policy_blocked: bool = False

@@ -5,6 +5,7 @@ import typer
 from rich.console import Console
 
 from apidev.application.dto.diagnostics import build_envelope, serialize_validation_diagnostic
+from apidev.application.dto.generation_plan import EndpointFilters
 from apidev.application.services.generate_service import GenerateService
 from apidev.application.services.validate_service import ValidateService
 from apidev.commands.common.baseline_ref import parse_baseline_ref, resolve_baseline_ref
@@ -41,6 +42,23 @@ def _normalize_flag(value: object) -> bool:
     return bool(candidate)
 
 
+def _normalize_patterns(value: object) -> list[str]:
+    candidate = value
+    for _ in range(64):
+        if candidate is None:
+            return []
+        if isinstance(candidate, (list, tuple)):
+            return [str(item) for item in candidate]
+        default = getattr(candidate, "default", None)
+        if default is candidate:
+            break
+        if default is not None or hasattr(candidate, "default"):
+            candidate = default
+            continue
+        break
+    return [str(candidate)]
+
+
 def generate_command(
     project_dir: Path = Path("."),
     check: bool = False,
@@ -70,6 +88,16 @@ def generate_command(
         "--baseline-ref",
         help="Baseline ref override (git tag or commit), takes precedence over release-state.",
         callback=parse_baseline_ref,
+    ),
+    include_endpoint: list[str] | None = typer.Option(
+        None,
+        "--include-endpoint",
+        help="Include endpoints matching a case-sensitive glob (repeatable).",
+    ),
+    exclude_endpoint: list[str] | None = typer.Option(
+        None,
+        "--exclude-endpoint",
+        help="Exclude endpoints matching a case-sensitive glob (repeatable).",
     ),
 ) -> None:
     scaffold_enabled = _normalize_flag(scaffold)
@@ -133,6 +161,10 @@ def generate_command(
         compatibility_policy=resolved_policy,
         baseline_ref=resolved_baseline_ref,
         scaffold=scaffold_override,
+        endpoint_filters=EndpointFilters.from_cli(
+            include=_normalize_patterns(include_endpoint),
+            exclude=_normalize_patterns(exclude_endpoint),
+        ),
     )
 
     if json_output:
@@ -208,6 +240,9 @@ def generate_command(
         raise SystemExit(1)
 
     if result.drift_status == "error":
+        for diagnostic in result.diagnostics:
+            detail_suffix = f" ({diagnostic.detail})" if diagnostic.detail else ""
+            console.print(f"\\[{diagnostic.code}] {diagnostic.location}{detail_suffix}")
         console.print("Generation failed (drift-status: error)")
         raise SystemExit(1)
 

@@ -12,6 +12,14 @@ Binary CLI tool for contract-driven API scaffolding.
 Compatibility alias:
 - `apidev generate` (legacy alias for `apidev gen`)
 
+## Endpoint фильтры для `gen`
+
+`apidev gen` поддерживает repeatable-флаги:
+- `--include-endpoint <pattern>`
+- `--exclude-endpoint <pattern>`
+
+Фильтрация всегда применяется по правилу `include -> exclude`, где pattern — case-sensitive glob по `operation_id` и `contract_relpath`.
+
 ## Docs
 
 - `docs/README.md` — documentation map and source-of-truth index.

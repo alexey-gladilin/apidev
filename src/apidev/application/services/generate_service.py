@@ -4,6 +4,7 @@ import subprocess
 
 from apidev.application.dto.generation_plan import (
     CompatibilityPolicy,
+    EndpointFilters,
     GenerateResult,
     GenerationDiagnostic,
 )
@@ -51,13 +52,25 @@ class GenerateService:
         compatibility_policy: CompatibilityPolicy = "warn",
         baseline_ref: str | None = None,
         scaffold: bool | None = None,
+        endpoint_filters: EndpointFilters | None = None,
     ) -> GenerateResult:
         plan = self.diff_service.run(
             project_dir,
             compatibility_policy=compatibility_policy,
             baseline_ref=baseline_ref,
             scaffold=scaffold,
+            endpoint_filters=endpoint_filters,
         )
+        if plan.diagnostics:
+            return GenerateResult(
+                applied_changes=0,
+                drift_status="error",
+                diagnostics=list(plan.diagnostics),
+                compatibility_policy=plan.compatibility_policy,
+                compatibility=plan.compatibility,
+                policy_blocked=plan.policy_blocked,
+            )
+
         drift_changes = [c for c in plan.changes if c.change_type in {"ADD", "UPDATE", "REMOVE"}]
         writable_changes = [c for c in plan.changes if c.change_type in {"ADD", "UPDATE"}]
         removable_changes = [c for c in plan.changes if c.change_type == "REMOVE"]

@@ -81,6 +81,12 @@ Compatibility alias:
 - пустой pattern считается невалидным;
 - malformed glob pattern (например, незакрытый `[` в character class) считается невалидным.
 
+Diagnostics contract для endpoint-фильтров:
+
+- невалидный pattern возвращает `generation.invalid-endpoint-pattern`;
+- пустой effective set после include/exclude возвращает `generation.empty-endpoint-selection`;
+- оба diagnostics публикуются с полями `code`, `location`, `detail` в text и JSON режимах `apidev gen`.
+
 Примеры:
 
 ```bash

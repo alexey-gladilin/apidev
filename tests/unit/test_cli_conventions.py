@@ -7,7 +7,9 @@ from apidev.application.dto.diagnostics import ValidationResult
 from apidev.application.dto.generation_plan import (
     CompatibilityDiagnostic,
     CompatibilitySummary,
+    EndpointFilters,
     GenerateResult,
+    GenerationDiagnostic,
     GenerationPlan,
     PlannedChange,
 )
@@ -224,6 +226,7 @@ def test_gen_check_json_mode_returns_unified_envelope(monkeypatch) -> None:
         compatibility_policy="warn",
         baseline_ref=None,
         scaffold=None,
+        endpoint_filters=None,
     ) -> GenerateResult:
         assert check is True
         return GenerateResult(
@@ -259,6 +262,7 @@ def test_gen_apply_json_merges_compatibility_and_generation_taxonomy(monkeypatch
         compatibility_policy="warn",
         baseline_ref=None,
         scaffold=None,
+        endpoint_filters=None,
     ) -> GenerateResult:
         assert check is False
         return GenerateResult(
@@ -435,3 +439,86 @@ def test_gen_check_json_preflight_validation_failure_returns_unified_envelope(mo
     assert payload["diagnostics"][0]["code"] == "validation.schema-invalid-value"
     assert payload["compatibility"]["overall"] == "non-breaking"
     assert payload["compatibility"]["diagnostics"] == []
+
+
+def test_gen_help_documents_endpoint_filter_flags() -> None:
+    result = runner.invoke(app, ["gen", "-h"])
+
+    assert result.exit_code == 0
+    assert "--include-endpoint" in result.output
+    assert "--exclude-endpoint" in result.output
+
+
+def test_gen_passes_endpoint_filters_to_generate_service(monkeypatch) -> None:
+    def _fake_validate(self, project_dir: Path) -> ValidationResult:
+        return ValidationResult(operations=[], diagnostics=[])
+
+    captured: dict[str, object] = {}
+
+    def _fake_generate(
+        self,
+        project_dir: Path,
+        check: bool = False,
+        compatibility_policy="warn",
+        baseline_ref=None,
+        scaffold=None,
+        endpoint_filters=None,
+    ) -> GenerateResult:
+        captured["endpoint_filters"] = endpoint_filters
+        return GenerateResult(applied_changes=0, drift_status="no-drift")
+
+    monkeypatch.setattr(ValidateService, "run", _fake_validate)
+    monkeypatch.setattr(GenerateService, "run", _fake_generate)
+
+    result = runner.invoke(
+        app,
+        [
+            "gen",
+            "--include-endpoint",
+            " billing_* ",
+            "--exclude-endpoint",
+            "users_*",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert captured["endpoint_filters"] == EndpointFilters(
+        include=("billing_*",),
+        exclude=("users_*",),
+    )
+
+
+def test_gen_text_mode_prints_generation_diagnostics_on_error(monkeypatch) -> None:
+    def _fake_validate(self, project_dir: Path) -> ValidationResult:
+        return ValidationResult(operations=[], diagnostics=[])
+
+    def _fake_generate(
+        self,
+        project_dir: Path,
+        check: bool = False,
+        compatibility_policy="warn",
+        baseline_ref=None,
+        scaffold=None,
+        endpoint_filters=None,
+    ) -> GenerateResult:
+        return GenerateResult(
+            applied_changes=0,
+            drift_status="error",
+            diagnostics=[
+                GenerationDiagnostic(
+                    code="generation.invalid-endpoint-pattern",
+                    location="include-endpoint[0]",
+                    detail="malformed glob pattern",
+                )
+            ],
+        )
+
+    monkeypatch.setattr(ValidateService, "run", _fake_validate)
+    monkeypatch.setattr(GenerateService, "run", _fake_generate)
+
+    result = runner.invoke(app, ["gen", "--include-endpoint", "["])
+
+    assert result.exit_code == 1
+    assert "[generation.invalid-endpoint-pattern] include-endpoint[0]" in result.output
+    assert "malformed glob" in result.output
+    assert "pattern" in result.output
