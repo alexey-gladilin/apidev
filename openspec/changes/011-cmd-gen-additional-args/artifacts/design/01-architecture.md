@@ -60,4 +60,6 @@ Rel(plan_builder, diagnostics_mapper, "Reports drift and apply diagnostics")
 - Фильтрация применяется до построения generation plan.
 - Без include/exclude флагов поведение `apidev gen` остается полностью совместимым.
 - Порядок операций после фильтрации остается детерминированным.
+- Match policy фиксирован: case-sensitive glob по `operation_id` и `contract_relpath` (`OR`).
 - Safety boundaries для write/remove сохраняются без ослабления.
+- При фильтрованном запуске stale-remove ограничен effective endpoint set и не затрагивает endpoint-ы вне scope.

@@ -20,19 +20,23 @@
   - include: whitelist (если задан);
   - exclude: blacklist поверх include/full-set.
 - Поддержать deterministic matching policy для endpoint pattern:
-  - match по `operation_id` и `contract_relpath`;
+  - pattern трактуется как case-sensitive glob;
+  - match по `operation_id` и `contract_relpath` (логика `OR`);
+  - невалидные pattern: пустая строка и malformed glob syntax (включая незакрытый `[` character-class);
   - фиксированная нормализация и порядок применения фильтров.
 - Возвращать диагностируемые ошибки для:
   - невалидного pattern;
   - empty effective set после фильтрации.
+  - namespace кодов диагностики: `generation.*` (согласно taxonomy capability `009-diagnostics-contract`).
+  - diagnostics payload обязан включать `code`, `location`, `detail`.
 
 ## Риски / Компромиссы
 - Риск: пользователь может ожидать фильтрацию и в `apidev diff`.
   - Митигация: явно зафиксировать scope текущего change как `apidev gen` only.
 - Риск: фильтрация может создать неочевидный remove-план при частичной генерации.
-  - Митигация: в design/testing зафиксировать поведение stale-remove при фильтрованном наборе.
+  - Митигация: stale-remove ограничивается только effective endpoint set; endpoint-ы вне scope фильтрованного запуска не участвуют в remove-плане только из-за отсутствия в фильтре.
 - Риск: неоднозначность шаблонов фильтра (glob/regex).
-  - Митигация: закрепить единую matching policy и отдельные негативные тесты на pattern parsing.
+  - Митигация: зафиксировать glob-only policy в spec/design и добавить негативные тесты на malformed glob.
 
 ## Linked Artifacts
 - Research: [artifacts/research/2026-03-03-endpoint-filtering-baseline.md](./artifacts/research/2026-03-03-endpoint-filtering-baseline.md)

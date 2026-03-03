@@ -55,6 +55,52 @@ Compatibility alias:
 - при указании флага CLI имеет приоритет над config;
 - scaffold-файлы создаются только в режиме `create-if-missing` (существующие не перезаписываются).
 
+## Контракт endpoint-фильтров для `apidev gen`
+
+`apidev gen` поддерживает повторяемые фильтры:
+
+- `--include-endpoint <pattern>`
+- `--exclude-endpoint <pattern>`
+
+Семантика фильтрации:
+
+- `include` формирует исходный candidate set;
+- `exclude` применяется после include и вычитает endpoint-ы из candidate set;
+- если include не задан, candidate set = полный набор endpoint-ов;
+- порядок применения всегда `include -> exclude`.
+
+Что именно матчится:
+
+- `pattern` применяется к `operation_id`;
+- `pattern` применяется к `contract_relpath` (относительный путь YAML-контракта);
+- endpoint считается совпавшим, если pattern совпал хотя бы с одним из двух значений (`operation_id OR contract_relpath`).
+
+Тип pattern:
+
+- используется `case-sensitive glob`;
+- пустой pattern считается невалидным;
+- malformed glob pattern (например, незакрытый `[` в character class) считается невалидным.
+
+Примеры:
+
+```bash
+# Включить только endpoint-ы по operation_id
+apidev gen --include-endpoint "billing.*"
+
+# Включить endpoint-ы по относительному пути контракта
+apidev gen --include-endpoint "contracts/v1/users/*.yaml"
+
+# Комбинация include/exclude: include -> exclude
+apidev gen \
+  --include-endpoint "contracts/v1/**" \
+  --exclude-endpoint "*admin*"
+
+# Несколько include-фильтров
+apidev gen \
+  --include-endpoint "billing.*" \
+  --include-endpoint "contracts/v1/payments/*.yaml"
+```
+
 ## Контракт help и UX
 
 Обязательные требования:

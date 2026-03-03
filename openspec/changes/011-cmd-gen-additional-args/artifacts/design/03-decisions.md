@@ -20,13 +20,20 @@
 
 ## DEC-04: Filter-matching по `operation_id` и `contract_relpath`
 
-- Решение: pattern матчится к стабильным строковым идентификаторам операции.
+- Решение: pattern трактуется как case-sensitive glob и матчится к стабильным строковым идентификаторам операции (`operation_id` и `contract_relpath`) по правилу `OR`.
 - Почему: обе сущности уже детерминированно формируются и доступны в pipeline.
 - Компромисс: отсутствует прямой матчинг по HTTP method/path, если это не отражено в pattern-значениях.
+- Дополнение: невалидными считаются пустые pattern и malformed glob syntax (включая незакрытый `[` character-class).
 
 ## DEC-05: Явные diagnostics для invalid/empty filter outcome
 
 - Решение: ввести отдельные диагностические коды для невалидного pattern и пустого effective set.
 - Почему: это дает проверяемый CI-contract и понятный fail-fast UX.
 - Компромисс: потребуется синхронизация docs/tests и taxonomy code namespace.
+- Норматив: codes обязаны принадлежать namespace `generation.*` в соответствии с capability taxonomy из `009-diagnostics-contract`.
 
+## DEC-06: Stale-remove policy для фильтрованной генерации
+
+- Решение: remove-план при include/exclude фильтрации ограничивается только effective endpoint set.
+- Почему: частичный запуск `apidev gen` не должен удалять artifacts endpoint-ов вне выбранного scope.
+- Компромисс: для глобальной очистки stale артефактов остается нужен запуск без фильтров.

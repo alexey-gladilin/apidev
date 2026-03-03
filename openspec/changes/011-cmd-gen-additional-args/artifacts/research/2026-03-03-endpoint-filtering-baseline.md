@@ -20,9 +20,10 @@
 5. Документированный CLI-контракт сейчас описывает scaffold flags и не содержит endpoint include/exclude флагов.
    - Evidence: `docs/reference/cli-contract.md:45-56`.
 
-## Open Questions
-- Нужно ли распространять include/exclude фильтры на `apidev diff` в том же change или оставить только `apidev gen`?
-- Какой тип pattern должен быть нормативным (glob, exact, regexp) для совместимости UX и детерминированности?
+## Resolved Questions (for design handoff)
+- Фильтрация scope данного change ограничена `apidev gen`; `apidev diff` остается без изменений.
+- Нормативный pattern type: case-sensitive glob по `operation_id` и `contract_relpath` (правило matching: `OR`).
+- Невалидные pattern: пустая строка и malformed glob syntax (включая незакрытый `[` character-class).
 
 ## Fact / Inference
 ### Fact
