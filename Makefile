@@ -160,8 +160,19 @@ smoke-binary: ## Smoke test built binary (auto-detects OS if not provided)
 	@python scripts/release/smoke_binary.py
 
 release: ## Create git tag + GitHub release using gh (TAG=v0.1.0 required)
-	@if [ -z "$$TAG" ]; then \
+	@if [ -z "$(TAG)" ]; then \
 		echo "$(RED)TAG is required. Example: make release TAG=v0.1.0$(NC)"; \
 		exit 1; \
-	fi; \
-	git tag "$$TAG" && gh release create "$$TAG" --generate-notes
+	fi
+	@command -v gh >/dev/null 2>&1 || { \
+		echo "$(RED)GitHub CLI (gh) not found. Install: https://cli.github.com/$(NC)"; \
+		exit 1; \
+	}
+	@gh auth status >/dev/null 2>&1 || { \
+		echo "$(RED)GitHub CLI not authenticated. Run: gh auth login$(NC)"; \
+		exit 1; \
+	}
+	@git tag "$(TAG)"
+	@git push origin "$(TAG)"
+	@gh release create "$(TAG)" --generate-notes
+	@echo "$(GREEN)Release created. Workflow will run from the release trigger.$(NC)"
