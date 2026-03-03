@@ -77,6 +77,7 @@ jobs:
           python -m pip install pyinstaller==6.18.0
 
       - name: Build standalone binary
+        shell: bash
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then
             uv run --python 3.13 --with pyinstaller==6.18.0 python scripts/release/build_binary.py
@@ -85,6 +86,7 @@ jobs:
           fi
 
       - name: Smoke check standalone binary
+        shell: bash
         run: |
           if [ "${{ runner.os }}" = "macOS" ]; then
             uv run --python 3.13 --with pyinstaller==6.18.0 python scripts/release/smoke_binary.py
