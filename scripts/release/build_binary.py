@@ -6,8 +6,7 @@ from pathlib import Path
 
 # Project root (parent of scripts/release/)
 ROOT = Path(__file__).resolve().parent.parent.parent
-SRC = ROOT / "src"
-CLI_SCRIPT = SRC / "apidev" / "cli.py"
+SPEC_PATH = ROOT / "packaging" / "pyinstaller" / "apidev.spec"
 
 
 def _run(command: list[str], cwd: Path | None = None) -> None:
@@ -20,8 +19,8 @@ def main() -> int:
     dist_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    if not CLI_SCRIPT.exists():
-        raise FileNotFoundError(f"CLI script not found: {CLI_SCRIPT}")
+    if not SPEC_PATH.exists():
+        raise FileNotFoundError(f"PyInstaller spec file not found: {SPEC_PATH}")
 
     _run(
         [
@@ -30,22 +29,11 @@ def main() -> int:
             "PyInstaller",
             "--noconfirm",
             "--clean",
-            "--onefile",
-            "--name",
-            "apidev",
-            "--paths",
-            str(SRC),
-            "--hidden-import",
-            "typer",
-            "--hidden-import",
-            "click",
-            str(CLI_SCRIPT),
             "--distpath",
             str(dist_dir),
             "--workpath",
             str(work_dir),
-            "--specpath",
-            str(work_dir),
+            str(SPEC_PATH),
         ],
         cwd=ROOT,
     )
