@@ -14,11 +14,15 @@ hidden_imports += collect_submodules("click")
 hidden_imports += collect_submodules("rich._unicode_data")
 
 
+# Package data required at runtime (e.g. init_service reads templates via importlib.resources).
+templates_src = project_root / "src" / "apidev" / "templates"
+datas = [(str(templates_src), "apidev/templates")] if templates_src.is_dir() else []
+
 a = Analysis(
     [str(project_root / "src" / "apidev" / "cli.py")],
     pathex=[str(project_root / "src")],
     binaries=[],
-    datas=[],
+    datas=datas,
     hiddenimports=hidden_imports,
     hookspath=[],
     hooksconfig={},
