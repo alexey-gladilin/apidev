@@ -165,12 +165,19 @@ In the documentation and examples, `apidev gen` is used as the primary command; 
 
 ## Installation
 
-Ready‑made standalone binaries are published in GitHub Releases:
+Recommended installation method is Homebrew:
+
+```bash
+brew tap alexey-gladilin/devtools
+brew install alexey-gladilin/devtools/apidev
+```
+
+Standalone binaries are also available in GitHub Releases:
 
 - Releases page: `https://github.com/alexey-gladilin/apidev/releases/latest`
 - Assets: `apidev-<version>-<os>-<arch>.zip` (Windows) or `apidev-<version>-<os>-<arch>.tar.gz` (Linux/macOS)
 
-**How to get the binary**
+**Manual binary installation**
 
 1. Open the latest release page.
 2. Download the archive for your platform from the Assets section.
@@ -184,4 +191,3 @@ Ready‑made standalone binaries are published in GitHub Releases:
 - `docs/reference/cli-contract.md` — canonical CLI contract, flags, and JSON output format.
 - `docs/roadmap.md` — historical snapshot of the roadmap and development direction.
 - `docs/process/ai-workflow.md` — workflow for working with AI agents and operational recommendations.
-

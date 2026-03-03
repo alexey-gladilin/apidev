@@ -17,6 +17,10 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  HOMEBREW_FORMULA_NAME: apidev
+  HOMEBREW_TAP_REPOSITORY: ${{ github.repository_owner }}/homebrew-devtools
+
 jobs:
   release:
     name: baseline-release-${{ matrix.os }}
@@ -156,33 +160,68 @@ jobs:
 
   publish-homebrew:
     name: publish-homebrew
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     needs: release
     if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
     permissions:
-      contents: read
+      contents: write
+    env:
+      HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
-      - name: Pre-check Homebrew tap token secret
-        id: precheck_homebrew_secret
+      - name: Validate Homebrew tap token
         shell: bash
-        env:
-          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${HOMEBREW_TAP_TOKEN:-}" ]; then
-            echo "Missing required secret HOMEBREW_TAP_TOKEN"
+          if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
+            echo "HOMEBREW_TAP_TOKEN is required for publishing to ${HOMEBREW_TAP_REPOSITORY}."
+            echo "Configure a fine-grained PAT with Contents: Read and write on ${HOMEBREW_TAP_REPOSITORY}."
             exit 1
           fi
-          case "$HOMEBREW_TAP_TOKEN" in
-            github_pat_*) ;;
-            *)
-              echo "HOMEBREW_TAP_TOKEN has unsupported format"
-              exit 1
-              ;;
-          esac
-          echo "ready=true" >> "$GITHUB_OUTPUT"
 
-      - name: Publish Homebrew formula placeholder
-        if: ${{ steps.precheck_homebrew_secret.outputs.ready == 'true' }}
+      - name: Checkout source repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: apidev-*
+          merge-multiple: true
+          path: dist/release
+
+      - name: Generate Homebrew formula from release assets
+        shell: bash
         run: |
-          echo "Homebrew publish path is enabled and secret pre-check passed."
+          set -euo pipefail
+          RELEASE_VERSION="${{ github.ref_name }}"
+          RELEASE_VERSION="${RELEASE_VERSION#v}"
+          python scripts/release/generate_homebrew_formula.py \
+            --version "${RELEASE_VERSION}" \
+            --repo-owner "${{ github.repository_owner }}" \
+            --repo-name "${{ github.event.repository.name }}" \
+            --formula-name "${{ env.HOMEBREW_FORMULA_NAME }}" \
+            --asset-base-url "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}" \
+            --output "dist/homebrew/Formula/${{ env.HOMEBREW_FORMULA_NAME }}.rb"
+
+      - name: Checkout Homebrew tap repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          repository: ${{ env.HOMEBREW_TAP_REPOSITORY }}
+          token: ${{ env.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Publish formula update to tap
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p homebrew-tap/Formula
+          cp "dist/homebrew/Formula/${{ env.HOMEBREW_FORMULA_NAME }}.rb" "homebrew-tap/Formula/${{ env.HOMEBREW_FORMULA_NAME }}.rb"
+          cd homebrew-tap
+          git add "Formula/${{ env.HOMEBREW_FORMULA_NAME }}.rb"
+          if git diff --cached --quiet; then
+            echo "Formula is already up to date"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update apidev formula for ${{ github.ref_name }}"
+          git push
