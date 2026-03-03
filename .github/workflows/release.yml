@@ -119,6 +119,10 @@ jobs:
           fi
           echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
 
+      - name: Verify release version sync with project metadata
+        shell: bash
+        run: python scripts/release/verify_version_sync.py --release-version "${{ steps.resolve_release_version.outputs.release_version }}"
+
       - name: Package standalone binary
         run: python scripts/release/package_binary.py --runner-os "${{ runner.os }}" --runner-arch "${{ runner.arch }}" --version "${{ steps.resolve_release_version.outputs.release_version }}"
 

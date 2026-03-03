@@ -1,4 +1,7 @@
 import sys
+import tomllib
+from importlib.metadata import PackageNotFoundError, version as package_version
+from pathlib import Path
 
 from typer import Context, Exit, Typer, echo
 
@@ -13,9 +16,44 @@ app = Typer(
 )
 
 
+def _resolve_cli_version() -> str:
+    # In local repo runs, prefer pyproject version so changes are visible immediately.
+    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    if pyproject_path.exists():
+        try:
+            payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+            project = payload.get("project")
+            if isinstance(project, dict):
+                pyproject_version = project.get("version")
+                if isinstance(pyproject_version, str) and pyproject_version.strip():
+                    return pyproject_version.strip()
+        except Exception:
+            pass
+
+    try:
+        return package_version("apidev")
+    except PackageNotFoundError:
+        from apidev import __version__
+
+        return __version__
+
+
 @app.callback(invoke_without_command=True)
 def _default_help(ctx: Context) -> None:
     if ctx.invoked_subcommand is None:
+        from rich.console import Console
+        from rich.panel import Panel
+
+        console = Console()
+        app_version = _resolve_cli_version()
+        console.print(
+            Panel.fit(
+                f"[bold cyan]apidev[/bold cyan] [blue]v{app_version}[/blue]\n"
+                "[dim]Contract-driven API workflow[/dim]",
+                border_style="blue",
+                padding=(0, 2),
+            )
+        )
         echo(ctx.get_help())
         raise Exit(0)
 
