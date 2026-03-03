@@ -14,7 +14,7 @@ class CompatibilityDiagnostic:
     location: str
     detail: str = ""
 
-    def as_unified_dict(self) -> dict[str, str]:
+    def as_unified_dict(self) -> dict[str, object]:
         category = "compatibility"
         severity = "info"
         normalized_category = self.category.strip().lower()
@@ -23,7 +23,7 @@ class CompatibilityDiagnostic:
         elif normalized_category == "potentially-breaking":
             severity = "warning"
         message = f"Compatibility diagnostic: {self.code}"
-        payload = {
+        payload: dict[str, object] = {
             "code": self.code,
             "severity": severity,
             "location": self.location,
@@ -49,14 +49,14 @@ class GenerationDiagnostic:
             "detail": self.detail,
         }
 
-    def as_unified_dict(self, *, source: str = "generate-service") -> dict[str, str]:
+    def as_unified_dict(self, *, source: str = "generate-service") -> dict[str, object]:
         category = "generation"
         if self.code.startswith("config."):
             category = "config"
         elif self.code.startswith("runtime."):
             category = "runtime"
         message = f"Generation diagnostic: {self.code}"
-        payload = {
+        payload: dict[str, object] = {
             "code": self.code,
             "severity": "error",
             "location": self.location,

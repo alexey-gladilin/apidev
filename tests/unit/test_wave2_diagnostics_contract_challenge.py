@@ -13,7 +13,9 @@ class _CompatibilityEntry:
 
 
 class _CompatibilityPayload:
-    def __init__(self, diagnostics: object, counts: object = None, overall: str = "non-breaking") -> None:
+    def __init__(
+        self, diagnostics: object, counts: object = None, overall: str = "non-breaking"
+    ) -> None:
         self.diagnostics = diagnostics
         self.counts = counts
         self.overall = overall
@@ -22,7 +24,9 @@ class _CompatibilityPayload:
 def test_compatibility_payload_tolerates_none_inputs() -> None:
     compatibility = _CompatibilityPayload(diagnostics=None, counts=None, overall="non-breaking")
 
-    diagnostics = compatibility_diagnostics_unified(compatibility=compatibility, source="diff-service")
+    diagnostics = compatibility_diagnostics_unified(
+        compatibility=compatibility, source="diff-service"
+    )
     payload = build_compatibility_payload(
         policy="warn",
         compatibility=compatibility,
@@ -64,7 +68,9 @@ def test_compatibility_diagnostics_ordering_is_deterministic_for_boundary_catego
         overall="breaking",
     )
 
-    diagnostics = compatibility_diagnostics_unified(compatibility=compatibility, source="diff-service")
+    diagnostics = compatibility_diagnostics_unified(
+        compatibility=compatibility, source="diff-service"
+    )
     assert [item["code"] for item in diagnostics] == [
         "compatibility.aaa",
         "compatibility.bbb",

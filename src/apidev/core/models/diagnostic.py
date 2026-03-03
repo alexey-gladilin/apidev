@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-
 _KNOWN_NAMESPACES = {"validation", "compatibility", "generation", "runtime", "config"}
 
 

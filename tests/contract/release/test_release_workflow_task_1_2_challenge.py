@@ -37,10 +37,22 @@ def test_release_step_order_rejects_package_before_smoke(
             "jobs": {
                 "release": {
                     "steps": [
-                        {"name": "Install release build dependencies", "run": "python -m pip install ."},
-                        {"name": "Build standalone binary", "run": "python scripts/release/build_binary.py"},
-                        {"name": "Package standalone binary", "run": "python scripts/release/package_binary.py"},
-                        {"name": "Smoke check standalone binary", "run": "python scripts/release/smoke_binary.py"},
+                        {
+                            "name": "Install release build dependencies",
+                            "run": "python -m pip install .",
+                        },
+                        {
+                            "name": "Build standalone binary",
+                            "run": "python scripts/release/build_binary.py",
+                        },
+                        {
+                            "name": "Package standalone binary",
+                            "run": "python scripts/release/package_binary.py",
+                        },
+                        {
+                            "name": "Smoke check standalone binary",
+                            "run": "python scripts/release/smoke_binary.py",
+                        },
                     ]
                 }
             },
@@ -49,7 +61,8 @@ def test_release_step_order_rejects_package_before_smoke(
     monkeypatch.chdir(tmp_path)
 
     with pytest.raises(
-        AssertionError, match="Release job must execute install -> build -> smoke -> package in order"
+        AssertionError,
+        match="Release job must execute install -> build -> smoke -> package in order",
     ):
         target.test_release_workflow_has_build_smoke_package_steps_in_order()
 
@@ -65,9 +78,7 @@ def test_smoke_gate_contract_rejects_missing_help_check(
     )
     monkeypatch.chdir(tmp_path)
 
-    with pytest.raises(
-        AssertionError, match="Smoke helper script must enforce apidev --help gate"
-    ):
+    with pytest.raises(AssertionError, match="Smoke helper script must enforce apidev --help gate"):
         target.test_smoke_script_contains_apidev_help_gate()
 
 

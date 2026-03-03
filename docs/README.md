@@ -30,7 +30,9 @@
 
 1. `CONTRIBUTING.md`
 2. `docs/process/ai-workflow.md`
-3. `docs/process/testing-strategy.md`
+3. `docs/process/release-process.md`
+4. `docs/process/release-checklist.md`
+5. `docs/process/testing-strategy.md`
 
 ## Легенда статусов
 
@@ -54,6 +56,8 @@
 | Процесс работы с репозиторием | `CONTRIBUTING.md` | Authoritative |
 | Тестовая стратегия | `docs/process/testing-strategy.md` | Authoritative |
 | AI workflow | `docs/process/ai-workflow.md` | Guide |
+| Процесс релиза бинарников | `docs/process/release-process.md` | Guide |
+| Операционный чеклист релиза | `docs/process/release-checklist.md` | Guide |
 | CLI contract | `docs/reference/cli-contract.md` | Authoritative |
 | Формат контрактов API | `docs/reference/contract-format.md` | Authoritative |
 | Глоссарий | `docs/reference/glossary.md` | Authoritative |
@@ -81,5 +85,6 @@
 - `CONTRIBUTING.md`
 - `docs/product/vision.md`
 - `docs/architecture/README.md`
+- `docs/process/release-process.md`
 - `docs/process/testing-strategy.md`
 - `docs/reference/glossary.md`

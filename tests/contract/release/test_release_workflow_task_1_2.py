@@ -10,9 +10,9 @@ import yaml
 
 def _load_release_workflow() -> dict:
     workflow_path = Path(".github/workflows/release.yml")
-    assert workflow_path.exists(), (
-        "Expected release workflow at .github/workflows/release.yml for task 1.2"
-    )
+    assert (
+        workflow_path.exists()
+    ), "Expected release workflow at .github/workflows/release.yml for task 1.2"
     with workflow_path.open("r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
     assert isinstance(data, dict), "Workflow YAML must be a mapping"
@@ -47,9 +47,9 @@ def test_release_workflow_has_build_smoke_package_steps_in_order() -> None:
     smoke_index, _ = _find_step(steps, "Smoke check standalone binary")
     package_index, _ = _find_step(steps, "Package standalone binary")
 
-    assert install_index < build_index < smoke_index < package_index, (
-        "Release job must execute install -> build -> smoke -> package in order"
-    )
+    assert (
+        install_index < build_index < smoke_index < package_index
+    ), "Release job must execute install -> build -> smoke -> package in order"
 
 
 def test_release_workflow_wires_release_scripts_for_core_steps() -> None:
@@ -66,15 +66,15 @@ def test_release_workflow_wires_release_scripts_for_core_steps() -> None:
     assert isinstance(smoke_run, str), "Smoke step must define run command"
     assert isinstance(package_run, str), "Package step must define run command"
 
-    assert "scripts/release/build_binary.py" in build_run, (
-        "Build step must call scripts/release/build_binary.py"
-    )
-    assert "scripts/release/smoke_binary.py" in smoke_run, (
-        "Smoke step must call scripts/release/smoke_binary.py"
-    )
-    assert "scripts/release/package_binary.py" in package_run, (
-        "Package step must call scripts/release/package_binary.py"
-    )
+    assert (
+        "scripts/release/build_binary.py" in build_run
+    ), "Build step must call scripts/release/build_binary.py"
+    assert (
+        "scripts/release/smoke_binary.py" in smoke_run
+    ), "Smoke step must call scripts/release/smoke_binary.py"
+    assert (
+        "scripts/release/package_binary.py" in package_run
+    ), "Package step must call scripts/release/package_binary.py"
 
 
 def test_release_helper_scripts_exist_for_task_1_2_scope() -> None:
@@ -89,13 +89,13 @@ def test_release_helper_scripts_exist_for_task_1_2_scope() -> None:
 
 def test_smoke_script_contains_apidev_help_gate() -> None:
     smoke_script = Path("scripts/release/smoke_binary.py")
-    assert smoke_script.exists(), (
-        "Smoke helper script must exist at scripts/release/smoke_binary.py"
-    )
+    assert (
+        smoke_script.exists()
+    ), "Smoke helper script must exist at scripts/release/smoke_binary.py"
     content = smoke_script.read_text(encoding="utf-8")
-    assert "apidev" in content and "--help" in content, (
-        "Smoke helper script must enforce apidev --help gate"
-    )
+    assert (
+        "apidev" in content and "--help" in content
+    ), "Smoke helper script must enforce apidev --help gate"
 
 
 def test_makefile_exposes_release_build_smoke_package_targets() -> None:
@@ -113,12 +113,12 @@ def test_makefile_release_package_passes_runner_metadata() -> None:
     assert makefile_path.exists(), "Expected Makefile in project root"
     content = makefile_path.read_text(encoding="utf-8")
 
-    assert "--runner-os" in content, (
-        "Makefile release-package target must pass --runner-os to package script"
-    )
-    assert "--runner-arch" in content, (
-        "Makefile release-package target must pass --runner-arch to package script"
-    )
+    assert (
+        "--runner-os" in content
+    ), "Makefile release-package target must pass --runner-os to package script"
+    assert (
+        "--runner-arch" in content
+    ), "Makefile release-package target must pass --runner-arch to package script"
 
 
 def test_release_workflow_pins_setup_python_action_to_full_commit_sha() -> None:
@@ -127,9 +127,9 @@ def test_release_workflow_pins_setup_python_action_to_full_commit_sha() -> None:
 
     uses = setup_python_step.get("uses")
     assert isinstance(uses, str), "Setup Python step must define 'uses' as a string"
-    assert uses.startswith("actions/setup-python@"), (
-        "Setup Python step must use actions/setup-python"
-    )
+    assert uses.startswith(
+        "actions/setup-python@"
+    ), "Setup Python step must use actions/setup-python"
 
     setup_python_ref = uses.split("@", 1)[1]
     assert len(setup_python_ref) == 40 and all(
@@ -143,15 +143,15 @@ def test_release_workflow_uses_locked_release_dependency_install_path() -> None:
 
     install_run = install_step.get("run")
     assert isinstance(install_run, str), "Install step must define run command"
-    assert "python -m pip install -r requirements/code.txt" in install_run, (
-        "Release install step must install locked dependencies from requirements/code.txt"
-    )
-    assert "python -m pip install --no-deps ." in install_run, (
-        "Release install step must install project artifact with --no-deps"
-    )
-    assert not re.search(r"pip install\s+\.(?:\s|$)", install_run), (
-        "Release install step must not use plain 'pip install .' with floating dependencies"
-    )
+    assert (
+        "python -m pip install -r requirements/code.txt" in install_run
+    ), "Release install step must install locked dependencies from requirements/code.txt"
+    assert (
+        "python -m pip install --no-deps ." in install_run
+    ), "Release install step must install project artifact with --no-deps"
+    assert not re.search(
+        r"pip install\s+\.(?:\s|$)", install_run
+    ), "Release install step must not use plain 'pip install .' with floating dependencies"
 
 
 def _load_package_binary_module():
@@ -166,13 +166,8 @@ def _load_package_binary_module():
 def test_package_binary_archive_name_allowlist_happy_path() -> None:
     module = _load_package_binary_module()
 
-    assert (
-        module._resolve_archive_name("Linux", "X64", None) == "apidev-linux-x64.tar.gz"
-    )
-    assert (
-        module._resolve_archive_name("Windows", "ARM64", None)
-        == "apidev-windows-arm64.zip"
-    )
+    assert module._resolve_archive_name("Linux", "X64", None) == "apidev-linux-x64.tar.gz"
+    assert module._resolve_archive_name("Windows", "ARM64", None) == "apidev-windows-arm64.zip"
 
 
 def test_package_binary_archive_name_allowlist_rejects_invalid_runner_inputs() -> None:

@@ -21,6 +21,8 @@ NORMATIVE_MARKERS = (
 )
 COMMAND_PATTERN = re.compile(r"`(apidev\s+[a-z-]+)`")
 CANONICAL_LINE_PATTERN = re.compile(r"каноническ[а-я\s]+", re.IGNORECASE)
+RELEASE_STEP_REF_PATTERN = re.compile(r"Step `([^`]+)`")
+RELEASE_PROCESS_GATE_PATTERN = re.compile(r"^\d+\.\s+`([^`]+)`$", re.MULTILINE)
 
 
 def _repo_rel(path: Path) -> str:
@@ -101,3 +103,38 @@ def test_canonical_generate_command_is_consistent_in_authoritative_docs() -> Non
 
     assert canonical_mentions, "No canonical `apidev gen` mention found in authoritative docs."
     assert non_canonical_mentions == []
+
+
+def test_release_checklist_quality_gates_reference_existing_release_workflow_steps() -> None:
+    workflow_path = REPO_ROOT / ".github" / "workflows" / "release.yml"
+    checklist_path = REPO_ROOT / "docs" / "process" / "release-checklist.md"
+    assert workflow_path.exists(), "Missing .github/workflows/release.yml"
+    assert checklist_path.exists(), "Missing docs/process/release-checklist.md"
+
+    workflow_text = workflow_path.read_text(encoding="utf-8")
+    checklist_text = checklist_path.read_text(encoding="utf-8")
+
+    referenced_steps = RELEASE_STEP_REF_PATTERN.findall(checklist_text)
+    assert referenced_steps, "release-checklist must reference workflow quality gate steps"
+
+    missing = [step for step in referenced_steps if f"- name: {step}" not in workflow_text]
+    assert missing == []
+
+
+def test_release_quality_gate_lists_stay_synced_between_process_and_checklist_docs() -> None:
+    process_path = REPO_ROOT / "docs" / "process" / "release-process.md"
+    checklist_path = REPO_ROOT / "docs" / "process" / "release-checklist.md"
+    assert process_path.exists(), "Missing docs/process/release-process.md"
+    assert checklist_path.exists(), "Missing docs/process/release-checklist.md"
+
+    process_text = process_path.read_text(encoding="utf-8")
+    checklist_text = checklist_path.read_text(encoding="utf-8")
+
+    process_steps = RELEASE_PROCESS_GATE_PATTERN.findall(process_text)
+    checklist_steps = RELEASE_STEP_REF_PATTERN.findall(checklist_text)
+
+    assert process_steps, "release-process must list workflow quality gate steps"
+    assert checklist_steps, "release-checklist must list workflow quality gate steps"
+    assert process_steps == [
+        step for step in checklist_steps if step != "Pre-check workflow_dispatch version input"
+    ]

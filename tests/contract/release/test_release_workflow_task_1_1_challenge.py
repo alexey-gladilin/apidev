@@ -65,9 +65,7 @@ def test_manual_trigger_rejects_null_mapping(
         target.test_release_workflow_has_required_triggers()
 
 
-def test_matrix_rejects_empty_os_list(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_matrix_rejects_empty_os_list(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _write_release_workflow(
         tmp_path,
         {

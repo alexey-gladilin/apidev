@@ -3,7 +3,12 @@ name: release
 "on":
   release:
     types: [published]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      release_version:
+        description: "Release version (SemVer, optional leading v)"
+        required: true
+        type: string
 
 concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}
@@ -28,11 +33,28 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+
+      - name: Pre-check workflow_dispatch version input
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw_input_version="${{ github.event.inputs.release_version }}"
+          normalized_input_version="${raw_input_version#v}"
+          normalized_input_version="${normalized_input_version//[[:space:]]/}"
+          if [ -z "$normalized_input_version" ]; then
+            echo "workflow_dispatch requires non-empty input release_version"
+            exit 1
+          fi
 
       - name: Setup Python
         uses: actions/setup-python@42375524f9f74f3c7805fd1cccb34e468c331a15
         with:
           python-version: "3.11"
+          check-latest: false
 
       - name: Install release build dependencies
         run: |
@@ -52,8 +74,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          raw_version="${{ github.event.release.tag_name || github.ref_name }}"
+          case "${{ github.event_name }}" in
+            release)
+              raw_version="${{ github.event.release.tag_name }}"
+              ;;
+            workflow_dispatch)
+              raw_version="${{ github.event.inputs.release_version }}"
+              ;;
+            *)
+              echo "Unsupported event for release version resolution: ${{ github.event_name }}"
+              exit 1
+              ;;
+          esac
           release_version="${raw_version#v}"
+          release_version="${release_version//[[:space:]]/}"
           if [ -z "$release_version" ]; then
             echo "Resolved release_version is empty"
             exit 1
@@ -119,3 +153,36 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.package_metadata.outputs.archive_path }}" --clobber
+
+  publish-homebrew:
+    name: publish-homebrew
+    runs-on: macos-latest
+    needs: release
+    if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+    permissions:
+      contents: read
+    steps:
+      - name: Pre-check Homebrew tap token secret
+        id: precheck_homebrew_secret
+        shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${HOMEBREW_TAP_TOKEN:-}" ]; then
+            echo "Missing required secret HOMEBREW_TAP_TOKEN"
+            exit 1
+          fi
+          case "$HOMEBREW_TAP_TOKEN" in
+            github_pat_*) ;;
+            *)
+              echo "HOMEBREW_TAP_TOKEN has unsupported format"
+              exit 1
+              ;;
+          esac
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+
+      - name: Publish Homebrew formula placeholder
+        if: ${{ steps.precheck_homebrew_secret.outputs.ready == 'true' }}
+        run: |
+          echo "Homebrew publish path is enabled and secret pre-check passed."

@@ -140,11 +140,7 @@ def generate_command(
             compatibility=result.compatibility,
             source="generate-service",
         )
-        diagnostics.extend(
-            [
-            diagnostic.as_unified_dict() for diagnostic in result.diagnostics
-            ]
-        )
+        diagnostics.extend([diagnostic.as_unified_dict() for diagnostic in result.diagnostics])
         if result.drift_status == "drift":
             diagnostics.append(
                 {

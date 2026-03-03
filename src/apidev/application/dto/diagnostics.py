@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Mapping, Sequence
 
 from apidev.core.models.diagnostic import ValidationDiagnostic
 from apidev.core.models.operation import Operation
@@ -41,7 +42,7 @@ def _severity_rank(severity: str) -> int:
 
 
 def build_summary(
-    diagnostics: list[dict[str, object]],
+    diagnostics: Sequence[Mapping[str, object]],
     *,
     applied_changes: int | None = None,
 ) -> dict[str, int | str]:
@@ -58,8 +59,8 @@ def build_summary(
     return summary
 
 
-def sort_diagnostics(diagnostics: list[dict[str, object]]) -> list[dict[str, object]]:
-    return sorted(
+def sort_diagnostics(diagnostics: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    ordered = sorted(
         diagnostics,
         key=lambda item: (
             _severity_rank(str(item.get("severity", "info"))),
@@ -69,13 +70,14 @@ def sort_diagnostics(diagnostics: list[dict[str, object]]) -> list[dict[str, obj
             str(item.get("detail", "")),
         ),
     )
+    return [dict(item) for item in ordered]
 
 
 def build_envelope(
     *,
     command: str,
     mode: str,
-    diagnostics: list[dict[str, object]],
+    diagnostics: Sequence[Mapping[str, object]],
     drift_status: str | None = None,
     compatibility: dict[str, object] | None = None,
     summary_extras: dict[str, object] | None = None,
@@ -83,8 +85,10 @@ def build_envelope(
 ) -> dict[str, object]:
     ordered_diagnostics = sort_diagnostics(diagnostics)
     applied_changes = None
-    if summary_extras and isinstance(summary_extras.get("applied_changes"), int):
-        applied_changes = int(summary_extras["applied_changes"])
+    if summary_extras:
+        raw_applied_changes = summary_extras.get("applied_changes")
+        if isinstance(raw_applied_changes, int):
+            applied_changes = raw_applied_changes
     payload: dict[str, object] = {
         "command": command,
         "mode": mode,
@@ -104,7 +108,7 @@ def serialize_validation_diagnostic(
     diagnostic: ValidationDiagnostic,
     *,
     source: str = "validate-service",
-) -> dict[str, str]:
+) -> dict[str, object]:
     return {
         "code": diagnostic.normalized_code(),
         "severity": diagnostic.severity,

@@ -302,7 +302,9 @@ def test_gen_apply_json_merges_compatibility_and_generation_taxonomy(monkeypatch
     assert payload["compatibility"]["diagnostics"][0]["source"] == "generate-service"
 
 
-def test_diff_json_keeps_compatibility_diagnostics_deterministic_and_in_summary(monkeypatch) -> None:
+def test_diff_json_keeps_compatibility_diagnostics_deterministic_and_in_summary(
+    monkeypatch,
+) -> None:
     def _fake_validate(self, project_dir: Path) -> ValidationResult:
         return ValidationResult(operations=[], diagnostics=[])
 
