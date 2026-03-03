@@ -1,0 +1,121 @@
+name: release
+
+"on":
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    name: baseline-release-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+
+      - name: Setup Python
+        uses: actions/setup-python@42375524f9f74f3c7805fd1cccb34e468c331a15
+        with:
+          python-version: "3.11"
+
+      - name: Install release build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements/code.txt
+          python -m pip install --no-deps .
+          python -m pip install pyinstaller==6.18.0
+
+      - name: Build standalone binary
+        run: python scripts/release/build_binary.py
+
+      - name: Smoke check standalone binary
+        run: python scripts/release/smoke_binary.py
+
+      - name: Resolve release version
+        id: resolve_release_version
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw_version="${{ github.event.release.tag_name || github.ref_name }}"
+          release_version="${raw_version#v}"
+          if [ -z "$release_version" ]; then
+            echo "Resolved release_version is empty"
+            exit 1
+          fi
+          echo "release_version=$release_version" >> "$GITHUB_OUTPUT"
+
+      - name: Package standalone binary
+        run: python scripts/release/package_binary.py --runner-os "${{ runner.os }}" --runner-arch "${{ runner.arch }}" --version "${{ steps.resolve_release_version.outputs.release_version }}"
+
+      - name: Verify packaged artifact naming inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          expected_prefix="apidev-${{ steps.resolve_release_version.outputs.release_version }}-"
+          archive_count=0
+          matched_archive_path=""
+          while IFS= read -r archive_path; do
+            [ -n "$archive_path" ] || continue
+            archive_count=$((archive_count + 1))
+            matched_archive_path="$archive_path"
+          done <<EOF
+          $(find dist/release -maxdepth 1 -type f -name "${expected_prefix}*")
+          EOF
+          if [ "$archive_count" -ne 1 ]; then
+            echo "Expected exactly one packaged archive with prefix ${expected_prefix}, got ${archive_count}"
+            find dist/release -maxdepth 1 -type f -print
+            exit 1
+          fi
+          archive_name="$(basename "$matched_archive_path")"
+          case "$archive_name" in
+            apidev-${{ steps.resolve_release_version.outputs.release_version }}-*-*.zip|apidev-${{ steps.resolve_release_version.outputs.release_version }}-*-*.tar.gz) ;;
+            *)
+              echo "Archive name does not match apidev-<version>-<os>-<arch> pattern: $archive_name"
+              exit 1
+              ;;
+          esac
+
+      - name: Capture packaged artifact metadata
+        id: package_metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive_path="$(find dist/release -maxdepth 1 -type f -name 'apidev-*' | head -n 1)"
+          if [ -z "$archive_path" ]; then
+            echo "No packaged artifact found in dist/release"
+            exit 1
+          fi
+          archive_name="$(basename "$archive_path")"
+          archive_stem="${archive_name%.tar.gz}"
+          archive_stem="${archive_stem%.zip}"
+          echo "archive_path=$archive_path" >> "$GITHUB_OUTPUT"
+          echo "archive_stem=$archive_stem" >> "$GITHUB_OUTPUT"
+
+      - name: Upload packaged workflow artifact
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808
+        with:
+          name: ${{ steps.package_metadata.outputs.archive_stem }}
+          path: ${{ steps.package_metadata.outputs.archive_path }}
+          if-no-files-found: error
+
+      - name: Upload packaged GitHub Release asset
+        if: ${{ github.event_name == 'release' && github.event.action == 'published' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ steps.package_metadata.outputs.archive_path }}" --clobber

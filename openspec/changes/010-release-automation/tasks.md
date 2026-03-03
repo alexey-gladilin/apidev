@@ -1,9 +1,9 @@
 ## 1. Phase 01 - Release Workflow Skeleton and Multi-OS Core ([plan](./artifacts/plan/phase-01.md))
 Зависимости фазы: стартовая фаза (без блокирующих зависимостей), выходы обязательны для Phase 02.
 
-- [ ] 1.1 Phase: 01; Scope: добавить baseline GitHub release workflow с multi-OS matrix (`macOS|Windows|Linux`) и trigger `release: published|workflow_dispatch`; Output artifact: `.github/workflows/release*.yml`; Verification: `actionlint .github/workflows/release*.yml` + dry-run на `workflow_dispatch`; DoD: workflow детерминированно запускается и покрывает все целевые ОС.
-- [ ] 1.2 Phase: 01; Scope: внедрить build/smoke/package шаги для standalone binary `apidev` в каждой ОС; Output artifact: `scripts/release/*`, `Makefile`, `.github/workflows/release*.yml`; Verification: smoke gate `apidev --help` в matrix run; DoD: бинарники собираются и проходят smoke-check до публикации.
-- [ ] 1.3 Phase: 01; Scope: закрепить deterministic artifact naming/version wiring и upload в workflow artifacts + GitHub Release assets; Output artifact: `.github/workflows/release*.yml`; Verification: проверка naming inventory в CI run; DoD: схема `apidev-<version>-<os>-<arch>` выполняется для всех обязательных target платформ.
+- [x] 1.1 Phase: 01; Scope: добавить baseline GitHub release workflow с multi-OS matrix (`macOS|Windows|Linux`) и trigger `release: published|workflow_dispatch`; Output artifact: `.github/workflows/release*.yml`; Verification: `actionlint .github/workflows/release*.yml` + dry-run на `workflow_dispatch`; DoD: workflow детерминированно запускается и покрывает все целевые ОС.
+- [x] 1.2 Phase: 01; Scope: внедрить build/smoke/package шаги для standalone binary `apidev` в каждой ОС; Output artifact: `scripts/release/*`, `Makefile`, `.github/workflows/release*.yml`; Verification: smoke gate `apidev --help` в matrix run; DoD: бинарники собираются и проходят smoke-check до публикации.
+- [x] 1.3 Phase: 01; Scope: закрепить deterministic artifact naming/version wiring и upload в workflow artifacts + GitHub Release assets; Output artifact: `.github/workflows/release*.yml`; Verification: проверка naming inventory в CI run; DoD: схема `apidev-<version>-<os>-<arch>` выполняется для всех обязательных target платформ.
 
 ## 2. Phase 02 - Release Publishing Surface and Homebrew Path ([plan](./artifacts/plan/phase-02.md))
 Зависимости фазы: требуется завершение Phase 01 и стабильный workflow contract.

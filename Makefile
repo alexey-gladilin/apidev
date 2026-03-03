@@ -2,7 +2,7 @@
 # Makefile for apidev
 # =============================================================================
 
-.PHONY: help menu install-deps format lint test architecture-test docs-check
+.PHONY: help menu install-deps format lint test architecture-test docs-check release-build release-smoke release-package
 
 .DEFAULT_GOAL := help
 
@@ -131,3 +131,14 @@ docs-check: ## Run documentation consistency checks
 		exit 1; \
 	fi
 	@echo "$(GREEN)Documentation checks passed$(NC)"
+
+release-build: ## Build standalone release binary with PyInstaller
+	@python scripts/release/build_binary.py
+
+release-smoke: ## Smoke-check standalone release binary (`apidev --help`)
+	@python scripts/release/smoke_binary.py
+
+release-package: ## Package standalone release binary to dist/release
+	@runner_os="$${RUNNER_OS:-$$(python -c 'import platform; print(platform.system())')}"; \
+	 runner_arch="$${RUNNER_ARCH:-$$(python -c 'import platform; print(platform.machine())')}"; \
+	 python scripts/release/package_binary.py --runner-os "$$runner_os" --runner-arch "$$runner_arch"
