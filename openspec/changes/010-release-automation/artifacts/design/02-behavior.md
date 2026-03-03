@@ -9,6 +9,8 @@
 
 ### `workflow_dispatch`
 - pipeline поддерживает ручной запуск для контролируемых прогонов;
+- ручной запуск SHALL требовать явный input `release_version`;
+- при пустом/отсутствующем `release_version` pipeline SHALL завершаться fail-fast до build этапа;
 - ручной запуск должен использовать тот же поведенческий контракт и quality gates, что и автоматический.
 
 ## Поведение multi-OS pipeline
@@ -51,11 +53,10 @@
 - `homebrew pre-check failed` -> Homebrew stage failed controlled way, core artifacts остаются консистентными.
 
 ## Assumptions
-- Версия релиза однозначно определяется из release/tag контекста.
+- Версия релиза однозначно определяется из `release.tag_name` (автоматический trigger) или `workflow_dispatch.inputs.release_version` (ручной trigger).
 - Smoke-check `apidev --help` достаточен как минимальный gate работоспособности бинарника на этапе Horizon 2.
 
 ## Risks
-- Ручной `workflow_dispatch` без строгой валидации входов может приводить к публикации с неверным version context.
 - Разные форматы архивов по ОС усложняют post-release поддержку install-инструкций.
 
 ## Open Questions

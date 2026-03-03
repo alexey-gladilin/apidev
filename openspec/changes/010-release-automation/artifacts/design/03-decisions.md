@@ -47,6 +47,22 @@
   - ограничиться только CI workflow без документации.
 - Почему отклонено: рост bus factor и ошибок ручного сопровождения релизов.
 
+## D7. Явный version contract для `workflow_dispatch`
+- Решение: ручной запуск `workflow_dispatch` использует обязательный input `release_version`; пустое или отсутствующее значение приводит к fail-fast до build/package шагов.
+- Причина: deterministic artifact naming требует однозначного источника версии независимо от branch/ref контекста.
+- Альтернативы:
+  - наследование `github.ref_name`;
+  - implicit fallback к latest tag.
+- Почему отклонены: оба варианта создают риск ошибочного version wiring и публикации артефактов с неверным именованием.
+
+## D8. Semantics optional Homebrew path
+- Решение: Homebrew path фиксируется как изолированный optional контур: controlled failure в Homebrew job не влияет на already-consistent core GitHub Release assets.
+- Причина: разделение blast radius между внешним publish path и обязательным multi-OS asset delivery.
+- Альтернативы:
+  - hard-fail всего release pipeline при падении Homebrew;
+  - полный отказ от Homebrew path.
+- Почему отклонены: hard-fail увеличивает операционный риск core релизов, а отказ от Homebrew противоречит целевому scope Horizon 2.
+
 ## Assumptions
 - Maintainers управляют релизами через GitHub Releases, а не через отдельный private deployment pipeline.
 - Репозиторий имеет достаточные права/секреты для публикации assets и (опционально) Homebrew formula.
@@ -58,6 +74,5 @@
 - Недостаточная observability pipeline затруднит triage редких межплатформенных падений.
 
 ## Open Questions
-- Должен ли Homebrew path быть soft-fail (warning) или hard-fail для всего release процесса?
 - Нужно ли фиксировать SLA по длительности release pipeline для maintainers?
 - Нужна ли автоматическая подпись/проверка checksum assets в первой итерации или это отдельный change?

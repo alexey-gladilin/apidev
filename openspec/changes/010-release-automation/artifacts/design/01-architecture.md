@@ -93,5 +93,8 @@ Rel(release_publisher, homebrew_guard, "Provides release metadata/version")
 
 ## Open Questions
 - Нужна ли поддержка нескольких архитектур (`amd64` + `arm64`) во всех ОС в первой итерации?
-- Должен ли `workflow_dispatch` требовать явный `version` input или наследовать tag/release контекст?
-- Нужно ли делать Homebrew publish блокирующим для релиза или оставлять non-blocking warning path?
+- Нужна ли автоматическая подпись/checksum verification как обязательный gate первой итерации?
+
+## Resolved Decisions for Implement
+- `workflow_dispatch` MUST принимать явный `release_version` input; pipeline SHALL падать при отсутствии/пустом значении, чтобы исключить недетерминированный version source.
+- Homebrew publish path фиксируется как isolated non-blocking path относительно core assets: при pre-check failure job завершаетcя controlled failure и не откатывает уже консистентно опубликованные GitHub Release assets.

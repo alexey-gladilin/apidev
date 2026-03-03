@@ -1,9 +1,9 @@
 # Change: Horizon 2 — Release Automation (multi-OS binary pipeline)
 
 ## Почему
-В `apidev` отсутствует формализованный репозиторный release-процесс для публикации standalone binary артефактов под `macOS`, `Windows`, `Linux`. Это делает выпуск зависимым от ручных шагов и усложняет повторяемый publish flow.
+В `apidev` требуется завершить и стандартизировать репозиторный release-процесс для публикации standalone binary артефактов под `macOS`, `Windows`, `Linux`. Часть базового контура уже реализована, но отсутствует полный process/documentation/security contract для production-ready публикации.
 
-Исследование baseline показало, что в `dbspec` уже реализован работающий GitHub release-поток с matrix build/smoke/package/release assets и Homebrew publish, тогда как в `apidev` таких workflow и release surface нет.
+Исследование baseline показало, что в `dbspec` уже реализован работающий GitHub release-поток с matrix build/smoke/package/release assets и Homebrew publish. Для `apidev` этот change фиксирует переход от частично реализованного baseline к целевому release contract Horizon 2.
 
 ## Что изменится
 - Добавляется capability `release-automation`:
@@ -38,5 +38,5 @@
 - Spec delta: [specs/release-automation/spec.md](./specs/release-automation/spec.md)
 
 ## Границы этапа
-Этот change-пакет покрывает Proposal/Design/Plan и readiness к implement.
-Implementation выполняется отдельно через `/openspec-implement` или `/openspec-implement-single` после review/approval.
+Этот change-пакет используется как execution tracker для поэтапной реализации Horizon 2.
+Phase 01 уже завершена в рамках этого change, а оставшиеся задачи выполняются через `/openspec-implement` или `/openspec-implement-single` до полного закрытия Phase 02-03.
