@@ -2,24 +2,25 @@ import json
 from pathlib import Path
 
 import typer
-from rich.console import Console
-
-from apidev.application.dto.diagnostics import (
-    build_envelope,
-    serialize_validation_diagnostic,
-)
-from apidev.application.services.validate_service import ValidateService
-from apidev.infrastructure.config.toml_loader import TomlConfigLoader
-from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
-from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
-
-console = Console()
 
 
 def validate_command(
     project_dir: Path = Path("."),
     json_output: bool = typer.Option(False, "--json", help="Print diagnostics as JSON."),
 ) -> None:
+    from rich.console import Console
+
+    from apidev.application.dto.diagnostics import (
+        build_envelope,
+        serialize_validation_diagnostic,
+    )
+    from apidev.application.services.validate_service import ValidateService
+    from apidev.infrastructure.config.toml_loader import TomlConfigLoader
+    from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
+    from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+
+    console = Console()
+
     root = project_dir.resolve()
     service = ValidateService(
         loader=YamlContractLoader(),

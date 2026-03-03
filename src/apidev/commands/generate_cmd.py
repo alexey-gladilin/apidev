@@ -2,29 +2,6 @@ import json
 from pathlib import Path
 
 import typer
-from rich.console import Console
-
-from apidev.application.dto.diagnostics import build_envelope, serialize_validation_diagnostic
-from apidev.application.dto.generation_plan import EndpointFilters
-from apidev.application.services.generate_service import GenerateService
-from apidev.application.services.validate_service import ValidateService
-from apidev.commands.common.baseline_ref import parse_baseline_ref, resolve_baseline_ref
-from apidev.commands.common.compatibility import (
-    build_compatibility_payload,
-    compatibility_diagnostics_unified,
-    parse_compatibility_policy,
-    print_compatibility,
-    resolve_compatibility_policy,
-)
-from apidev.commands.runtime import load_runtime
-from apidev.infrastructure.config.toml_loader import TomlConfigLoader
-from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
-from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
-from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
-from apidev.infrastructure.output.writer import SafeWriter
-from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
-
-console = Console()
 
 
 def _normalize_flag(value: object) -> bool:
@@ -81,13 +58,11 @@ def generate_command(
             "If omitted, value is taken from .apidev/config.toml."
         ),
         case_sensitive=False,
-        callback=parse_compatibility_policy,
     ),
     baseline_ref: str | None = typer.Option(
         None,
         "--baseline-ref",
         help="Baseline ref override (git tag or commit), takes precedence over release-state.",
-        callback=parse_baseline_ref,
     ),
     include_endpoint: list[str] | None = typer.Option(
         None,
@@ -100,10 +75,38 @@ def generate_command(
         help="Exclude endpoints matching a case-sensitive glob (repeatable).",
     ),
 ) -> None:
+    from rich.console import Console
+
+    from apidev.application.dto.diagnostics import (
+        build_envelope,
+        serialize_validation_diagnostic,
+    )
+    from apidev.application.dto.generation_plan import EndpointFilters
+    from apidev.application.services.generate_service import GenerateService
+    from apidev.application.services.validate_service import ValidateService
+    from apidev.commands.common.baseline_ref import resolve_baseline_ref
+    from apidev.commands.common.compatibility import (
+        build_compatibility_payload,
+        compatibility_diagnostics_unified,
+        parse_compatibility_policy,
+        print_compatibility,
+        resolve_compatibility_policy,
+    )
+    from apidev.commands.runtime import load_runtime
+    from apidev.infrastructure.config.toml_loader import TomlConfigLoader
+    from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
+    from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+    from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
+    from apidev.infrastructure.output.writer import SafeWriter
+    from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
+
+    console = Console()
+
     scaffold_enabled = _normalize_flag(scaffold)
     no_scaffold_enabled = _normalize_flag(no_scaffold)
     if scaffold_enabled and no_scaffold_enabled:
         raise typer.BadParameter("Options --scaffold and --no-scaffold are mutually exclusive.")
+    compatibility_policy = parse_compatibility_policy(compatibility_policy)
 
     root = project_dir.resolve()
     resolved_baseline_ref = resolve_baseline_ref(baseline_ref)

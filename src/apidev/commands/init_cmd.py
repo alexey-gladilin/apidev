@@ -2,13 +2,6 @@ from pathlib import Path
 from typing import Annotated
 
 import typer
-from rich.console import Console
-
-from apidev.application.services.init_service import InitRepairRequiredError, InitService
-from apidev.infrastructure.config.toml_loader import default_config_text
-from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
-
-console = Console()
 
 
 def init_command(
@@ -28,6 +21,14 @@ def init_command(
         ),
     ] = False,
 ) -> None:
+    from rich.console import Console
+
+    from apidev.application.services.init_service import InitRepairRequiredError, InitService
+    from apidev.infrastructure.config.toml_loader import default_config_text
+    from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
+
+    console = Console()
+
     if repair and force:
         raise typer.BadParameter("Use either --repair or --force, not both.")
 
