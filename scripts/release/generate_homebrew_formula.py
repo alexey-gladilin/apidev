@@ -123,8 +123,9 @@ def collect_macos_artifacts(version: str, release_dir: Path) -> dict[str, MacosA
             package_kind=package_kind,
         )
         existing = result.get(arch)
-        # Prefer onedir for Homebrew startup performance.
-        if existing is None or (existing.package_kind == "onefile" and package_kind == "onedir"):
+        # Prefer onefile artifact for Homebrew stability.
+        # Onedir bundles can fail Homebrew linkage fixups on macOS for compiled modules.
+        if existing is None or (existing.package_kind == "onedir" and package_kind == "onefile"):
             result[arch] = candidate
     if not result:
         raise ValueError(f"No macOS artifacts found in {release_dir}")
