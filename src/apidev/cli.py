@@ -2,6 +2,8 @@ import sys
 import tomllib
 from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
+import os
+from typing import Callable
 
 from typer import Context, Exit, Typer, echo
 
@@ -9,6 +11,57 @@ from apidev.commands.diff_cmd import diff_command
 from apidev.commands.generate_cmd import generate_command
 from apidev.commands.init_cmd import init_command
 from apidev.commands.validate_cmd import validate_command
+
+
+def _fallback_shell_name_from_env() -> str | None:
+    shell_path = os.environ.get("SHELL", "").strip()
+    if shell_path:
+        shell_name = Path(shell_path).name.lower()
+        if shell_name in {"bash", "zsh", "fish", "pwsh", "powershell"}:
+            return shell_name
+        if shell_name == "sh":
+            return "bash"
+    if os.name == "nt":
+        comspec = os.environ.get("COMSPEC", "").lower()
+        if "powershell" in comspec:
+            return "powershell"
+        if comspec.endswith("cmd.exe"):
+            return "cmd"
+        return "powershell"
+    return "bash"
+
+
+def _safe_detect_shell_name(detector: Callable[[], str | None]) -> str | None:
+    try:
+        detected = detector()
+        if detected:
+            return detected
+    except RuntimeError as exc:
+        if "Shell detection not implemented for" not in str(exc):
+            raise
+    except ModuleNotFoundError as exc:
+        if not (exc.name and exc.name.startswith("shellingham")):
+            raise
+    return _fallback_shell_name_from_env()
+
+
+def _patch_typer_completion_shell_detection() -> None:
+    import typer.completion as completion
+
+    if getattr(completion, "_APIDEV_SHELL_PATCHED", False):
+        return
+
+    original_detector = completion._get_shell_name
+
+    def _patched_detector() -> str | None:
+        return _safe_detect_shell_name(original_detector)
+
+    completion._get_shell_name = _patched_detector
+    completion._APIDEV_SHELL_PATCHED = True
+
+
+_patch_typer_completion_shell_detection()
+
 
 app = Typer(
     help="apidev contract-driven API generator",

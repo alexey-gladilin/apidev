@@ -10,6 +10,8 @@ hidden_imports = collect_submodules("apidev")
 # Typer/Click rely on dynamic imports in some environments.
 hidden_imports += collect_submodules("typer")
 hidden_imports += collect_submodules("click")
+# Typer shell completion uses shellingham backends loaded dynamically.
+hidden_imports += collect_submodules("shellingham")
 # Rich resolves unicode tables via dynamic import names.
 hidden_imports += collect_submodules("rich._unicode_data")
 

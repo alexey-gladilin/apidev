@@ -2,7 +2,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from apidev.cli import app
+from apidev.cli import app, _safe_detect_shell_name
 from apidev.application.dto.diagnostics import ValidationResult
 from apidev.application.dto.generation_plan import (
     CompatibilityDiagnostic,
@@ -21,6 +21,38 @@ from apidev.application.services.diff_service import DiffService
 from apidev.application.services.generate_service import GenerateService
 
 runner = CliRunner()
+
+
+def test_shell_detection_fallback_handles_shellingham_runtime_error(monkeypatch) -> None:
+    monkeypatch.setenv("SHELL", "/bin/zsh")
+
+    def _failing_detector() -> str | None:
+        raise RuntimeError("Shell detection not implemented for 'posix'")
+
+    assert _safe_detect_shell_name(_failing_detector) == "zsh"
+
+
+def test_shell_detection_fallback_handles_missing_shellingham_backend(monkeypatch) -> None:
+    monkeypatch.setenv("SHELL", "/bin/bash")
+
+    def _missing_backend_detector() -> str | None:
+        raise ModuleNotFoundError("No module named 'shellingham.posix'", name="shellingham.posix")
+
+    assert _safe_detect_shell_name(_missing_backend_detector) == "bash"
+
+
+def test_shell_detection_fallback_defaults_to_bash_without_shell_env(monkeypatch) -> None:
+    monkeypatch.delenv("SHELL", raising=False)
+
+    def _failing_detector() -> str | None:
+        raise RuntimeError("Shell detection not implemented for 'posix'")
+
+    assert _safe_detect_shell_name(_failing_detector) == "bash"
+
+
+def test_shell_detection_fallback_handles_none_from_detector(monkeypatch) -> None:
+    monkeypatch.setenv("SHELL", "/bin/zsh")
+    assert _safe_detect_shell_name(lambda: None) == "zsh"
 
 
 def _read_cli_contract() -> str:
