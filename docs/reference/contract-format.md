@@ -79,15 +79,21 @@ generated_dir = ".apidev/output/api"
 postprocess = "auto"
 scaffold = true
 scaffold_dir = "integration"
+scaffold_write_policy = "create-missing"
 ```
 
 Семантика:
 
 - `generator.scaffold`: `boolean`, включает/выключает генерацию integration scaffold по умолчанию.
-- `generator.scaffold_dir`: `string`, относительный путь от `generator.generated_dir` для scaffold-файлов.
+- `generator.scaffold_dir`: `string`, относительный путь от `project_dir` для scaffold-файлов.
 - Абсолютные пути в `generator.scaffold_dir` запрещены.
-- `generator.scaffold_dir` не должен выходить за пределы `generator.generated_dir`.
-- Запись scaffold-файлов выполняется в режиме `create-if-missing` (без перезаписи существующих файлов).
+- `generator.scaffold_dir` должен оставаться в пределах `project_dir`.
+- `generator.generated_dir` и `generator.scaffold_dir` не должны пересекаться (равенство и вложенность запрещены).
+- `generator.scaffold_write_policy`: `string`, политика записи scaffold-шаблонов.
+  - `create-missing` (default): создавать только отсутствующие scaffold-файлы.
+  - `skip-existing`: существующие scaffold-файлы не изменяются, отсутствующие создаются.
+  - `fail-on-conflict`: если целевой scaffold-файл уже существует, генерация завершается с ошибкой.
+- Недопустимое значение `generator.scaffold_write_policy` приводит к ошибке валидации конфигурации.
 
 ## Конфигурация Evolution и release-state
 

@@ -47,6 +47,14 @@ def _create_diff_service() -> DiffService:
     )
 
 
+def _planned_paths_within_root(plan: Any, root: Path) -> list[str]:
+    planned_paths: list[str] = []
+    for change in plan.changes:
+        if change.path.is_relative_to(root):
+            planned_paths.append(change.path.relative_to(root).as_posix())
+    return planned_paths
+
+
 def test_diff_service_generates_transport_models_and_registry_metadata(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(
@@ -92,10 +100,8 @@ errors: []
 
     plan = _create_diff_service().run(tmp_path)
 
-    planned_paths = [
-        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
-    ]
-    assert planned_paths == [
+    generated_paths = _planned_paths_within_root(plan, plan.generated_root)
+    assert generated_paths == [
         "operation_map.py",
         "openapi_docs.py",
         "alpha/__init__.py",
@@ -112,10 +118,13 @@ errors: []
         "zeta/models/get_status_request.py",
         "zeta/models/get_status_response.py",
         "zeta/models/get_status_error.py",
-        "integration/handler_registry.py",
-        "integration/router_factory.py",
-        "integration/auth_registry.py",
-        "integration/error_mapper.py",
+    ]
+    scaffold_paths = _planned_paths_within_root(plan, tmp_path / "integration")
+    assert scaffold_paths == [
+        "handler_registry.py",
+        "router_factory.py",
+        "auth_registry.py",
+        "error_mapper.py",
     ]
 
     operation_map = next(
@@ -213,13 +222,11 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    planned_paths = [
-        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
-    ]
-    assert "billing_domain/routes/get_invoice.py" in planned_paths
-    assert "billing_domain/models/get_invoice_request.py" in planned_paths
-    assert "billing_domain/models/get_invoice_response.py" in planned_paths
-    assert "billing_domain/models/get_invoice_error.py" in planned_paths
+    generated_paths = _planned_paths_within_root(plan, plan.generated_root)
+    assert "billing_domain/routes/get_invoice.py" in generated_paths
+    assert "billing_domain/models/get_invoice_request.py" in generated_paths
+    assert "billing_domain/models/get_invoice_response.py" in generated_paths
+    assert "billing_domain/models/get_invoice_error.py" in generated_paths
 
     operation_map = next(
         change for change in plan.changes if change.path.name == "operation_map.py"
@@ -317,13 +324,11 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    planned_paths = [
-        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
-    ]
-    assert "domain_segment/routes/operation_segment.py" in planned_paths
-    assert "domain_segment/models/operation_segment_request.py" in planned_paths
-    assert "domain_segment/models/operation_segment_response.py" in planned_paths
-    assert "domain_segment/models/operation_segment_error.py" in planned_paths
+    generated_paths = _planned_paths_within_root(plan, plan.generated_root)
+    assert "domain_segment/routes/operation_segment.py" in generated_paths
+    assert "domain_segment/models/operation_segment_request.py" in generated_paths
+    assert "domain_segment/models/operation_segment_response.py" in generated_paths
+    assert "domain_segment/models/operation_segment_error.py" in generated_paths
 
     operation_map = next(
         change for change in plan.changes if change.path.name == "operation_map.py"
@@ -520,6 +525,51 @@ errors:
     assert first_fingerprint != second_entry["contract_fingerprint"]
 
 
+def test_diff_service_normalizes_short_form_error_example_for_projection(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    contract_path = tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml"
+    contract_path.parent.mkdir(parents=True, exist_ok=True)
+    contract_path.write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    example:
+      code: INVOICE_NOT_FOUND
+      message: Invoice not found
+    body:
+      type: object
+      properties:
+        code:
+          type: string
+          required: true
+        message:
+          type: string
+""".strip(),
+        encoding="utf-8",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, namespace)
+    operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
+    entry = operation_map_value["billing_get_invoice"]
+
+    assert entry["error_examples"] == [
+        {"code": "INVOICE_NOT_FOUND", "message": "Invoice not found"}
+    ]
+
+
 def test_operation_map_escapes_malicious_path_literal(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     malicious_path = '/x"+__import__("os").system("echo_INJECTED")+"'
@@ -550,3 +600,78 @@ errors: []
     operation_map_value = namespace["OPERATION_MAP"]
     assert isinstance(operation_map_value, dict)
     assert operation_map_value["billing_get_invoice"]["path"] == malicious_path
+
+
+def test_operation_map_includes_domain_for_runtime_and_openapi_projection(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, namespace)
+    operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
+    entry = operation_map_value["billing_get_invoice"]
+
+    assert entry["domain"] == "billing"
+
+
+def test_openapi_projection_includes_domain_tags_security_and_error_responses(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    body:
+      type: object
+      example:
+        code: INVOICE_NOT_FOUND
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, operation_map_namespace)
+    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+
+    openapi_source = openapi_docs.content.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = build_openapi_paths()
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+
+    assert get_operation["tags"] == ["billing"]
+    assert get_operation["security"] == [{"bearerAuth": []}]
+    assert "200" in get_operation["responses"]
+    assert "404" in get_operation["responses"]

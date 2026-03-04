@@ -3,36 +3,87 @@
 from .operation_map import OPERATION_MAP
 
 
+def _resolve_domain_tag(entry: dict[str, object], operation_id: str) -> str:
+    if "tags" in entry:
+        raise ValueError(
+            "validation.MANUAL_TAGS_FORBIDDEN: "
+            f"operation_id={operation_id!r}; field='tags' must not be set manually."
+        )
+
+    domain = entry.get("domain")
+    if isinstance(domain, str) and domain.strip():
+        return domain.strip()
+    router_module = str(entry.get("router_module", "")).strip()
+    if router_module:
+        return router_module.split(".", 1)[0]
+    return operation_id.split("_", 1)[0]
+
+
+def _resolve_security(entry: dict[str, object]) -> list[dict[str, list[str]]] | None:
+    auth_mode = str(entry.get("auth", "public")).strip().lower()
+    if auth_mode == "public":
+        return None
+    if auth_mode == "bearer":
+        return [{"bearerAuth": []}]
+    return [{"apidevAuth": []}]
+
+
+def _build_responses(entry: dict[str, object]) -> dict[str, dict[str, object]]:
+    response_schema = entry.get("response_schema", {})
+    response_example = entry.get("response_example")
+    response_status = str(int(entry.get("response_status", 200)))
+    responses: dict[str, dict[str, object]] = {
+        response_status: {
+            "description": "Success",
+            "content": {
+                "application/json": {
+                    "schema": response_schema,
+                    "example": response_example,
+                }
+            },
+        }
+    }
+    raw_errors = entry.get("error_schemas", [])
+    if isinstance(raw_errors, list):
+        sorted_errors = sorted(
+            (error for error in raw_errors if isinstance(error, dict)),
+            key=lambda error: (int(error.get("http_status", 500)), str(error.get("code", ""))),
+        )
+        for error in sorted_errors:
+            status = str(int(error.get("http_status", 500)))
+            code = str(error.get("code", "")).strip()
+            responses[status] = {
+                "description": code or f"HTTP {status}",
+                "content": {
+                    "application/json": {
+                        "schema": error.get("body", {}),
+                        "example": error.get("example"),
+                    }
+                },
+            }
+    return responses
+
+
 def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
     """Build deterministic OpenAPI `paths` fragment from generated operation metadata."""
     paths: dict[str, dict[str, dict[str, object]]] = {}
     for operation_id in sorted(OPERATION_MAP):
-        entry = OPERATION_MAP[operation_id]
+        entry = dict(OPERATION_MAP[operation_id])
         path = str(entry["path"])
         method = str(entry["method"]).lower()
-        response_schema = entry.get("response_schema", {})
-        response_example = entry.get("response_example")
-        response_status = str(int(entry.get("response_status", 200)))
+        security = _resolve_security(entry)
         operation = {
             "operationId": operation_id,
             "summary": str(entry.get("summary", "")),
             "description": str(entry.get("description", "")),
             "deprecated": str(entry.get("deprecation_status", "active")) == "deprecated",
+            "tags": [_resolve_domain_tag(entry, operation_id)],
+            "x-apidev-auth": str(entry.get("auth", "public")),
             "x-apidev-deprecation": {
                 "status": str(entry.get("deprecation_status", "active")),
                 "deprecated_since_release": entry.get("deprecated_since_release"),
             },
-            "responses": {
-                response_status: {
-                    "description": "Success",
-                    "content": {
-                        "application/json": {
-                            "schema": response_schema,
-                            "example": response_example,
-                        }
-                    },
-                }
-            },
+            "responses": _build_responses(entry),
             "x-apidev-errors": [
                 {
                     "code": str(error.get("code", "")),
@@ -43,6 +94,8 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
                 for error in entry.get("error_schemas", [])
             ],
         }
+        if security is not None:
+            operation["security"] = security
         methods = paths.setdefault(path, {})
         methods[method] = operation
     return paths

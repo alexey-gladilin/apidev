@@ -5,7 +5,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast
 
 import yaml
 from apidev.application.dto.resolved_paths import resolve_paths
@@ -47,6 +47,14 @@ class DiffService:
     )
     _INVALID_FILTER_PATTERN_CODE = "generation.invalid-endpoint-pattern"
     _EMPTY_FILTER_SET_CODE = "generation.empty-endpoint-selection"
+    _SCAFFOLD_WRITE_POLICIES: tuple[str, ...] = (
+        "create-missing",
+        "skip-existing",
+        "fail-on-conflict",
+    )
+    _SCAFFOLD_TEMPLATE_CONTEXT: dict[str, str] = {
+        "runtime_router_adapter": "fastapi-apirouter",
+    }
 
     def __init__(
         self,
@@ -77,6 +85,7 @@ class DiffService:
         postprocess_mode = config.generator.postprocess
         effective_scaffold = config.generator.scaffold if scaffold is None else scaffold
         scaffold_root = self._resolve_scaffold_root(
+            project_dir=project_dir,
             generated_root=paths.generated_root,
             raw_scaffold_dir=config.generator.scaffold_dir,
         )
@@ -209,6 +218,7 @@ class DiffService:
                     project_dir=project_dir,
                     scaffold_root=scaffold_root,
                     postprocess_mode=postprocess_mode,
+                    scaffold_write_policy=config.generator.scaffold_write_policy,
                 )
             )
         protected_roots = (scaffold_root,) if effective_scaffold else ()
@@ -792,12 +802,28 @@ class DiffService:
         project_dir: Path,
         scaffold_root: Path,
         postprocess_mode: PythonPostprocessMode,
+        scaffold_write_policy: Literal[
+            "create-missing", "skip-existing", "fail-on-conflict"
+        ] = "create-missing",
     ) -> list[PlannedChange]:
+        if scaffold_write_policy not in self._SCAFFOLD_WRITE_POLICIES:
+            raise ValueError(
+                "Invalid generator.scaffold_write_policy "
+                f"'{scaffold_write_policy}'. Expected one of: "
+                f"{', '.join(self._SCAFFOLD_WRITE_POLICIES)}."
+            )
+
         planned: list[PlannedChange] = []
         for filename, template_name in self._SCAFFOLD_TEMPLATES:
             target = scaffold_root / filename
             if self.fs.exists(target):
-                # Keep manual scaffold content untouched (create-if-missing policy).
+                if scaffold_write_policy == "fail-on-conflict":
+                    raise ValueError(
+                        "Invalid generator.scaffold_write_policy 'fail-on-conflict': "
+                        f"scaffold target already exists: {target}"
+                    )
+
+                # Keep manual scaffold content untouched for create-missing/skip-existing.
                 planned.append(
                     PlannedChange(
                         path=target, content=self.fs.read_text(target), change_type="SAME"
@@ -805,12 +831,22 @@ class DiffService:
                 )
                 continue
 
-            content = self.renderer.render(template_name, {})
+            content = self.renderer.render(template_name, dict(self._SCAFFOLD_TEMPLATE_CONTEXT))
             content = self._postprocess_python(project_dir, target, content, postprocess_mode)
             planned.append(PlannedChange(path=target, content=content, change_type="ADD"))
         return planned
 
-    def _resolve_scaffold_root(self, generated_root: Path, raw_scaffold_dir: str) -> Path:
+    def _resolve_scaffold_root(
+        self, project_dir: Path, generated_root: Path, raw_scaffold_dir: str
+    ) -> Path:
+        project_root = project_dir.resolve()
+        generated_root_resolved = generated_root.resolve(strict=False)
+        if not self._is_relative_to(generated_root_resolved, project_root):
+            raise ValueError(
+                f"Invalid generator.generated_dir '{generated_root}': "
+                f"path must stay inside project directory '{project_root}'."
+            )
+
         scaffold_dir = raw_scaffold_dir.strip()
         if not scaffold_dir:
             raise ValueError("Invalid generator.scaffold_dir: must be a non-empty path.")
@@ -822,16 +858,28 @@ class DiffService:
                 "absolute paths are not allowed."
             )
 
-        generated_root_resolved = generated_root.resolve()
-        scaffold_root = (generated_root_resolved / candidate).resolve(strict=False)
-        try:
-            scaffold_root.relative_to(generated_root_resolved)
-        except ValueError as exc:
+        scaffold_root = (project_root / candidate).resolve(strict=False)
+        if not self._is_relative_to(scaffold_root, project_root):
             raise ValueError(
                 f"Invalid generator.scaffold_dir '{raw_scaffold_dir}': "
-                "path must stay inside generated root."
-            ) from exc
+                f"path must stay inside project directory '{project_root}'."
+            )
+        if self._paths_overlap(generated_root_resolved, scaffold_root):
+            raise ValueError(
+                "Invalid generator paths: output contours must not overlap "
+                f"(generated_dir='{generated_root_resolved}', scaffold_dir='{scaffold_root}')."
+            )
         return scaffold_root
+
+    def _paths_overlap(self, left: Path, right: Path) -> bool:
+        return self._is_relative_to(left, right) or self._is_relative_to(right, left)
+
+    def _is_relative_to(self, candidate: Path, root: Path) -> bool:
+        try:
+            candidate.relative_to(root)
+            return True
+        except ValueError:
+            return False
 
     def _scaffold_template_targets(self, scaffold_root: Path) -> tuple[Path, ...]:
         return tuple(scaffold_root / filename for filename, _ in self._SCAFFOLD_TEMPLATES)
@@ -1119,6 +1167,35 @@ class DiffService:
         ]
         return sorted(details, key=lambda item: (item["code"], item["http_status"]))
 
+    def _normalized_error_items(self, operation: Operation) -> list[dict[str, object]]:
+        normalized: list[dict[str, object]] = []
+        for index, error in enumerate(operation.contract.errors):
+            if not isinstance(error, dict):
+                continue
+            normalized.append(self._normalize_error_item(error, index=index))
+        return normalized
+
+    def _normalize_error_item(self, error: dict[str, object], *, index: int) -> dict[str, object]:
+        normalized_error = dict(error)
+        if "example" not in normalized_error:
+            return normalized_error
+
+        short_example = normalized_error.pop("example")
+        body = normalized_error.get("body")
+        if not isinstance(body, dict):
+            return normalized_error
+
+        normalized_body = dict(body)
+        if "example" not in normalized_body:
+            normalized_body["example"] = short_example
+        elif normalized_body.get("example") != short_example:
+            raise ValueError(
+                "Conflicting error examples at "
+                f"errors[{index}]: short-form example does not match body.example."
+            )
+        normalized_error["body"] = normalized_body
+        return normalized_error
+
     def _error_schemas(self, operation: Operation) -> list[dict[str, object]]:
         details = [
             {
@@ -1127,8 +1204,7 @@ class DiffService:
                 "body": error.get("body", {}),
                 "example": self._schema_example(error.get("body", {})),
             }
-            for error in operation.contract.errors
-            if isinstance(error, dict)
+            for error in self._normalized_error_items(operation)
         ]
         return sorted(details, key=lambda item: (item["code"], item["http_status"]))
 
@@ -1139,7 +1215,7 @@ class DiffService:
 
     def _contract_fingerprint(self, operation: Operation) -> str:
         response_body = operation.contract.response_body
-        errors = operation.contract.errors
+        errors = self._normalized_error_items(operation)
         payload = {
             "method": operation.contract.method,
             "path": operation.contract.path,
@@ -1171,8 +1247,7 @@ class DiffService:
                     "http_status": int(error.get("http_status", 500)),
                     "body": error.get("body", {}),
                 }
-                for error in operation.contract.errors
-                if isinstance(error, dict)
+                for error in self._normalized_error_items(operation)
             ]
         return {}
 

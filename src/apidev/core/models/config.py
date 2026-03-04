@@ -1,4 +1,5 @@
-from typing import Literal
+from pathlib import Path
+from typing import Literal, cast
 
 from pydantic import BaseModel, field_validator
 
@@ -12,13 +13,42 @@ class GeneratorConfig(BaseModel):
     postprocess: Literal["auto", "none", "ruff", "black"] = "auto"
     scaffold: bool = True
     scaffold_dir: str = "integration"
+    scaffold_write_policy: Literal["create-missing", "skip-existing", "fail-on-conflict"] = (
+        "create-missing"
+    )
+
+    @field_validator("generated_dir")
+    @classmethod
+    def _validate_generated_dir(cls, value: str) -> str:
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError("must be a non-empty path")
+        if Path(candidate).is_absolute():
+            raise ValueError("absolute paths are not allowed")
+        return value
 
     @field_validator("scaffold_dir")
     @classmethod
     def _validate_scaffold_dir(cls, value: str) -> str:
-        if not value.strip():
+        candidate = value.strip()
+        if not candidate:
             raise ValueError("must be a non-empty path")
+        if Path(candidate).is_absolute():
+            raise ValueError("absolute paths are not allowed")
         return value
+
+    @field_validator("scaffold_write_policy")
+    @classmethod
+    def _validate_scaffold_write_policy(
+        cls, value: str
+    ) -> Literal["create-missing", "skip-existing", "fail-on-conflict"]:
+        candidate = value.strip().lower()
+        allowed = ("create-missing", "skip-existing", "fail-on-conflict")
+        if candidate not in allowed:
+            raise ValueError(
+                "must be one of: create-missing, skip-existing, fail-on-conflict"
+            )
+        return cast(Literal["create-missing", "skip-existing", "fail-on-conflict"], candidate)
 
 
 class TemplatesConfig(BaseModel):

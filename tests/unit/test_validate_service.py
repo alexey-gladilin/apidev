@@ -737,3 +737,114 @@ errors: []
         and d.code == "SCHEMA_INVALID_VALUE"
         for d in result.diagnostics
     )
+
+
+def test_validate_accepts_short_form_error_example(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/short_form_error_example.yaml",
+        """
+method: GET
+path: /v1/items/{item_id}
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: ITEM_NOT_FOUND
+    http_status: 404
+    example:
+      code: ITEM_NOT_FOUND
+    body:
+      type: object
+      properties:
+        code:
+          type: string
+          required: true
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+    assert len(result.operations) == 1
+
+
+def test_validate_accepts_equivalent_short_and_nested_error_examples(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/equivalent_error_examples.yaml",
+        """
+method: GET
+path: /v1/items/{item_id}
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: ITEM_NOT_FOUND
+    http_status: 404
+    example:
+      code: ITEM_NOT_FOUND
+    body:
+      type: object
+      example:
+        code: ITEM_NOT_FOUND
+      properties:
+        code:
+          type: string
+          required: true
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+    assert len(result.operations) == 1
+
+
+def test_validate_rejects_conflicting_short_and_nested_error_examples(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/conflicting_error_examples.yaml",
+        """
+method: GET
+path: /v1/items/{item_id}
+auth: public
+summary: S
+description: D
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: ITEM_NOT_FOUND
+    http_status: 404
+    example:
+      code: ITEM_NOT_FOUND
+    body:
+      type: object
+      example:
+        code: OTHER_ERROR
+      properties:
+        code:
+          type: string
+          required: true
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert result.has_errors
+    assert any(
+        d.location.endswith("errors[0].example")
+        and d.code == "SCHEMA_INVALID_VALUE"
+        and "conflicts with 'errors[0].body.example'" in d.message
+        for d in result.diagnostics
+    )

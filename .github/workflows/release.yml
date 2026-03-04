@@ -73,7 +73,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r requirements/code.txt
-          python -m pip install .
+          python -m pip install --no-deps .
           python -m pip install pyinstaller==6.18.0
 
       - name: Build standalone binary
@@ -235,18 +235,30 @@ jobs:
     env:
       HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
     steps:
-      - name: Validate Homebrew tap token
+      - name: Pre-check Homebrew tap token secret
+        id: precheck_homebrew_secret
         shell: bash
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${HOMEBREW_TAP_TOKEN}" ]; then
-            echo "HOMEBREW_TAP_TOKEN is required for publishing to ${HOMEBREW_TAP_REPOSITORY}."
-            echo "Configure a fine-grained PAT with Contents: Read and write on ${HOMEBREW_TAP_REPOSITORY}."
+            echo "Missing required secret HOMEBREW_TAP_TOKEN"
             exit 1
           fi
+          case "${HOMEBREW_TAP_TOKEN}" in
+            github_pat_*) ;;
+            *)
+              echo "HOMEBREW_TAP_TOKEN has unsupported format (expected github_pat_*)"
+              exit 1
+              ;;
+          esac
+          echo "ready=true" >> "$GITHUB_OUTPUT"
 
       - name: Checkout source repository
         uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332
+        with:
+          persist-credentials: false
 
       - name: Download release artifacts
         uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
@@ -274,9 +286,11 @@ jobs:
         with:
           repository: ${{ env.HOMEBREW_TAP_REPOSITORY }}
           token: ${{ env.HOMEBREW_TAP_TOKEN }}
+          persist-credentials: false
           path: homebrew-tap
 
-      - name: Publish formula update to tap
+      - name: Publish Homebrew formula placeholder
+        if: ${{ steps.precheck_homebrew_secret.outputs.ready == 'true' }}
         shell: bash
         run: |
           set -euo pipefail

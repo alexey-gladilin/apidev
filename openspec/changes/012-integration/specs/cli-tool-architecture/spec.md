@@ -91,7 +91,12 @@
 #### Scenario: Запрещенная комбинация `integration-mode=full` и `runtime=none`
 - **WHEN** пользователь задает `--integration-mode full` и `--runtime none`
 - **THEN** `apidev init` SHALL завершаться fail-fast validation error до файловых операций
-- **AND** diagnostics SHALL использовать стабильный `code` из каталога init/profile ошибок
+- **AND** diagnostics SHALL использовать стабильный `code = config.INIT_MODE_CONFLICT`
+
+#### Scenario: Невалидные enum-значения init profile-флагов
+- **WHEN** пользователь передает недопустимое значение в `--runtime` или `--integration-mode`
+- **THEN** `apidev init` SHALL завершаться fail-fast validation error до файловых операций
+- **AND** diagnostics SHALL использовать стабильный `code = config.INIT_PROFILE_INVALID_ENUM`
 
 #### Scenario: Управление OpenAPI extensions
 - **WHEN** пользователь задает `openapi.include_extensions = false`
@@ -107,14 +112,14 @@
 #### Scenario: Нормативные fail-fast error codes
 - **WHEN** формируется fail-fast diagnostics
 - **THEN** `code` SHALL быть одним из нормативных значений:
-  - `PATH_BOUNDARY_VIOLATION`
-  - `OUTPUT_CONTOUR_CONFLICT`
-  - `INVALID_SCAFFOLD_WRITE_POLICY`
-  - `MANUAL_TAGS_FORBIDDEN`
-  - `RELEASE_STATE_INVALID_KEY`
-  - `RELEASE_STATE_TYPE_MISMATCH`
-  - `INIT_PROFILE_INVALID_ENUM`
-  - `INIT_MODE_CONFLICT`
+  - `validation.PATH_BOUNDARY_VIOLATION`
+  - `validation.OUTPUT_CONTOUR_CONFLICT`
+  - `validation.INVALID_SCAFFOLD_WRITE_POLICY`
+  - `validation.MANUAL_TAGS_FORBIDDEN`
+  - `validation.RELEASE_STATE_INVALID_KEY`
+  - `validation.RELEASE_STATE_TYPE_MISMATCH`
+  - `config.INIT_PROFILE_INVALID_ENUM`
+  - `config.INIT_MODE_CONFLICT`
 - **AND** перечисленные `code` SHALL оставаться стабильными в рамках этого change
 
 #### Scenario: Каноническая сериализация diagnostics envelope

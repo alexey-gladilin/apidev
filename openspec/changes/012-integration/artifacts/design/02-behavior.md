@@ -30,14 +30,14 @@
   - при одинаковом входе diagnostics envelope должен быть байтово-идентичным.
 
 ### 1.3 Нормативный каталог fail-fast codes
-- `PATH_BOUNDARY_VIOLATION`
-- `OUTPUT_CONTOUR_CONFLICT`
-- `INVALID_SCAFFOLD_WRITE_POLICY`
-- `MANUAL_TAGS_FORBIDDEN`
-- `RELEASE_STATE_INVALID_KEY`
-- `RELEASE_STATE_TYPE_MISMATCH`
-- `INIT_PROFILE_INVALID_ENUM`
-- `INIT_MODE_CONFLICT`
+- `validation.PATH_BOUNDARY_VIOLATION`
+- `validation.OUTPUT_CONTOUR_CONFLICT`
+- `validation.INVALID_SCAFFOLD_WRITE_POLICY`
+- `validation.MANUAL_TAGS_FORBIDDEN`
+- `validation.RELEASE_STATE_INVALID_KEY`
+- `validation.RELEASE_STATE_TYPE_MISMATCH`
+- `config.INIT_PROFILE_INVALID_ENUM`
+- `config.INIT_MODE_CONFLICT`
 
 ## 2. `scaffold_write_policy`
 - Поддерживаются три режима:
@@ -86,7 +86,7 @@
 | `create|repair|force` | `integration-mode=off` | Integration-артефакты не создаются и не обновляются |
 | `create|repair|force` | `integration-mode=scaffold` | Управляются только scaffold integration-артефакты |
 | `create|repair|force` | `integration-mode=full` | Управляются generated+scaffold integration-артефакты согласно mode |
-| Любой | Невалидный enum в `--runtime` или `--integration-mode` | CLI validation error до файловых операций |
+| Любой | Невалидный enum в `--runtime` или `--integration-mode` | CLI validation error `config.INIT_PROFILE_INVALID_ENUM` до файловых операций |
 | Любой | `--repair` и `--force` одновременно | CLI validation error до запуска pipeline |
 
 ### 5.2 File-scope matrix для profile-managed artifacts
@@ -96,11 +96,12 @@
 | `scaffold` | `fastapi` | `<scaffold_dir>/handler_registry.py`, `<scaffold_dir>/router_factory.py`, `<scaffold_dir>/auth_registry.py`, `<scaffold_dir>/error_mapper.py` | изменения generated transport (`operation_map.py`, `openapi_docs.py`, `<domain>/**`) |
 | `scaffold` | `none` | `<scaffold_dir>/handler_registry.py`, `<scaffold_dir>/error_mapper.py` | генерация runtime-specific scaffold (`router_factory.py`, `auth_registry.py`) |
 | `full` | `fastapi` | scaffold из режима `scaffold` + generated integration (`<generated_dir>/operation_map.py`, `<generated_dir>/openapi_docs.py`, `<generated_dir>/<domain>/**`) | изменения вне profile-scope |
-| `full` | `none` | нет | validation error `INIT_PROFILE_INVALID_ENUM` (комбинация запрещена: full требует runtime wiring) |
+| `full` | `none` | нет | validation error `config.INIT_MODE_CONFLICT` (комбинация запрещена: full требует runtime wiring) |
 
 ### 5.3 Политика для `runtime=none`
 - `runtime=none` означает запрет runtime-specific wiring артефактов.
-- `integration-mode=full` в сочетании с `runtime=none` считается невалидной комбинацией и завершается fail-fast validation error (`INIT_PROFILE_INVALID_ENUM`) до файловых операций.
+- `integration-mode=full` в сочетании с `runtime=none` считается невалидной комбинацией и завершается fail-fast validation error (`config.INIT_MODE_CONFLICT`) до файловых операций.
+- Невалидные enum-значения (`--runtime`/`--integration-mode`) завершаются fail-fast validation error (`config.INIT_PROFILE_INVALID_ENUM`) до файловых операций.
 
 ## 6. Strict validation release-state
 - `release_number` должен соответствовать ожидаемому типу.

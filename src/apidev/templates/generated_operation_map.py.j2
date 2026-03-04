@@ -8,6 +8,7 @@ OPERATION_MAP = {
         "method": {{ entry.method | tojson }},
         "path": {{ entry.path | tojson }},
         "auth": {{ entry.auth | tojson }},
+        "domain": {{ entry.router_module.split(".")[0] | tojson }},
         "summary": {{ entry.summary | tojson }},
         "description": {{ entry.description | tojson }},
         "response_status": {{ entry.response_status }},

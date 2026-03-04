@@ -1,21 +1,183 @@
-"""Manual integration scaffold: build runtime routes from generated operation map."""
+"""Manual integration scaffold: build runtime routes from generated operation map.
 
+Adapter contract: {{ runtime_router_adapter }}
+"""
+
+import importlib
 from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
 from operation_map import OPERATION_MAP
 from .auth_registry import resolve_auth_dependency
 from .handler_registry import resolve_handler
 
+try:
+    from fastapi import APIRouter, Depends
+except ModuleNotFoundError:  # pragma: no cover - fallback for scaffold tests without FastAPI.
+    @dataclass
+    class _Dependency:
+        dependency: Any
 
-def build_router() -> list[dict[str, Any]]:
-    routes: list[dict[str, Any]] = []
+    @dataclass
+    class _Route:
+        path: str
+        endpoint: Callable[..., Awaitable[Any]]
+        methods: set[str]
+        operation_id: str | None
+        summary: str | None
+        description: str | None
+        deprecated: bool
+        responses: dict[int, dict[str, object]]
+        tags: list[str] | None
+        dependencies: list[_Dependency]
+
+    class APIRouter:  # type: ignore[no-redef]
+        def __init__(self) -> None:
+            self.routes: list[_Route] = []
+
+        def add_api_route(
+            self,
+            path: str,
+            endpoint: Callable[..., Awaitable[Any]],
+            *,
+            methods: list[str],
+            operation_id: str | None = None,
+            summary: str | None = None,
+            description: str | None = None,
+            deprecated: bool = False,
+            responses: dict[int, dict[str, object]] | None = None,
+            tags: list[str] | None = None,
+            dependencies: list[_Dependency] | None = None,
+        ) -> None:
+            self.routes.append(
+                _Route(
+                    path=path,
+                    endpoint=endpoint,
+                    methods={method.upper() for method in methods},
+                    operation_id=operation_id,
+                    summary=summary,
+                    description=description,
+                    deprecated=deprecated,
+                    responses=responses or {},
+                    tags=tags,
+                    dependencies=dependencies or [],
+                )
+            )
+
+    def Depends(dependency: Any) -> _Dependency:  # type: ignore[no-redef]
+        return _Dependency(dependency=dependency)
+
+
+def _require_string(meta: Mapping[str, object], operation_id: str, key: str) -> str:
+    value = meta.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"Invalid operation metadata for '{operation_id}': '{key}' must be non-empty string.")
+    return value
+
+
+def _optional_string(meta: Mapping[str, object], key: str) -> str | None:
+    value = meta.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        value = str(value)
+    stripped = value.strip()
+    return stripped or None
+
+
+def _build_responses(meta: Mapping[str, object]) -> dict[int, dict[str, object]]:
+    status_raw = meta.get("response_status", 200)
+    try:
+        success_status = int(status_raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"Invalid operation metadata: response_status={status_raw!r}") from exc
+
+    responses: dict[int, dict[str, object]] = {
+        success_status: {"description": "Success"},
+    }
+    raw_errors = meta.get("error_schemas", [])
+    if isinstance(raw_errors, list):
+        for error_item in sorted(
+            (item for item in raw_errors if isinstance(item, Mapping)),
+            key=lambda item: (int(item.get("http_status", 500)), str(item.get("code", ""))),
+        ):
+            http_status = int(error_item.get("http_status", 500))
+            code = str(error_item.get("code", "")).strip()
+            responses[http_status] = {"description": code or f"HTTP {http_status}"}
+    return responses
+
+
+def _resolve_domain_tag(meta: Mapping[str, object], operation_id: str, router_module: str) -> str:
+    if "tags" in meta:
+        raise ValueError(
+            "validation.MANUAL_TAGS_FORBIDDEN: "
+            f"operation_id={operation_id!r}; field='tags' must not be set manually."
+        )
+
+    domain = meta.get("domain")
+    if isinstance(domain, str) and domain.strip():
+        return domain.strip()
+    if router_module.strip():
+        return router_module.split(".", 1)[0]
+    return operation_id.split("_", 1)[0]
+
+
+def _load_generated_route(router_module: str) -> Callable[..., Awaitable[Any]]:
+    module = importlib.import_module(router_module)
+    route_callable = getattr(module, "route", None)
+    if not callable(route_callable):
+        raise ValueError(f"Generated router module '{router_module}' does not expose callable 'route'.")
+    return route_callable
+
+
+def build_router() -> APIRouter:
+    router = APIRouter()
     for operation_id in sorted(OPERATION_MAP):
-        meta = dict(OPERATION_MAP[operation_id])
-        meta["handler"] = resolve_handler(operation_id)
-        meta["auth_dependency"] = resolve_auth_dependency(str(meta.get("auth", "public")))
-        routes.append(meta)
-    return routes
+        raw_meta = OPERATION_MAP[operation_id]
+        if not isinstance(raw_meta, Mapping):
+            raise ValueError(
+                f"Invalid operation metadata for '{operation_id}': operation entry must be object."
+            )
+        meta = dict(raw_meta)
+        method = _require_string(meta, operation_id, "method").upper()
+        path = _require_string(meta, operation_id, "path")
+        router_module = _require_string(meta, operation_id, "router_module")
+        auth_mode = str(meta.get("auth", "public"))
+
+        handler = resolve_handler(operation_id)
+        auth_dependency = resolve_auth_dependency(auth_mode)
+        dependencies = [Depends(auth_dependency)] if auth_dependency is not None else []
+        route_callable = _load_generated_route(router_module)
+
+        async def endpoint(
+            payload: Mapping[str, object] | None = None,
+            current_user: Any = None,
+            *,
+            _route_callable: Callable[..., Awaitable[Any]] = route_callable,
+            _handler: Any = handler,
+        ) -> Any:
+            result = await invoke_route_with_context(
+                route_callable=_route_callable,
+                handler=_handler,
+                payload=payload,
+                current_user=current_user,
+            )
+            return getattr(result, "payload", None) or {}
+
+        router.add_api_route(
+            path,
+            endpoint,
+            methods=[method],
+            operation_id=operation_id,
+            summary=_optional_string(meta, "summary"),
+            description=_optional_string(meta, "description"),
+            deprecated=str(meta.get("deprecation_status", "active")) == "deprecated",
+            responses=_build_responses(meta),
+            tags=[_resolve_domain_tag(meta, operation_id, router_module)],
+            dependencies=dependencies,
+        )
+    return router
 
 
 def enrich_payload_with_user_context(

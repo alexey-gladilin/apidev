@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pytest
+
 from apidev.core.models.config import ApidevConfig
 from apidev.infrastructure.config.toml_loader import default_config_text
 
@@ -7,6 +11,7 @@ def test_config_model_sets_scaffold_defaults() -> None:
 
     assert config.generator.scaffold is True
     assert config.generator.scaffold_dir == "integration"
+    assert config.generator.scaffold_write_policy == "create-missing"
 
 
 def test_default_config_text_contains_scaffold_defaults() -> None:
@@ -14,3 +19,32 @@ def test_default_config_text_contains_scaffold_defaults() -> None:
 
     assert "scaffold = true" in text
     assert 'scaffold_dir = "integration"' in text
+    assert 'scaffold_write_policy = "create-missing"' in text
+
+
+def test_config_rejects_empty_generated_dir() -> None:
+    with pytest.raises(ValueError, match="generated_dir"):
+        ApidevConfig.model_validate({"generator": {"generated_dir": "   "}})
+
+
+def test_config_rejects_absolute_scaffold_dir() -> None:
+    absolute = str((Path.cwd() / "scaffold").resolve())
+    with pytest.raises(ValueError, match="scaffold_dir"):
+        ApidevConfig.model_validate({"generator": {"scaffold_dir": absolute}})
+
+
+def test_config_rejects_absolute_generated_dir() -> None:
+    absolute = str((Path.cwd() / "generated").resolve())
+    with pytest.raises(ValueError, match="generated_dir"):
+        ApidevConfig.model_validate({"generator": {"generated_dir": absolute}})
+
+
+def test_config_accepts_supported_scaffold_write_policies() -> None:
+    for policy in ("create-missing", "skip-existing", "fail-on-conflict"):
+        config = ApidevConfig.model_validate({"generator": {"scaffold_write_policy": policy}})
+        assert config.generator.scaffold_write_policy == policy
+
+
+def test_config_rejects_unknown_scaffold_write_policy() -> None:
+    with pytest.raises(ValueError, match="scaffold_write_policy"):
+        ApidevConfig.model_validate({"generator": {"scaffold_write_policy": "overwrite"}})

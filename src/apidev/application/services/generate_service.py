@@ -104,14 +104,15 @@ class GenerateService:
                 policy_blocked=plan.policy_blocked,
             )
 
+        boundary_root = project_dir
         for change in writable_changes:
-            self.writer.write(plan.generated_root, change.path, change.content)
+            self.writer.write(boundary_root, change.path, change.content)
 
         removed_paths: list[Path] = []
         changed_paths = [change.path for change in writable_changes]
         for change in removable_changes:
             try:
-                removed = self._remove_generated_artifact(plan.generated_root, change.path)
+                removed = self._remove_generated_artifact(boundary_root, change.path)
             except ValueError as exc:
                 changed_paths.extend(removed_paths)
                 return GenerateResult(

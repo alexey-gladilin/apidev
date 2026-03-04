@@ -1,6 +1,6 @@
 import re
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, field_validator
 
 _GIT_SHA_RE = re.compile(r"^[0-9a-fA-F]{7,40}$")
 _HEX_RE = re.compile(r"^[0-9a-fA-F]+$")
@@ -25,7 +25,7 @@ def validate_baseline_ref(value: str) -> str:
 class ReleaseState(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    release_number: int
+    release_number: StrictInt
     baseline_ref: str
     released_at: str | None = None
     git_commit: str | None = None

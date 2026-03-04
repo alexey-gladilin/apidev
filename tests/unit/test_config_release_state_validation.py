@@ -1,4 +1,5 @@
 from pathlib import Path
+import json
 
 import pytest
 
@@ -195,3 +196,65 @@ release_state_file = ".apidev/release-state.json"
 
     with pytest.raises(ValueError, match=r"exceeds max size"):
         loader.load_release_state(tmp_path, config)
+
+
+def test_release_state_rejects_legacy_current_release_key_with_diagnostics_payload(
+    tmp_path: Path,
+) -> None:
+    _write_config(
+        tmp_path,
+        """
+version = "1"
+
+[evolution]
+release_state_file = ".apidev/release-state.json"
+""",
+    )
+    (tmp_path / ".apidev" / "release-state.json").write_text(
+        '{"current_release": 2, "baseline_ref": "v1.0.0"}',
+        encoding="utf-8",
+    )
+
+    loader = TomlConfigLoader(fs=LocalFileSystem())
+    config = loader.load(tmp_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        loader.load_release_state(tmp_path, config)
+
+    payload = json.loads(str(exc_info.value))
+    assert payload["code"] == "validation.RELEASE_STATE_INVALID_KEY"
+    assert payload["message"] == "release-state contains unsupported legacy key"
+    assert payload["context"] == {"field": "current_release"}
+
+
+def test_release_state_rejects_release_number_type_mismatch_with_diagnostics_payload(
+    tmp_path: Path,
+) -> None:
+    _write_config(
+        tmp_path,
+        """
+version = "1"
+
+[evolution]
+release_state_file = ".apidev/release-state.json"
+""",
+    )
+    (tmp_path / ".apidev" / "release-state.json").write_text(
+        '{"release_number": "2", "baseline_ref": "v1.0.0"}',
+        encoding="utf-8",
+    )
+
+    loader = TomlConfigLoader(fs=LocalFileSystem())
+    config = loader.load(tmp_path)
+
+    with pytest.raises(ValueError) as exc_info:
+        loader.load_release_state(tmp_path, config)
+
+    payload = json.loads(str(exc_info.value))
+    assert payload["code"] == "validation.RELEASE_STATE_TYPE_MISMATCH"
+    assert payload["message"] == "release-state field has invalid type"
+    assert payload["context"] == {
+        "actual_type": "str",
+        "expected_type": "int",
+        "field": "release_number",
+    }

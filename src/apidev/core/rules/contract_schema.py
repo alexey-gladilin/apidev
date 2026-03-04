@@ -26,7 +26,7 @@ HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 AUTH_MODES = {"public", "bearer"}
 ROOT_ALLOWED_FIELDS = {"method", "path", "auth", "summary", "description", "response", "errors"}
 RESPONSE_ALLOWED_FIELDS = {"status", "body"}
-ERROR_ALLOWED_FIELDS = {"code", "http_status", "body"}
+ERROR_ALLOWED_FIELDS = {"code", "http_status", "body", "example"}
 SCHEMA_ALLOWED_FIELDS = {
     "type",
     "properties",
@@ -267,25 +267,34 @@ def validate_contract_schema(
 
     if isinstance(errors, list):
         seen_error_codes: set[str] = set()
+        normalized_errors: list[dict[str, Any]] = []
         for index, error_item in enumerate(errors):
             prefix = f"errors[{index}]"
             diagnostics.extend(_require_type(relpath, prefix, error_item, dict))
             if not isinstance(error_item, dict):
                 continue
 
-            diagnostics.extend(
-                _report_unknown_fields(relpath, prefix, error_item, ERROR_ALLOWED_FIELDS)
+            normalized_error_item = _normalize_error_example(
+                relpath=relpath,
+                prefix=prefix,
+                error_item=error_item,
+                diagnostics=diagnostics,
             )
             diagnostics.extend(
-                _require_type(relpath, f"{prefix}.code", error_item.get("code"), str)
+                _report_unknown_fields(relpath, prefix, normalized_error_item, ERROR_ALLOWED_FIELDS)
             )
             diagnostics.extend(
-                _require_type(relpath, f"{prefix}.http_status", error_item.get("http_status"), int)
+                _require_type(relpath, f"{prefix}.code", normalized_error_item.get("code"), str)
             )
             diagnostics.extend(
-                _require_type(relpath, f"{prefix}.body", error_item.get("body"), dict)
+                _require_type(
+                    relpath, f"{prefix}.http_status", normalized_error_item.get("http_status"), int
+                )
             )
-            code = error_item.get("code")
+            diagnostics.extend(
+                _require_type(relpath, f"{prefix}.body", normalized_error_item.get("body"), dict)
+            )
+            code = normalized_error_item.get("code")
             if isinstance(code, str):
                 normalized_code = code.strip()
                 if not normalized_code:
@@ -320,7 +329,7 @@ def validate_contract_schema(
                     )
                 seen_error_codes.add(normalized_code)
 
-            http_status = error_item.get("http_status")
+            http_status = normalized_error_item.get("http_status")
             if isinstance(http_status, int) and not (400 <= http_status <= 599):
                 diagnostics.append(
                     ValidationDiagnostic(
@@ -331,14 +340,15 @@ def validate_contract_schema(
                         rule=RULE_FIELD_VALUE,
                     )
                 )
-            body = error_item.get("body")
+            body = normalized_error_item.get("body")
             if isinstance(body, dict):
                 diagnostics.extend(_validate_body_schema(relpath, f"{prefix}.body", body))
+            normalized_errors.append(normalized_error_item)
+    else:
+        normalized_errors = []
 
     if diagnostics:
         return None, diagnostics
-
-    normalized_errors = list(errors) if isinstance(errors, list) else []
 
     return (
         EndpointContract(
@@ -612,6 +622,43 @@ def _is_example_type_compatible(declared_type: str, example_value: Any) -> bool:
     if declared_type == "null":
         return example_value is None
     return True
+
+
+def _normalize_error_example(
+    relpath: str,
+    prefix: str,
+    error_item: dict[str, Any],
+    diagnostics: list[ValidationDiagnostic],
+) -> dict[str, Any]:
+    normalized_error = dict(error_item)
+    if "example" not in normalized_error:
+        return normalized_error
+
+    short_example = normalized_error.pop("example")
+    body = normalized_error.get("body")
+    if not isinstance(body, dict):
+        return normalized_error
+
+    normalized_body = dict(body)
+    if "example" in normalized_body:
+        nested_example = normalized_body.get("example")
+        if short_example != nested_example:
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message=(
+                        f"Field '{prefix}.example' conflicts with "
+                        f"'{prefix}.body.example'."
+                    ),
+                    location=f"{relpath}:{prefix}.example",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+    else:
+        normalized_body["example"] = short_example
+    normalized_error["body"] = normalized_body
+    return normalized_error
 
 
 def _report_unknown_fields(

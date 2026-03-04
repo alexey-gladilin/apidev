@@ -4,6 +4,8 @@ from pathlib import Path
 import sys
 from typing import Any, cast
 
+import pytest
+
 from apidev.application.dto.generation_plan import EndpointFilters
 from apidev.application.services.generate_service import GenerateService
 from apidev.application.services.diff_service import DiffService
@@ -955,3 +957,66 @@ errors: []
         "status": "deprecated",
         "deprecated_since_release": 2,
     }
+
+
+def test_generate_openapi_rejects_manual_tags_in_operation_metadata(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    operation_map_value["billing_get_invoice"]["tags"] = ["manual"]
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+
+    with pytest.raises(ValueError, match="MANUAL_TAGS_FORBIDDEN"):
+        build_openapi_paths()

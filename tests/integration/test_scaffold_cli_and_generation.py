@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from typer.testing import CliRunner
 
 from apidev.application.services.generate_service import GenerateService
@@ -15,7 +16,10 @@ runner = CliRunner()
 
 
 def _write_project(
-    project_dir: Path, scaffold: bool = True, scaffold_dir: str = "integration"
+    project_dir: Path,
+    scaffold: bool = True,
+    scaffold_dir: str = "integration",
+    scaffold_write_policy: str = "create-missing",
 ) -> None:
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
@@ -29,6 +33,7 @@ dir = ".apidev/contracts"
 generated_dir = ".apidev/output/api"
 scaffold = {str(scaffold).lower()}
 scaffold_dir = "{scaffold_dir}"
+scaffold_write_policy = "{scaffold_write_policy}"
 
 [templates]
 dir = ".apidev/templates"
@@ -73,11 +78,11 @@ def test_gen_cli_scaffold_override_enables_generation(tmp_path: Path) -> None:
     )
 
     assert result.exit_code == 0
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    assert (generated_root / "integration" / "handler_registry.py").exists()
-    assert (generated_root / "integration" / "router_factory.py").exists()
-    assert (generated_root / "integration" / "auth_registry.py").exists()
-    assert (generated_root / "integration" / "error_mapper.py").exists()
+    scaffold_root = tmp_path / "integration"
+    assert (scaffold_root / "handler_registry.py").exists()
+    assert (scaffold_root / "router_factory.py").exists()
+    assert (scaffold_root / "auth_registry.py").exists()
+    assert (scaffold_root / "error_mapper.py").exists()
 
 
 def test_diff_cli_scaffold_override_is_accepted(tmp_path: Path) -> None:
@@ -93,7 +98,7 @@ def test_gen_preserves_existing_scaffold_file(tmp_path: Path) -> None:
     _write_project(tmp_path, scaffold=True)
     _run_generate(tmp_path)
 
-    scaffold_file = tmp_path / ".apidev" / "output" / "api" / "integration" / "handler_registry.py"
+    scaffold_file = tmp_path / "integration" / "handler_registry.py"
     sentinel = "# user-owned scaffold\n"
     scaffold_file.write_text(sentinel, encoding="utf-8")
 
@@ -118,7 +123,7 @@ def test_gen_preserves_custom_scaffold_python_file_when_scaffold_enabled(tmp_pat
     _write_project(tmp_path, scaffold=True)
     _run_generate(tmp_path)
 
-    custom_scaffold = tmp_path / ".apidev" / "output" / "api" / "integration" / "custom_handler.py"
+    custom_scaffold = tmp_path / "integration" / "custom_handler.py"
     sentinel = "# custom scaffold\n"
     custom_scaffold.write_text(sentinel, encoding="utf-8")
 
@@ -128,12 +133,11 @@ def test_gen_preserves_custom_scaffold_python_file_when_scaffold_enabled(tmp_pat
     assert custom_scaffold.read_text(encoding="utf-8") == sentinel
 
 
-def test_gen_cli_no_scaffold_override_removes_existing_scaffold_files(tmp_path: Path) -> None:
+def test_gen_cli_no_scaffold_override_keeps_external_scaffold_files(tmp_path: Path) -> None:
     _write_project(tmp_path, scaffold=True)
     _run_generate(tmp_path)
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    custom_scaffold = generated_root / "integration" / "custom_handler.py"
+    custom_scaffold = tmp_path / "integration" / "custom_handler.py"
     custom_scaffold.write_text("# stale scaffold\n", encoding="utf-8")
 
     result = runner.invoke(
@@ -142,4 +146,25 @@ def test_gen_cli_no_scaffold_override_removes_existing_scaffold_files(tmp_path: 
     )
 
     assert result.exit_code == 0
-    assert not custom_scaffold.exists()
+    assert custom_scaffold.exists()
+
+
+def test_gen_scaffold_policy_fail_on_conflict_returns_error(tmp_path: Path) -> None:
+    _write_project(tmp_path, scaffold=True, scaffold_write_policy="fail-on-conflict")
+    _run_generate(tmp_path)
+
+    scaffold_file = tmp_path / "integration" / "handler_registry.py"
+    scaffold_file.write_text("# user-owned scaffold\n", encoding="utf-8")
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    with pytest.raises(ValueError, match="fail-on-conflict"):
+        service.run(tmp_path, baseline_ref="v1.0.0")

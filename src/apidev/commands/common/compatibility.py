@@ -1,4 +1,5 @@
 import typer
+from typer.models import OptionInfo
 from rich.console import Console
 from typing import cast
 
@@ -6,14 +7,31 @@ from apidev.application.dto.diagnostics import sort_diagnostics
 from apidev.application.dto.generation_plan import CompatibilityPolicy
 
 
-def parse_compatibility_policy(policy: str | None) -> str | None:
-    if policy is None:
+def parse_compatibility_policy(policy: object) -> str | None:
+    current = policy
+    for _ in range(8):
+        if isinstance(current, OptionInfo):
+            current = current.default
+            continue
+        if current is None:
+            return None
+        if isinstance(current, str):
+            break
+        if hasattr(current, "default"):
+            default = getattr(current, "default")
+            if default is current:
+                break
+            current = default
+            continue
+        break
+
+    if current is None:
         return None
-    normalized = str(policy).strip().lower()
+    normalized = str(current).strip().lower()
     if normalized in {"warn", "strict"}:
         return normalized
     raise typer.BadParameter(
-        f"Invalid compatibility policy '{policy}'. Expected one of: warn, strict."
+        f"Invalid compatibility policy '{current}'. Expected one of: warn, strict."
     )
 
 
