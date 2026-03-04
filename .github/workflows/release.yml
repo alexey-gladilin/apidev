@@ -68,8 +68,8 @@ jobs:
         if: ${{ runner.os == 'macOS' }}
         run: |
           uv python install 3.13
-          uv pip install --python 3.13 -r requirements/code.txt
-          uv pip install --python 3.13 --no-deps .
+          uv pip install --system --python 3.13 -r requirements/code.txt
+          uv pip install --system --python 3.13 --no-deps .
 
       - name: Install release build dependencies
         if: ${{ runner.os != 'macOS' }}
