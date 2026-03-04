@@ -24,6 +24,7 @@
 - `*Result`, `*Plan`, `*Config`, `*Paths`, `*Issue`, `*Error` — DTO и state types.
 - Модули — `snake_case`.
 - Entry-point модули CLI следуют шаблону `<verb>_cmd.py`.
+- В документации используем `generated_dir`; legacy identifier `generated_root` допустим во внутреннем коде/тестах как техническое имя того же пути.
 
 ## Что проверять в review
 

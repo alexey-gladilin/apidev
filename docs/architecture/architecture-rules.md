@@ -19,7 +19,7 @@
 | AR-002 | `application` не импортирует concrete adapters из `infrastructure` | `test_application_no_infra_imports.py` | Mandatory / test-backed |
 | AR-003 | `core` не выполняет direct I/O и format parsing | `test_core_purity.py` | Mandatory / test-backed |
 | AR-005 | `diff` не пишет файлы, `apidev gen --check` выполняется без side effects | `test_pipeline_contract.py` | Mandatory / test-backed |
-| AR-006 | Запись допускается только внутри generated root | `test_write_boundary_policy.py` | Mandatory / test-backed |
+| AR-006 | Запись generated/scaffold допускается только внутри `project_dir` с единым path-boundary policy | `test_write_boundary_policy.py` | Mandatory / test-backed |
 | AR-007 | Пути contracts/templates/generated должны идти из единого config source | `test_config_path_single_source.py` | Mandatory / test-backed |
 | AR-010 | Документация проекта ведется на русском, code artifacts — на английском | review + doc policy | Mandatory |
 
@@ -58,6 +58,7 @@ core -> filesystem I/O and format parsing
 - Boundary parsing и external formats остаются на границе системы.
 - `application/*` остается orchestration layer, а не вторым domain layer.
 - Generated/manual boundary является обязательной safety policy.
+- Внутренний технический identifier `generated_root` в коде допускается как legacy naming для пути `generator.generated_dir`; нормативная терминология документации использует `generated_dir`.
 - Документация проекта пишется на русском языке, code artifacts — на английском языке.
 
 ## Классификация нарушений

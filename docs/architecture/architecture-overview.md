@@ -29,7 +29,7 @@ flowchart TD
 - `application/*` координирует use cases и pipeline.
 - `core/*` содержит доменные модели, правила и порты.
 - `infrastructure/*` владеет filesystem, YAML, TOML, Jinja2 и concrete adapters.
-- generated output ограничен write-boundary внутри configured generated root.
+- generated/scaffold output ограничен write-boundary внутри `project_dir` с единым path-boundary policy.
 
 ## Ключевые потоки
 
@@ -97,7 +97,7 @@ sequenceDiagram
         GENSVC-->>CMD: drift_detected=true|false
     else check=false
         GENSVC->>WR: write only ADD/UPDATE changes
-        WR-->>GENSVC: writes inside generated root only
+        WR-->>GENSVC: writes inside project_dir boundary only
     end
 
     CMD-->>U: applied changes / drift status

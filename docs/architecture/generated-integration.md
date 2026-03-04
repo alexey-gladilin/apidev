@@ -69,10 +69,10 @@
 | `<generated_dir>/<domain>/models/__init__.py` | Generated | Да | Package marker для models namespace |
 | `<generated_dir>/<domain>/routes/*.py` | Generated | Да | Transport adapter и bridge contract |
 | `<generated_dir>/<domain>/models/*.py` | Generated | Да | Request/response/error transport models |
-| `<generated_dir>/<scaffold_dir>/handler_registry.py` | Generated scaffold | Только create-if-missing | Каркас маппинга `operation_id -> handler` |
-| `<generated_dir>/<scaffold_dir>/router_factory.py` | Generated scaffold | Только create-if-missing | Каркас runtime регистрации endpoint-ов |
-| `<generated_dir>/<scaffold_dir>/auth_registry.py` | Generated scaffold | Только create-if-missing | Каркас резолва auth dependencies |
-| `<generated_dir>/<scaffold_dir>/error_mapper.py` | Generated scaffold | Только create-if-missing | Каркас domain->HTTP error mapping |
+| `<scaffold_dir>/handler_registry.py` | Generated scaffold | По `scaffold_write_policy` | Каркас маппинга `operation_id -> handler` |
+| `<scaffold_dir>/router_factory.py` | Generated scaffold | По `scaffold_write_policy` | Каркас runtime регистрации endpoint-ов |
+| `<scaffold_dir>/auth_registry.py` | Generated scaffold | По `scaffold_write_policy` | Каркас резолва auth dependencies |
+| `<scaffold_dir>/error_mapper.py` | Generated scaffold | По `scaffold_write_policy` | Каркас domain->HTTP error mapping |
 | `app/**/handlers*.py` | Manual | Нет | Бизнес-логика use-case/домен |
 | `app/**/auth*.py` | Manual | Нет | Декод токена, policy, user context |
 | `app/**/factory*.py` или `app/**/composition*.py` | Manual | Нет | Финальное wiring в FastAPI runtime |
@@ -96,7 +96,7 @@
 
 ### Package/import policy (single-level domain layout)
 
-- references в `operation_map.py` строятся как module paths относительно `generated_root` (`<domain>.routes.*`, `<domain>.models.*`);
+- references в `operation_map.py` строятся как module paths относительно `generated_dir` (`<domain>.routes.*`, `<domain>.models.*`);
 - generated router использует относительные импорты вида `from ..models.<operation>_request import ...`;
 - generator всегда создает `__init__.py` в `<domain>/`, `<domain>/routes/`, `<domain>/models/`;
 - runtime wiring должен импортировать модули только через metadata из `operation_map.py`, без ручного дописывания domain-specific путей.
@@ -286,21 +286,23 @@ def install_custom_openapi(app) -> None:
 - `apidev init` добавляет в `.apidev/config.toml` параметры:
   - `generator.scaffold = true`
   - `generator.scaffold_dir = "integration"`
+  - `generator.scaffold_write_policy = "create-missing" | "skip-existing" | "fail-on-conflict"`
 - CLI overrides:
   - `--scaffold` (включить scaffold-генерацию для запуска)
   - `--no-scaffold` (выключить scaffold-генерацию для запуска)
 - Приоритет источников: CLI flag -> config -> default.
-- Политика записи фиксированная: `create-if-missing`:
-  - если scaffold-файл отсутствует, он создается;
-  - если scaffold-файл существует, он не перезаписывается.
-- `generator.scaffold_dir` трактуется как относительный путь от `generator.generated_dir`.
-- Абсолютные пути для `generator.scaffold_dir` запрещены.
-- `generator.scaffold_dir` не может выходить за пределы `generator.generated_dir`.
+- Политика записи задается явно через `generator.scaffold_write_policy`:
+  - `create-missing`: scaffold-файл создается только если отсутствует;
+  - `skip-existing`: существующий scaffold-файл пропускается с детерминированной диагностикой;
+  - `fail-on-conflict`: при существующем scaffold-файле генерация завершается ошибкой.
+- `generator.generated_dir` и `generator.scaffold_dir` — независимые output-контуры.
+- Оба пути валидируются единым path-boundary policy внутри `project_dir`.
+- Выход за границы `project_dir` запрещен и приводит к fail-fast диагностике.
 
 Минимальный набор scaffold-файлов при opt-in:
 
 ```text
-<generated_dir>/integration/
+<scaffold_dir>/
 ├── handler_registry.py
 ├── router_factory.py
 ├── auth_registry.py
@@ -318,7 +320,7 @@ def install_custom_openapi(app) -> None:
 - APIDev не должен генерировать use-case/business логику.
 - APIDev не должен генерировать project-specific auth policy.
 - APIDev не должен генерировать domain-specific error semantics.
-- Запись разрешена только внутри configured generated root.
+- Запись generated/scaffold разрешена только внутри `project_dir` в рамках единого path-boundary policy.
 
 ## Нецелевой путь (anti-pattern)
 

@@ -61,6 +61,6 @@ flowchart LR
 - `application/*` не импортирует concrete adapters из `infrastructure/*`.
 - `core/*` не выполняет direct I/O и не зависит от `commands/application/infrastructure`.
 - `commands/*` остаются thin adapters без бизнес-правил.
-- `SafeWriter` реализует `WriterPort` и обеспечивает write-boundary только внутри generated root.
+- `SafeWriter` реализует `WriterPort` и обеспечивает write-boundary для generated/scaffold только внутри `project_dir`.
 - Boundary parsing/shape validation остаются в adapters or edge-facing layers; `core/*` работает с доменными понятиями, а не raw payload.
 - `core/models/*` может содержать rich models и value objects с поведением, если это поведение относится к инвариантам модели.
