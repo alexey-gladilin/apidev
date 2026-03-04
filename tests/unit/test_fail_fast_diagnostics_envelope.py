@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from typing import cast
 
 from apidev.application.dto.diagnostics import FAIL_FAST_ERROR_CODES, build_envelope
 from apidev.application.dto.generation_plan import GenerationDiagnostic
@@ -21,7 +22,7 @@ def test_generation_diagnostic_unified_context_is_canonical() -> None:
     payload = diagnostic.as_unified_dict()
 
     assert payload["message"] == "generated_dir must stay inside project_dir"
-    assert list(payload["context"].keys()) == ["generated_dir", "project_dir"]
+    assert list(cast(dict, payload["context"]).keys()) == ["generated_dir", "project_dir"]
 
 
 def test_fail_fast_envelope_context_serialization_is_byte_stable() -> None:

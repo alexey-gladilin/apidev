@@ -201,8 +201,7 @@ dir = "{contracts_dir}"
 generated_dir = ".apidev/output/api"
 [templates]
 dir = "{templates_dir}"
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -238,8 +237,7 @@ dir = "{contracts_dir}"
 generated_dir = ".apidev/output/api"
 [templates]
 dir = "{templates_dir}"
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 

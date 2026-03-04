@@ -559,7 +559,9 @@ errors:
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
     operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
@@ -622,7 +624,9 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     namespace: dict[str, object] = {}
     exec(operation_map.content, {}, namespace)
     operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
@@ -631,7 +635,9 @@ errors: []
     assert entry["domain"] == "billing"
 
 
-def test_openapi_projection_includes_domain_tags_security_and_error_responses(tmp_path: Path) -> None:
+def test_openapi_projection_includes_domain_tags_security_and_error_responses(
+    tmp_path: Path,
+) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,
@@ -657,14 +663,18 @@ errors:
     )
 
     plan = _create_diff_service().run(tmp_path)
-    operation_map = next(change for change in plan.changes if change.path.name == "operation_map.py")
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
     openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map.content, {}, operation_map_namespace)
     operation_map_value = operation_map_namespace["OPERATION_MAP"]
 
-    openapi_source = openapi_docs.content.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_source = openapi_docs.content.replace(
+        "from .operation_map import OPERATION_MAP\n\n", ""
+    )
     openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
     exec(openapi_source, openapi_namespace)
     build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])

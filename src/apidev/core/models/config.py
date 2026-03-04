@@ -45,9 +45,7 @@ class GeneratorConfig(BaseModel):
         candidate = value.strip().lower()
         allowed = ("create-missing", "skip-existing", "fail-on-conflict")
         if candidate not in allowed:
-            raise ValueError(
-                "must be one of: create-missing, skip-existing, fail-on-conflict"
-            )
+            raise ValueError("must be one of: create-missing, skip-existing, fail-on-conflict")
         return cast(Literal["create-missing", "skip-existing", "fail-on-conflict"], candidate)
 
 

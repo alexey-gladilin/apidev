@@ -648,8 +648,7 @@ def _normalize_error_example(
                     code=SCHEMA_INVALID_VALUE,
                     severity="error",
                     message=(
-                        f"Field '{prefix}.example' conflicts with "
-                        f"'{prefix}.body.example'."
+                        f"Field '{prefix}.example' conflicts with " f"'{prefix}.body.example'."
                     ),
                     location=f"{relpath}:{prefix}.example",
                     rule=RULE_FIELD_VALUE,

@@ -77,7 +77,9 @@ def test_diff_service_remove_challenge_ignores_non_python_stale_files(tmp_path: 
     )
 
 
-def test_diff_service_remove_challenge_never_targets_outside_generated_dir_path(tmp_path: Path) -> None:
+def test_diff_service_remove_challenge_never_targets_outside_generated_dir_path(
+    tmp_path: Path,
+) -> None:
     _write_project_config(tmp_path)
     _write_contract(tmp_path, "health/ping.yaml")
 

@@ -189,7 +189,9 @@ class DiffService:
             bridge_contract = self._build_bridge_contract(
                 op, deprecated_operations, transport_segments
             )
-            target = paths.generated_dir_path / domain_segment / "routes" / f"{operation_segment}.py"
+            target = (
+                paths.generated_dir_path / domain_segment / "routes" / f"{operation_segment}.py"
+            )
             content = self.renderer.render(
                 "generated_router.py.j2",
                 {

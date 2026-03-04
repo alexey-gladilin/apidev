@@ -1081,9 +1081,9 @@ errors: []
     router_source = (generated_dir_path / "billing" / "routes" / "get_invoice.py").read_text(
         encoding="utf-8"
     )
-    response_source = (generated_dir_path / "billing" / "models" / "get_invoice_response.py").read_text(
-        encoding="utf-8"
-    )
+    response_source = (
+        generated_dir_path / "billing" / "models" / "get_invoice_response.py"
+    ).read_text(encoding="utf-8")
     openapi_docs = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
 
     assert '"deprecation_status": "deprecated"' in operation_map_source
@@ -1162,7 +1162,9 @@ errors: []
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
     operation_map_value["billing_get_invoice"]["tags"] = ["manual"]
 
     openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")

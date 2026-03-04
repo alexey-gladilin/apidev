@@ -131,7 +131,9 @@ def test_diff_service_does_not_remove_existing_scaffold_python_files_when_enable
 
     plan = _create_service().run(tmp_path)
 
-    remove_paths = {change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"}
+    remove_paths = {
+        change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"
+    }
     assert scaffold_file.resolve() not in remove_paths
     assert stale_file.resolve() in remove_paths
 
@@ -146,7 +148,9 @@ def test_diff_service_scaffold_override_protects_existing_scaffold_files_from_re
 
     plan = _create_service().run(tmp_path, scaffold=True)
 
-    remove_paths = {change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"}
+    remove_paths = {
+        change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"
+    }
     assert scaffold_file.resolve() not in remove_paths
 
 
@@ -160,7 +164,9 @@ def test_diff_service_does_not_plan_remove_for_external_scaffold_files_when_conf
 
     plan = _create_service().run(tmp_path)
 
-    remove_paths = {change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"}
+    remove_paths = {
+        change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"
+    }
     assert scaffold_file.resolve() not in remove_paths
 
 
@@ -183,7 +189,9 @@ def test_diff_service_does_not_plan_remove_for_external_scaffold_files_when_glob
 
     plan = service.run(tmp_path)
 
-    remove_paths = {change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"}
+    remove_paths = {
+        change.path.resolve() for change in plan.changes if change.change_type == "REMOVE"
+    }
     assert scaffold_file.resolve() not in remove_paths
 
 
@@ -258,9 +266,7 @@ def test_diff_service_scaffold_policy_create_missing_keeps_existing_targets(
     plan = _create_service().run(tmp_path)
 
     scaffold_change = next(
-        change
-        for change in plan.changes
-        if change.path.resolve() == scaffold_file.resolve()
+        change for change in plan.changes if change.path.resolve() == scaffold_file.resolve()
     )
     assert scaffold_change.change_type == "SAME"
 
@@ -276,9 +282,7 @@ def test_diff_service_scaffold_policy_skip_existing_keeps_existing_targets(
     plan = _create_service().run(tmp_path)
 
     scaffold_change = next(
-        change
-        for change in plan.changes
-        if change.path.resolve() == scaffold_file.resolve()
+        change for change in plan.changes if change.path.resolve() == scaffold_file.resolve()
     )
     assert scaffold_change.change_type == "SAME"
 
@@ -303,9 +307,5 @@ def test_diff_service_scaffold_policy_fail_on_conflict_adds_when_missing(
     plan = _create_service().run(tmp_path)
 
     target = (tmp_path / "integration" / "handler_registry.py").resolve()
-    scaffold_change = next(
-        change
-        for change in plan.changes
-        if change.path.resolve() == target
-    )
+    scaffold_change = next(change for change in plan.changes if change.path.resolve() == target)
     assert scaffold_change.change_type == "ADD"

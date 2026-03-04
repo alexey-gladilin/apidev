@@ -63,7 +63,9 @@ class TomlConfigLoader(ConfigLoaderPort):
                     context={"field": "current_release"},
                 )
             )
-        if "release_number" in data and not self._is_strict_positive_int_type(data["release_number"]):
+        if "release_number" in data and not self._is_strict_positive_int_type(
+            data["release_number"]
+        ):
             raise ValueError(
                 self._build_release_state_diagnostic_payload(
                     code=_RELEASE_STATE_TYPE_MISMATCH_CODE,

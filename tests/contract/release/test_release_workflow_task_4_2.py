@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -43,8 +44,8 @@ def _managed_templates(root: Path) -> set[str]:
 )
 def test_init_profile_matrix_manages_expected_templates(
     tmp_path: Path,
-    runtime: str,
-    integration_mode: str,
+    runtime: Literal["fastapi", "none"],
+    integration_mode: Literal["off", "scaffold", "full"],
     expected_templates: set[str],
 ) -> None:
     service = InitService(fs=LocalFileSystem(), default_config_text=default_config_text())

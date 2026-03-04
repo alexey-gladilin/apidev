@@ -43,7 +43,9 @@ def test_generate_service_remove_conflict_returns_error_with_machine_readable_di
     remove_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "stale.py"
     service = _create_service(monkeypatch, tmp_path, remove_path)
 
-    monkeypatch.setattr(service, "_remove_generated_artifact", lambda generated_dir_path, target: False)
+    monkeypatch.setattr(
+        service, "_remove_generated_artifact", lambda generated_dir_path, target: False
+    )
 
     result = service.run(tmp_path, baseline_ref="v1.0.0")
 

@@ -269,8 +269,7 @@ HANDLERS: dict[str, Any] = {}
 
 def resolve_handler(operation_id: str) -> Any:
     return HANDLERS[operation_id]
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -282,8 +281,7 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
     if auth_mode == "public":
         return None
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -352,8 +350,7 @@ def resolve_handler(_operation_id: str) -> Any:
 
         return _Result()
     return _handler
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -363,8 +360,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -415,8 +411,7 @@ def resolve_handler(_operation_id: str) -> Any:
 
         return _Result()
     return _handler
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -426,8 +421,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -504,8 +498,7 @@ def resolve_handler(_operation_id: str) -> Any:
 
         return _Result()
     return _handler
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -515,8 +508,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -570,8 +562,7 @@ def resolve_handler(_operation_id: str) -> Any:
 
         return _Result()
     return _handler
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -581,8 +572,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -645,8 +635,7 @@ def resolve_handler(_operation_id: str) -> Any:
 
         return _Result()
     return _handler
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -656,8 +645,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -711,8 +699,7 @@ HANDLERS: dict[str, Any] = {}
 
 def resolve_handler(operation_id: str) -> Any:
     return HANDLERS[operation_id]
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -722,8 +709,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -734,8 +720,7 @@ from typing import Any
 
 async def route(payload: dict[str, object], handler: Any) -> Any:
     return await handler(payload)
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
@@ -816,8 +801,7 @@ HANDLERS: dict[str, Any] = {}
 
 def resolve_handler(operation_id: str) -> Any:
     return HANDLERS[operation_id]
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
     (integration_root / "auth_registry.py").write_text(
@@ -827,8 +811,7 @@ from typing import Any
 
 def resolve_auth_dependency(_auth_mode: str) -> Any:
     return None
-""".strip()
-        + "\n",
+""".strip() + "\n",
         encoding="utf-8",
     )
 
