@@ -13,11 +13,11 @@ from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 
 
 class _NoopWriter:
-    def write(self, generated_root: Path, target: Path, content: str) -> None:
-        _ = (generated_root, target, content)
+    def write(self, generated_dir_path: Path, target: Path, content: str) -> None:
+        _ = (generated_dir_path, target, content)
 
-    def remove(self, generated_root: Path, target: Path) -> bool:
-        _ = (generated_root, target)
+    def remove(self, generated_dir_path: Path, target: Path) -> bool:
+        _ = (generated_dir_path, target)
         return True
 
 
@@ -53,7 +53,7 @@ def _create_service(monkeypatch, tmp_path: Path) -> GenerateService:
         writer=_NoopWriter(),
         postprocessor=cast(PythonPostprocessorPort, object()),
     )
-    plan = GenerationPlan(generated_root=tmp_path / ".apidev" / "output" / "api", changes=[])
+    plan = GenerationPlan(generated_dir_path=tmp_path / ".apidev" / "output" / "api", changes=[])
     monkeypatch.setattr(service.diff_service, "run", lambda *args, **kwargs: plan)
     return service
 
@@ -113,7 +113,7 @@ def test_generate_apply_does_not_crash_or_overwrite_invalid_release_state_json_o
         postprocessor=cast(PythonPostprocessorPort, object()),
     )
     plan = GenerationPlan(
-        generated_root=tmp_path / ".apidev" / "output" / "api",
+        generated_dir_path=tmp_path / ".apidev" / "output" / "api",
         changes=[PlannedChange(path=Path("users.py"), content="x", change_type="ADD")],
     )
     monkeypatch.setattr(service.diff_service, "run", lambda *args, **kwargs: plan)

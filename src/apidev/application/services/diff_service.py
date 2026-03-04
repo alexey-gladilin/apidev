@@ -86,7 +86,7 @@ class DiffService:
         effective_scaffold = config.generator.scaffold if scaffold is None else scaffold
         scaffold_root = self._resolve_scaffold_root(
             project_dir=project_dir,
-            generated_root=paths.generated_root,
+            generated_dir_path=paths.generated_dir_path,
             raw_scaffold_dir=config.generator.scaffold_dir,
         )
 
@@ -98,7 +98,7 @@ class DiffService:
         filter_diagnostics = self._validate_endpoint_filters(effective_filters)
         if filter_diagnostics:
             return GenerationPlan(
-                generated_root=paths.generated_root,
+                generated_dir_path=paths.generated_dir_path,
                 diagnostics=filter_diagnostics,
                 compatibility_policy=normalized_policy,
             )
@@ -106,7 +106,7 @@ class DiffService:
         enriched_operations = self._apply_endpoint_filters(ordered_operations, effective_filters)
         if effective_filters.enabled and not enriched_operations:
             return GenerationPlan(
-                generated_root=paths.generated_root,
+                generated_dir_path=paths.generated_dir_path,
                 diagnostics=[
                     GenerationDiagnostic(
                         code=self._EMPTY_FILTER_SET_CODE,
@@ -135,13 +135,13 @@ class DiffService:
         except ValueError as exc:
             release_state_error = str(exc)
 
-        plan = GenerationPlan(generated_root=paths.generated_root)
+        plan = GenerationPlan(generated_dir_path=paths.generated_dir_path)
 
         registry_entries = [
             self._build_registry_entry(op, deprecated_operations, transport_segments)
             for op in enriched_operations
         ]
-        operation_map_target = paths.generated_root / "operation_map.py"
+        operation_map_target = paths.generated_dir_path / "operation_map.py"
         operation_map_content = self.renderer.render(
             "generated_operation_map.py.j2",
             {
@@ -154,7 +154,7 @@ class DiffService:
         )
         plan.changes.append(self._planned_change(operation_map_target, operation_map_content))
 
-        openapi_docs_target = paths.generated_root / "openapi_docs.py"
+        openapi_docs_target = paths.generated_dir_path / "openapi_docs.py"
         openapi_docs_content = self.renderer.render(
             "generated_openapi_docs.py.j2",
             {
@@ -169,7 +169,7 @@ class DiffService:
 
         for domain_segment in sorted({segments[0] for segments in transport_segments.values()}):
             for package_suffix in ("", "routes", "models"):
-                package_dir = paths.generated_root / domain_segment
+                package_dir = paths.generated_dir_path / domain_segment
                 if package_suffix:
                     package_dir = package_dir / package_suffix
                 init_target = package_dir / "__init__.py"
@@ -189,7 +189,7 @@ class DiffService:
             bridge_contract = self._build_bridge_contract(
                 op, deprecated_operations, transport_segments
             )
-            target = paths.generated_root / domain_segment / "routes" / f"{operation_segment}.py"
+            target = paths.generated_dir_path / domain_segment / "routes" / f"{operation_segment}.py"
             content = self.renderer.render(
                 "generated_router.py.j2",
                 {
@@ -203,7 +203,7 @@ class DiffService:
             for kind in ("request", "response", "error"):
                 model = self._build_transport_model(op, kind, deprecated_operations)
                 model_target = (
-                    paths.generated_root
+                    paths.generated_dir_path
                     / domain_segment
                     / "models"
                     / f"{operation_segment}_{kind}.py"
@@ -228,12 +228,12 @@ class DiffService:
         )
         plan.changes.extend(
             self._planned_removes(
-                paths.generated_root,
+                paths.generated_dir_path,
                 plan.changes,
                 protected_roots=protected_roots,
                 required_remove_paths=required_remove_paths,
                 remove_scope_roots=self._resolve_remove_scope_roots(
-                    generated_root=paths.generated_root,
+                    generated_dir_path=paths.generated_dir_path,
                     operations=enriched_operations,
                     endpoint_filters=effective_filters,
                     transport_segments=transport_segments,
@@ -370,7 +370,7 @@ class DiffService:
 
     def _resolve_remove_scope_roots(
         self,
-        generated_root: Path,
+        generated_dir_path: Path,
         operations: list[Operation],
         endpoint_filters: EndpointFilters,
         transport_segments: dict[str, tuple[str, str]],
@@ -384,7 +384,7 @@ class DiffService:
                 if operation.operation_id in transport_segments
             }
         )
-        return tuple(generated_root / domain for domain in selected_domains)
+        return tuple(generated_dir_path / domain for domain in selected_domains)
 
     def _build_compatibility_summary(
         self,
@@ -741,8 +741,8 @@ class DiffService:
             return "response-field-type-changed"
         return "auth-changed"
 
-    def _load_existing_operation_ids(self, generated_root: Path) -> set[str]:
-        operation_map_path = generated_root / "operation_map.py"
+    def _load_existing_operation_ids(self, generated_dir_path: Path) -> set[str]:
+        operation_map_path = generated_dir_path / "operation_map.py"
         if not self.fs.exists(operation_map_path):
             return set()
 
@@ -838,13 +838,13 @@ class DiffService:
         return planned
 
     def _resolve_scaffold_root(
-        self, project_dir: Path, generated_root: Path, raw_scaffold_dir: str
+        self, project_dir: Path, generated_dir_path: Path, raw_scaffold_dir: str
     ) -> Path:
         project_root = project_dir.resolve()
-        generated_root_resolved = generated_root.resolve(strict=False)
-        if not self._is_relative_to(generated_root_resolved, project_root):
+        generated_dir_path_resolved = generated_dir_path.resolve(strict=False)
+        if not self._is_relative_to(generated_dir_path_resolved, project_root):
             raise ValueError(
-                f"Invalid generator.generated_dir '{generated_root}': "
+                f"Invalid generator.generated_dir '{generated_dir_path}': "
                 f"path must stay inside project directory '{project_root}'."
             )
 
@@ -865,10 +865,10 @@ class DiffService:
                 f"Invalid generator.scaffold_dir '{raw_scaffold_dir}': "
                 f"path must stay inside project directory '{project_root}'."
             )
-        if self._paths_overlap(generated_root_resolved, scaffold_root):
+        if self._paths_overlap(generated_dir_path_resolved, scaffold_root):
             raise ValueError(
                 "Invalid generator paths: output contours must not overlap "
-                f"(generated_dir='{generated_root_resolved}', scaffold_dir='{scaffold_root}')."
+                f"(generated_dir='{generated_dir_path_resolved}', scaffold_dir='{scaffold_root}')."
             )
         return scaffold_root
 
@@ -887,13 +887,13 @@ class DiffService:
 
     def _planned_removes(
         self,
-        generated_root: Path,
+        generated_dir_path: Path,
         plan_changes: list[PlannedChange],
         protected_roots: tuple[Path, ...] = (),
         required_remove_paths: tuple[Path, ...] = (),
         remove_scope_roots: tuple[Path, ...] | None = None,
     ) -> list[PlannedChange]:
-        generated_root_resolved = generated_root.resolve()
+        generated_dir_path_resolved = generated_dir_path.resolve()
         protected_root_resolved = tuple(root.resolve(strict=False) for root in protected_roots)
         remove_scope_roots_resolved = (
             tuple(root.resolve(strict=False) for root in remove_scope_roots)
@@ -903,7 +903,7 @@ class DiffService:
         expected_paths = {change.path.resolve() for change in plan_changes}
         stale_paths_by_resolved: dict[Path, Path] = {}
 
-        for path in self.fs.glob(generated_root, "**/*.py"):
+        for path in self.fs.glob(generated_dir_path, "**/*.py"):
             if not path.is_file():
                 continue
             resolved_path = path.resolve()
@@ -921,8 +921,8 @@ class DiffService:
                 stale_paths_by_resolved[resolved_path] = path
                 continue
 
-            existing_key = self._stable_remove_sort_key(existing, generated_root_resolved)
-            candidate_key = self._stable_remove_sort_key(path, generated_root_resolved)
+            existing_key = self._stable_remove_sort_key(existing, generated_dir_path_resolved)
+            candidate_key = self._stable_remove_sort_key(path, generated_dir_path_resolved)
             if candidate_key < existing_key:
                 stale_paths_by_resolved[resolved_path] = path
 
@@ -935,7 +935,7 @@ class DiffService:
             if resolved_path in expected_paths:
                 continue
             try:
-                resolved_path.relative_to(generated_root_resolved)
+                resolved_path.relative_to(generated_dir_path_resolved)
             except ValueError:
                 continue
 
@@ -944,15 +944,15 @@ class DiffService:
                 stale_paths_by_resolved[resolved_path] = path
                 continue
 
-            existing_key = self._stable_remove_sort_key(existing, generated_root_resolved)
-            candidate_key = self._stable_remove_sort_key(path, generated_root_resolved)
+            existing_key = self._stable_remove_sort_key(existing, generated_dir_path_resolved)
+            candidate_key = self._stable_remove_sort_key(path, generated_dir_path_resolved)
             if candidate_key < existing_key:
                 stale_paths_by_resolved[resolved_path] = path
 
         stale_paths = sorted(
             stale_paths_by_resolved.values(),
             key=lambda stale_path: self._stable_remove_sort_key(
-                stale_path, generated_root_resolved
+                stale_path, generated_dir_path_resolved
             ),
         )
         return [
@@ -980,10 +980,12 @@ class DiffService:
                 continue
         return False
 
-    def _stable_remove_sort_key(self, path: Path, generated_root_resolved: Path) -> tuple[str, str]:
+    def _stable_remove_sort_key(
+        self, path: Path, generated_dir_path_resolved: Path
+    ) -> tuple[str, str]:
         resolved_path = path.resolve()
         try:
-            relative_path = resolved_path.relative_to(generated_root_resolved).as_posix()
+            relative_path = resolved_path.relative_to(generated_dir_path_resolved).as_posix()
         except ValueError:
             relative_path = path.as_posix()
         return (relative_path, resolved_path.as_posix())
@@ -1161,7 +1163,7 @@ class DiffService:
         details = [
             {
                 "code": str(error.get("code", "")).strip(),
-                "http_status": int(error.get("http_status", 500)),
+                "http_status": self._http_status(error),
             }
             for error in operation.contract.errors
             if isinstance(error, dict)
@@ -1201,13 +1203,31 @@ class DiffService:
         details = [
             {
                 "code": str(error.get("code", "")).strip(),
-                "http_status": int(error.get("http_status", 500)),
+                "http_status": self._http_status(error),
                 "body": error.get("body", {}),
                 "example": self._schema_example(error.get("body", {})),
             }
             for error in self._normalized_error_items(operation)
         ]
         return sorted(details, key=lambda item: (item["code"], item["http_status"]))
+
+    def _http_status(self, error: dict[str, object]) -> int:
+        raw_status = error.get("http_status", 500)
+        if isinstance(raw_status, bool):
+            return int(raw_status)
+        if isinstance(raw_status, int):
+            return raw_status
+        if isinstance(raw_status, float):
+            return int(raw_status)
+        if isinstance(raw_status, str):
+            stripped_status = raw_status.strip()
+            if not stripped_status:
+                return 500
+            try:
+                return int(stripped_status)
+            except ValueError:
+                return 500
+        return 500
 
     def _schema_example(self, schema_fragment: object) -> object:
         if isinstance(schema_fragment, dict):
@@ -1245,7 +1265,7 @@ class DiffService:
             return [
                 {
                     "code": str(error.get("code", "")).strip(),
-                    "http_status": int(error.get("http_status", 500)),
+                    "http_status": self._http_status(error),
                     "body": error.get("body", {}),
                 }
                 for error in self._normalized_error_items(operation)

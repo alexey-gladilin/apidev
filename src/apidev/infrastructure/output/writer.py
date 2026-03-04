@@ -8,9 +8,9 @@ class SafeWriter(WriterPort):
     def __init__(self, fs: FileSystemPort):
         self.fs = fs
 
-    def write(self, generated_root: Path, target: Path, content: str) -> None:
-        final = self._resolve_within_generated_root(
-            generated_root=generated_root,
+    def write(self, generated_dir_path: Path, target: Path, content: str) -> None:
+        final = self._resolve_within_generated_dir_path(
+            generated_dir_path=generated_dir_path,
             target=target,
             action="write",
             root_action_message="write to",
@@ -18,9 +18,9 @@ class SafeWriter(WriterPort):
 
         self.fs.write_text(final, content)
 
-    def remove(self, generated_root: Path, target: Path) -> bool:
-        final = self._resolve_within_generated_root(
-            generated_root=generated_root,
+    def remove(self, generated_dir_path: Path, target: Path) -> bool:
+        final = self._resolve_within_generated_dir_path(
+            generated_dir_path=generated_dir_path,
             target=target,
             action="remove",
             root_action_message="remove",
@@ -35,14 +35,14 @@ class SafeWriter(WriterPort):
         final.unlink()
         return True
 
-    def _resolve_within_generated_root(
+    def _resolve_within_generated_dir_path(
         self,
-        generated_root: Path,
+        generated_dir_path: Path,
         target: Path,
         action: str,
         root_action_message: str,
     ) -> Path:
-        root = generated_root.resolve()
+        root = generated_dir_path.resolve()
         final = target.resolve()
 
         if root == final:

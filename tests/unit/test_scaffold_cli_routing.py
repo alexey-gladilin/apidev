@@ -50,7 +50,7 @@ def test_diff_command_passes_scaffold_true_override(monkeypatch, tmp_path: Path)
         self, project_dir: Path, compatibility_policy="warn", baseline_ref=None, scaffold=None
     ):
         captured["scaffold"] = scaffold
-        return GenerationPlan(generated_root=project_dir / ".apidev" / "output" / "api")
+        return GenerationPlan(generated_dir_path=project_dir / ".apidev" / "output" / "api")
 
     monkeypatch.setattr(DiffService, "run", _fake_run)
 

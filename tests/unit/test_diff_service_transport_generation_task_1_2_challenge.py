@@ -121,7 +121,7 @@ def test_task_1_2_empty_contracts_directory_still_generates_registry(tmp_path: P
     _write_project_config(tmp_path)
 
     plan = _create_diff_service().run(tmp_path)
-    planned = [change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes]
+    planned = [change.path.relative_to(plan.generated_dir_path).as_posix() for change in plan.changes]
     assert planned == ["operation_map.py", "openapi_docs.py"]
 
 

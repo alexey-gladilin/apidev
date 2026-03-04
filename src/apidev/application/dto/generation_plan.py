@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
+from apidev.application.dto.diagnostics import canonicalize_context
+
 DriftStatus = Literal["drift", "no-drift", "error"]
 CompatibilityPolicy = Literal["warn", "strict"]
 ChangeType = Literal["ADD", "UPDATE", "REMOVE", "SAME"]
@@ -41,13 +43,24 @@ class GenerationDiagnostic:
     code: str
     location: str
     detail: str = ""
+    message: str = ""
+    context: dict[str, object] = field(default_factory=dict)
 
-    def as_dict(self) -> dict[str, str]:
-        return {
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "context", canonicalize_context(self.context))
+
+    def as_dict(self) -> dict[str, object]:
+        payload: dict[str, object] = {
             "code": self.code,
             "location": self.location,
             "detail": self.detail,
         }
+        if self.message:
+            payload["message"] = self.message
+        canonical_context = canonicalize_context(self.context)
+        if canonical_context:
+            payload["context"] = canonical_context
+        return payload
 
     def as_unified_dict(self, *, source: str = "generate-service") -> dict[str, object]:
         category = "generation"
@@ -55,7 +68,7 @@ class GenerationDiagnostic:
             category = "config"
         elif self.code.startswith("runtime."):
             category = "runtime"
-        message = f"Generation diagnostic: {self.code}"
+        message = self.message or f"Generation diagnostic: {self.code}"
         payload: dict[str, object] = {
             "code": self.code,
             "severity": "error",
@@ -66,6 +79,9 @@ class GenerationDiagnostic:
         }
         if self.detail:
             payload["detail"] = self.detail
+        canonical_context = canonicalize_context(self.context)
+        if canonical_context:
+            payload["context"] = canonical_context
         return payload
 
 
@@ -111,7 +127,7 @@ class PlannedChange:
 
 @dataclass(slots=True)
 class GenerationPlan:
-    generated_root: Path
+    generated_dir_path: Path
     changes: list[PlannedChange] = field(default_factory=list)
     diagnostics: list[GenerationDiagnostic] = field(default_factory=list)
     compatibility_policy: CompatibilityPolicy = "warn"

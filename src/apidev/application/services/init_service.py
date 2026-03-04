@@ -112,7 +112,9 @@ class InitService:
         if mode == "create":
             if invalid_paths:
                 raise InitRepairRequiredError(invalid_paths=invalid_paths)
-            status = "already_initialized" if changed == 0 else "initialized"
+            status: Literal["already_initialized", "initialized"] = (
+                "already_initialized" if changed == 0 else "initialized"
+            )
             return InitResult(status=status, changed=changed)
 
         if mode == "repair":

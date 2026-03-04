@@ -50,11 +50,11 @@ class RecordingWriter:
     def __init__(self) -> None:
         self.calls: list[tuple[Path, Path]] = []
 
-    def write(self, generated_root: Path, target: Path, content: str) -> None:
-        self.calls.append((generated_root, target))
+    def write(self, generated_dir_path: Path, target: Path, content: str) -> None:
+        self.calls.append((generated_dir_path, target))
 
-    def remove(self, generated_root: Path, target: Path) -> bool:
-        self.calls.append((generated_root, target))
+    def remove(self, generated_dir_path: Path, target: Path) -> bool:
+        self.calls.append((generated_dir_path, target))
         return True
 
 

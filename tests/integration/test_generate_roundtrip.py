@@ -113,12 +113,12 @@ errors:
     result = service.run(tmp_path, baseline_ref="v1.0.0")
 
     assert result.applied_changes >= 5
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    router = generated_root / "billing" / "routes" / "get_invoice.py"
-    openapi_docs = generated_root / "openapi_docs.py"
-    request_model = generated_root / "billing" / "models" / "get_invoice_request.py"
-    response_model = generated_root / "billing" / "models" / "get_invoice_response.py"
-    error_model = generated_root / "billing" / "models" / "get_invoice_error.py"
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    router = generated_dir_path / "billing" / "routes" / "get_invoice.py"
+    openapi_docs = generated_dir_path / "openapi_docs.py"
+    request_model = generated_dir_path / "billing" / "models" / "get_invoice_request.py"
+    response_model = generated_dir_path / "billing" / "models" / "get_invoice_response.py"
+    error_model = generated_dir_path / "billing" / "models" / "get_invoice_error.py"
 
     assert router.exists()
     assert openapi_docs.exists()
@@ -179,12 +179,12 @@ errors: []
 
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    assert (generated_root / "billing" / "__init__.py").exists()
-    assert (generated_root / "billing" / "routes" / "__init__.py").exists()
-    assert (generated_root / "billing" / "models" / "__init__.py").exists()
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    assert (generated_dir_path / "billing" / "__init__.py").exists()
+    assert (generated_dir_path / "billing" / "routes" / "__init__.py").exists()
+    assert (generated_dir_path / "billing" / "models" / "__init__.py").exists()
 
-    inserted = str(generated_root)
+    inserted = str(generated_dir_path)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     try:
@@ -460,7 +460,7 @@ errors: []
     stale_file.parent.mkdir(parents=True, exist_ok=True)
     stale_file.write_text("# stale\n", encoding="utf-8")
 
-    def _raise_remove_error(generated_root: Path, target: Path) -> bool:
+    def _raise_remove_error(generated_dir_path: Path, target: Path) -> bool:
         raise ValueError(f"remove failed for {target}")
 
     monkeypatch.setattr(service, "_remove_generated_artifact", _raise_remove_error)
@@ -544,11 +544,11 @@ errors: []
     assert apply_remove.drift_status == "no-drift"
     assert apply_remove.applied_changes >= 1
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    assert not (generated_root / "billing" / "routes" / "get_invoice.py").exists()
-    assert not (generated_root / "billing" / "models" / "get_invoice_request.py").exists()
-    assert not (generated_root / "billing" / "models" / "get_invoice_response.py").exists()
-    assert not (generated_root / "billing" / "models" / "get_invoice_error.py").exists()
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    assert not (generated_dir_path / "billing" / "routes" / "get_invoice.py").exists()
+    assert not (generated_dir_path / "billing" / "models" / "get_invoice_request.py").exists()
+    assert not (generated_dir_path / "billing" / "models" / "get_invoice_response.py").exists()
+    assert not (generated_dir_path / "billing" / "models" / "get_invoice_error.py").exists()
 
     post_apply_diff_plan = diff_service.run(tmp_path)
     post_apply_changes = [
@@ -774,10 +774,10 @@ errors:
 
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    response_model = generated_root / "billing" / "models" / "get_invoice_response.py"
-    operation_map = generated_root / "operation_map.py"
-    openapi_docs = generated_root / "openapi_docs.py"
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    response_model = generated_dir_path / "billing" / "models" / "get_invoice_response.py"
+    operation_map = generated_dir_path / "operation_map.py"
+    openapi_docs = generated_dir_path / "openapi_docs.py"
 
     response_source = response_model.read_text(encoding="utf-8")
     assert 'SCHEMA_EXAMPLE = {"invoice_id": "inv-001"}' in response_source
@@ -845,9 +845,9 @@ errors: []
 
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
-    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
     assert '"x-apidev-auth"' in openapi_docs_source
     assert '"x-apidev-deprecation"' in openapi_docs_source
     assert '"x-apidev-errors"' in openapi_docs_source
@@ -925,9 +925,9 @@ errors:
 
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
-    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
     assert "x-apidev-" not in openapi_docs_source
 
     operation_map_namespace: dict[str, object] = {}
@@ -999,9 +999,9 @@ errors: []
 
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
-    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
@@ -1076,15 +1076,15 @@ errors: []
 
     _ = service.run(tmp_path)
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
-    router_source = (generated_root / "billing" / "routes" / "get_invoice.py").read_text(
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    router_source = (generated_dir_path / "billing" / "routes" / "get_invoice.py").read_text(
         encoding="utf-8"
     )
-    response_source = (generated_root / "billing" / "models" / "get_invoice_response.py").read_text(
+    response_source = (generated_dir_path / "billing" / "models" / "get_invoice_response.py").read_text(
         encoding="utf-8"
     )
-    openapi_docs = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    openapi_docs = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
 
     assert '"deprecation_status": "deprecated"' in operation_map_source
     assert '"deprecated_since_release": 2' in operation_map_source
@@ -1156,9 +1156,9 @@ errors: []
 
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
-    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)

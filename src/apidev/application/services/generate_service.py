@@ -181,9 +181,9 @@ class GenerateService:
             policy_blocked=plan.policy_blocked,
         )
 
-    def _remove_generated_artifact(self, generated_root: Path, target: Path) -> bool:
+    def _remove_generated_artifact(self, generated_dir_path: Path, target: Path) -> bool:
         # Backward-compatible hook for integration tests that monkeypatch remove failures.
-        return self.writer.remove(generated_root, target)
+        return self.writer.remove(generated_dir_path, target)
 
     def _remove_diagnostic(
         self,

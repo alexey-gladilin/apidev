@@ -30,6 +30,7 @@ flowchart TD
 - `core/*` содержит доменные модели, правила и порты.
 - `infrastructure/*` владеет filesystem, YAML, TOML, Jinja2 и concrete adapters.
 - generated/scaffold output ограничен write-boundary внутри `project_dir` с единым path-boundary policy.
+- `generated_dir` и `scaffold_dir` рассматриваются как независимые output-контуры: их совпадение или nested-пересечение запрещено и должно завершаться fail-fast до записи файлов.
 
 ## Ключевые потоки
 

@@ -401,7 +401,7 @@ def test_gen_apply_exits_with_error_when_remove_apply_fails(
     )
     stale_path.write_text("# stale\n", encoding="utf-8")
 
-    def _raise_remove_error(self, generated_root: Path, target: Path) -> bool:
+    def _raise_remove_error(self, generated_dir_path: Path, target: Path) -> bool:
         raise ValueError(f"remove failed for {target}")
 
     monkeypatch.setattr(GenerateService, "_remove_generated_artifact", _raise_remove_error)

@@ -157,7 +157,7 @@ def test_diff_json_mode_returns_unified_envelope(monkeypatch) -> None:
         self, project_dir: Path, compatibility_policy="warn", baseline_ref=None, scaffold=None
     ) -> GenerationPlan:
         return GenerationPlan(
-            generated_root=project_dir / ".apidev" / "output" / "api",
+            generated_dir_path=project_dir / ".apidev" / "output" / "api",
             compatibility_policy="warn",
             compatibility=CompatibilitySummary(
                 overall="breaking",
@@ -194,7 +194,7 @@ def test_diff_json_drift_exit_semantics_keep_preview_non_blocking(monkeypatch) -
         self, project_dir: Path, compatibility_policy="warn", baseline_ref=None, scaffold=None
     ) -> GenerationPlan:
         return GenerationPlan(
-            generated_root=project_dir / ".apidev" / "output" / "api",
+            generated_dir_path=project_dir / ".apidev" / "output" / "api",
             changes=[PlannedChange(path=Path("users.py"), content="x", change_type="ADD")],
             compatibility_policy="warn",
             compatibility=CompatibilitySummary(),
@@ -316,7 +316,7 @@ def test_diff_json_keeps_compatibility_diagnostics_deterministic_and_in_summary(
         self, project_dir: Path, compatibility_policy="warn", baseline_ref=None, scaffold=None
     ) -> GenerationPlan:
         return GenerationPlan(
-            generated_root=project_dir / ".apidev" / "output" / "api",
+            generated_dir_path=project_dir / ".apidev" / "output" / "api",
             compatibility_policy="strict",
             policy_blocked=True,
             compatibility=CompatibilitySummary(

@@ -53,7 +53,7 @@ def test_transport_generation_empty_contract_set_keeps_core_outputs(tmp_path: Pa
 
     plan = _create_diff_service().run(tmp_path)
     planned_paths = [
-        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+        change.path.relative_to(plan.generated_dir_path).as_posix() for change in plan.changes
     ]
 
     assert planned_paths == ["operation_map.py", "openapi_docs.py"]
@@ -80,7 +80,7 @@ errors: []
 
     plan = _create_diff_service().run(tmp_path)
     planned_paths = [
-        change.path.relative_to(plan.generated_root).as_posix() for change in plan.changes
+        change.path.relative_to(plan.generated_dir_path).as_posix() for change in plan.changes
     ]
 
     assert "billing/routes/get_invoice.py" in planned_paths

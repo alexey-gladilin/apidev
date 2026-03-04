@@ -63,8 +63,8 @@ def test_diff_service_remove_challenge_ignores_non_python_stale_files(tmp_path: 
     _write_project_config(tmp_path)
     _write_contract(tmp_path, "health/ping.yaml")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    stale_txt = generated_root / "routers" / "stale_router.txt"
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    stale_txt = generated_dir_path / "routers" / "stale_router.txt"
     stale_txt.parent.mkdir(parents=True, exist_ok=True)
     stale_txt.write_text("stale text artifact", encoding="utf-8")
 
@@ -77,7 +77,7 @@ def test_diff_service_remove_challenge_ignores_non_python_stale_files(tmp_path: 
     )
 
 
-def test_diff_service_remove_challenge_never_targets_outside_generated_root(tmp_path: Path) -> None:
+def test_diff_service_remove_challenge_never_targets_outside_generated_dir_path(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(tmp_path, "health/ping.yaml")
 
@@ -89,7 +89,7 @@ def test_diff_service_remove_challenge_never_targets_outside_generated_root(tmp_
 
     assert all(change.path != outside_stale for change in plan.changes)
     assert all(
-        change.path.is_relative_to(plan.generated_root)
+        change.path.is_relative_to(plan.generated_dir_path)
         for change in plan.changes
         if change.change_type == "REMOVE"
     )

@@ -121,9 +121,9 @@ def test_diff_service_does_not_remove_existing_scaffold_python_files_when_enable
     tmp_path: Path,
 ) -> None:
     _write_project(tmp_path, scaffold=True, scaffold_dir="integration")
-    generated_root = tmp_path / ".apidev" / "output" / "api"
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
     scaffold_file = tmp_path / "integration" / "custom_handler.py"
-    stale_file = generated_root / "billing" / "models" / "obsolete_model.py"
+    stale_file = generated_dir_path / "billing" / "models" / "obsolete_model.py"
     scaffold_file.parent.mkdir(parents=True, exist_ok=True)
     stale_file.parent.mkdir(parents=True, exist_ok=True)
     scaffold_file.write_text("# user-owned scaffold\n", encoding="utf-8")

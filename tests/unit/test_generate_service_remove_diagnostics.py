@@ -11,11 +11,11 @@ from apidev.core.ports.template_engine import TemplateEnginePort
 
 
 class _NoopWriter:
-    def write(self, generated_root: Path, target: Path, content: str) -> None:
-        _ = (generated_root, target, content)
+    def write(self, generated_dir_path: Path, target: Path, content: str) -> None:
+        _ = (generated_dir_path, target, content)
 
-    def remove(self, generated_root: Path, target: Path) -> bool:
-        _ = (generated_root, target)
+    def remove(self, generated_dir_path: Path, target: Path) -> bool:
+        _ = (generated_dir_path, target)
         return True
 
 
@@ -29,7 +29,7 @@ def _create_service(monkeypatch, tmp_path: Path, remove_path: Path) -> GenerateS
         postprocessor=cast(PythonPostprocessorPort, object()),
     )
     plan = GenerationPlan(
-        generated_root=tmp_path / ".apidev" / "output" / "api",
+        generated_dir_path=tmp_path / ".apidev" / "output" / "api",
         changes=[PlannedChange(path=remove_path, content="", change_type="REMOVE")],
     )
     monkeypatch.setattr(service.diff_service, "run", lambda *args, **kwargs: plan)
@@ -43,7 +43,7 @@ def test_generate_service_remove_conflict_returns_error_with_machine_readable_di
     remove_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "stale.py"
     service = _create_service(monkeypatch, tmp_path, remove_path)
 
-    monkeypatch.setattr(service, "_remove_generated_artifact", lambda generated_root, target: False)
+    monkeypatch.setattr(service, "_remove_generated_artifact", lambda generated_dir_path, target: False)
 
     result = service.run(tmp_path, baseline_ref="v1.0.0")
 
@@ -63,7 +63,7 @@ def test_generate_service_remove_boundary_violation_returns_error_with_canonical
     remove_path = tmp_path / ".apidev" / "output" / "api" / "routers" / "stale.py"
     service = _create_service(monkeypatch, tmp_path, remove_path)
 
-    def _raise_boundary_error(generated_root: Path, target: Path) -> bool:
+    def _raise_boundary_error(generated_dir_path: Path, target: Path) -> bool:
         raise ValueError(f"Refusing to remove outside generated root: {target}")
 
     monkeypatch.setattr(service, "_remove_generated_artifact", _raise_boundary_error)

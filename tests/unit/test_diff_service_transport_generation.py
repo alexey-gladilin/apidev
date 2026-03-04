@@ -100,7 +100,7 @@ errors: []
 
     plan = _create_diff_service().run(tmp_path)
 
-    generated_paths = _planned_paths_within_root(plan, plan.generated_root)
+    generated_paths = _planned_paths_within_root(plan, plan.generated_dir_path)
     assert generated_paths == [
         "operation_map.py",
         "openapi_docs.py",
@@ -222,7 +222,7 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    generated_paths = _planned_paths_within_root(plan, plan.generated_root)
+    generated_paths = _planned_paths_within_root(plan, plan.generated_dir_path)
     assert "billing_domain/routes/get_invoice.py" in generated_paths
     assert "billing_domain/models/get_invoice_request.py" in generated_paths
     assert "billing_domain/models/get_invoice_response.py" in generated_paths
@@ -324,7 +324,7 @@ errors: []
     )
 
     plan = _create_diff_service().run(tmp_path)
-    generated_paths = _planned_paths_within_root(plan, plan.generated_root)
+    generated_paths = _planned_paths_within_root(plan, plan.generated_dir_path)
     assert "domain_segment/routes/operation_segment.py" in generated_paths
     assert "domain_segment/models/operation_segment_request.py" in generated_paths
     assert "domain_segment/models/operation_segment_response.py" in generated_paths
@@ -403,9 +403,9 @@ errors: []
 """,
     )
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    stale_b = generated_root / "transport" / "models" / "zzz_stale.py"
-    stale_a = generated_root / "transport" / "models" / "aaa_stale.py"
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    stale_b = generated_dir_path / "transport" / "models" / "zzz_stale.py"
+    stale_a = generated_dir_path / "transport" / "models" / "aaa_stale.py"
     stale_b.parent.mkdir(parents=True, exist_ok=True)
     stale_b.write_text("# stale-b", encoding="utf-8")
     stale_a.write_text("# stale-a", encoding="utf-8")
@@ -417,7 +417,7 @@ errors: []
     def unstable_glob(root: Path, pattern: str) -> list[Path]:
         nonlocal flip
         paths = original_glob(root, pattern)
-        if root == generated_root and pattern == "**/*.py":
+        if root == generated_dir_path and pattern == "**/*.py":
             stale_paths = [path for path in paths if path.name in {"aaa_stale.py", "zzz_stale.py"}]
             stable_paths = [path for path in paths if path not in stale_paths]
             flip = not flip
@@ -431,12 +431,12 @@ errors: []
     second = service.run(tmp_path)
 
     first_removes = [
-        change.path.relative_to(generated_root).as_posix()
+        change.path.relative_to(generated_dir_path).as_posix()
         for change in first.changes
         if change.change_type == "REMOVE"
     ]
     second_removes = [
-        change.path.relative_to(generated_root).as_posix()
+        change.path.relative_to(generated_dir_path).as_posix()
         for change in second.changes
         if change.change_type == "REMOVE"
     ]

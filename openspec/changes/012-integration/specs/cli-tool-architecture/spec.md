@@ -68,7 +68,7 @@
 
 #### Scenario: Integration profile для `apidev init`
 - **WHEN** пользователь запускает `apidev init` с `--runtime`, `--integration-mode`, `--integration-dir`
-- **THEN** init SHALL создавать/обновлять integration-artifacts согласно выбранному профилю
+- **THEN** init SHALL управлять только profile-managed integration templates в init-managed scope
 - **AND** поведение в режимах `--repair` и `--force` SHALL быть детерминированным и документированным
 
 #### Scenario: Допустимые значения integration profile-флагов
@@ -85,8 +85,13 @@
 
 #### Scenario: Документированная матрица precedence
 - **WHEN** описывается поведение `apidev init` для profile-флагов
-- **THEN** documentation SHALL содержать явную matrix для `create|repair|force` x `integration-mode`
-- **AND** matrix SHALL фиксировать, что именно создается/обновляется и какие комбинации завершаются validation error
+- **THEN** documentation SHALL содержать явную matrix для `create|repair|force` x profile-условий (`runtime`, `integration-mode`, `integration-dir`)
+- **AND** matrix SHALL фиксировать, что именно создается/обновляется в profile-managed template scope и какие комбинации завершаются validation error
+
+#### Scenario: Документированная file-scope матрица profile-managed artifacts
+- **WHEN** описываются profile-managed integration templates для `apidev init`
+- **THEN** documentation SHALL содержать matrix `integration-mode` x `runtime` c явным перечнем managed templates
+- **AND** matrix SHALL фиксировать forbidden mutations вне profile-scope и запрет runtime wiring для `runtime=none`
 
 #### Scenario: Запрещенная комбинация `integration-mode=full` и `runtime=none`
 - **WHEN** пользователь задает `--integration-mode full` и `--runtime none`

@@ -108,17 +108,28 @@ Precedence для режимов и операций записи:
 - если не указан ни `--repair`, ни `--force`, применяется режим `create`;
 - `--repair` и `--force` взаимоисключающие; совместное использование запрещено;
 - до записи файлов обязательно проходят enum/path проверки profile-параметров;
-- при `create` конфликт с измененными managed-файлами не исправляется автоматически: команда завершает выполнение и требует явного выбора `repair` или `force`;
-- `repair` изменяет только проблемные managed-файлы из профильного набора;
-- `force` перезаписывает весь профильный managed-набор.
+- profile-флаги управляют только profile-managed template-набором в `.apidev/templates` и не расширяют scope записи за пределы init-managed файлов.
 
-Profile-набор integration templates:
+### Matrix: mode precedence (`create|repair|force` x profile)
 
-- `off`: bootstrap templates отключен;
-- `scaffold + none`: `integration_handler_registry.py.j2`, `integration_error_mapper.py.j2`;
-- `scaffold + fastapi`: добавляются `integration_router_factory.py.j2` и `integration_auth_registry.py.j2`;
-- `full + fastapi`: scaffold-набор + `generated_operation_map.py.j2`, `generated_openapi_docs.py.j2`, `generated_router.py.j2`, `generated_schema.py.j2`;
-- `full + none`: невалидная комбинация (`config.INIT_MODE_CONFLICT`).
+| Режим | Profile-условие | Нормативное поведение |
+|---|---|---|
+| `create` | Валидный профиль (`runtime`, `integration-mode`, `integration-dir`) | Создаются только отсутствующие profile-managed templates; измененные managed templates не перезаписываются автоматически |
+| `repair` | Валидный профиль | Восстанавливаются только проблемные profile-managed templates из текущего profile-scope |
+| `force` | Валидный профиль | Перезаписывается весь profile-managed template-набор текущего profile-scope |
+| Любой | `--repair` и `--force` одновременно | CLI parsing error (exit code `2`) до файловых операций |
+| Любой | Невалидный enum в `--runtime`/`--integration-mode` | Fail-fast validation error `config.INIT_PROFILE_INVALID_ENUM` до файловых операций |
+| Любой | Невалидный `--integration-dir` (пустой/absolute/outside `project_dir`) | Fail-fast validation error `validation.PATH_BOUNDARY_VIOLATION` до файловых операций |
+
+### Matrix: file-scope для profile-managed templates (`integration-mode` x `runtime`)
+
+| `integration-mode` | `runtime` | Profile-managed templates (`.apidev/templates`) | Forbidden mutations |
+|---|---|---|---|
+| `off` | `fastapi` / `none` | Нет integration templates в profile-scope | Любые записи integration template-файлов вне init-managed scope |
+| `scaffold` | `none` | `integration_handler_registry.py.j2`, `integration_error_mapper.py.j2` | Создание runtime-specific templates (`integration_router_factory.py.j2`, `integration_auth_registry.py.j2`) |
+| `scaffold` | `fastapi` | `integration_handler_registry.py.j2`, `integration_router_factory.py.j2`, `integration_auth_registry.py.j2`, `integration_error_mapper.py.j2` | Запись generated template-набора (`generated_operation_map.py.j2`, `generated_openapi_docs.py.j2`, `generated_router.py.j2`, `generated_schema.py.j2`) |
+| `full` | `fastapi` | Scaffold-набор + `generated_operation_map.py.j2`, `generated_openapi_docs.py.j2`, `generated_router.py.j2`, `generated_schema.py.j2` | Запись файлов вне profile-scope и вне init-managed scope |
+| `full` | `none` | Нет (комбинация запрещена) | Fail-fast validation error `config.INIT_MODE_CONFLICT` до файловых операций |
 
 ## Конфигурация Evolution и release-state
 
@@ -267,6 +278,7 @@ errors:
   - `code`
   - `http_status`
   - `body`
+  - `example` (опционально, short-form)
 
 Неизвестные поля в `errors[*]` запрещены.
 
@@ -286,6 +298,15 @@ errors:
 
 - Тип: `object`
 - Должен соответствовать правилам schema-фрагмента
+
+### `errors[*].example` (short-form)
+
+- Опциональное поле верхнего уровня error-item.
+- Поддерживается как short-form запись примера ошибки.
+- Значение нормализуется в каноническую nested-модель `errors[*].body.example`.
+- Если в одном error-item заданы и `errors[*].example`, и `errors[*].body.example`:
+  - при эквивалентных значениях запись валидна и используется каноническая nested-модель;
+  - при конфликтующих значениях валидация завершается fail-fast ошибкой.
 
 ## Формат schema-фрагмента (`response.body`, `errors[*].body`, вложенные узлы)
 

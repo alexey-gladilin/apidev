@@ -298,6 +298,8 @@ def install_custom_openapi(app) -> None:
 - `generator.generated_dir` и `generator.scaffold_dir` — независимые output-контуры.
 - Оба пути валидируются единым path-boundary policy внутри `project_dir`.
 - Выход за границы `project_dir` запрещен и приводит к fail-fast диагностике.
+- Совпадение контуров (`generated_dir == scaffold_dir`) или вложенность одного контура в другой запрещены и приводят к fail-fast валидации до файловых операций.
+- Для contour conflict используется стабильная диагностика `validation.OUTPUT_CONTOUR_CONFLICT`; для выхода за границы `project_dir` — `validation.PATH_BOUNDARY_VIOLATION`.
 
 Минимальный набор scaffold-файлов при opt-in:
 
@@ -321,6 +323,7 @@ def install_custom_openapi(app) -> None:
 - APIDev не должен генерировать project-specific auth policy.
 - APIDev не должен генерировать domain-specific error semantics.
 - Запись generated/scaffold разрешена только внутри `project_dir` в рамках единого path-boundary policy.
+- Пересечение output-контуров (`generated_dir`/`scaffold_dir`) запрещено: контуры должны быть независимыми и непересекающимися.
 
 ## Нецелевой путь (anti-pattern)
 

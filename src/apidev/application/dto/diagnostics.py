@@ -1,10 +1,34 @@
 from dataclasses import dataclass, field
+import json
 from typing import Mapping, Sequence
 
 from apidev.core.models.diagnostic import ValidationDiagnostic
 from apidev.core.models.operation import Operation
 
 Severity = str
+
+FAIL_FAST_ERROR_CODES: tuple[str, ...] = (
+    "validation.PATH_BOUNDARY_VIOLATION",
+    "validation.OUTPUT_CONTOUR_CONFLICT",
+    "validation.INVALID_SCAFFOLD_WRITE_POLICY",
+    "validation.MANUAL_TAGS_FORBIDDEN",
+    "validation.RELEASE_STATE_INVALID_KEY",
+    "validation.RELEASE_STATE_TYPE_MISMATCH",
+    "config.INIT_PROFILE_INVALID_ENUM",
+    "config.INIT_MODE_CONFLICT",
+)
+
+
+def canonicalize_context(context: Mapping[str, object] | None) -> dict[str, object]:
+    if not context:
+        return {}
+    canonical: dict[str, object] = {}
+    for key in sorted(str(item) for item in context.keys()):
+        value = context.get(key)
+        if value is None:
+            continue
+        canonical[key] = value
+    return canonical
 
 
 @dataclass(slots=True)
@@ -60,6 +84,17 @@ def build_summary(
 
 
 def sort_diagnostics(diagnostics: Sequence[Mapping[str, object]]) -> list[dict[str, object]]:
+    def _context_sort_key(item: Mapping[str, object]) -> str:
+        raw_context = item.get("context")
+        if not isinstance(raw_context, Mapping):
+            return ""
+        return json.dumps(
+            canonicalize_context(raw_context),
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+
     ordered = sorted(
         diagnostics,
         key=lambda item: (
@@ -68,6 +103,7 @@ def sort_diagnostics(diagnostics: Sequence[Mapping[str, object]]) -> list[dict[s
             str(item.get("location", "")),
             str(item.get("message", "")),
             str(item.get("detail", "")),
+            _context_sort_key(item),
         ),
     )
     return [dict(item) for item in ordered]

@@ -77,9 +77,9 @@ def test_diff_service_plans_remove_in_deterministic_path_order(tmp_path: Path) -
     _write_project_config(tmp_path)
     _write_contract(tmp_path, "health/ping.yaml")
 
-    generated_root = tmp_path / ".apidev" / "output" / "api"
-    stale_b = generated_root / "transport" / "models" / "zzz_stale.py"
-    stale_a = generated_root / "transport" / "models" / "aaa_stale.py"
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    stale_b = generated_dir_path / "transport" / "models" / "zzz_stale.py"
+    stale_a = generated_dir_path / "transport" / "models" / "aaa_stale.py"
     stale_b.parent.mkdir(parents=True, exist_ok=True)
     stale_b.write_text("# stale-b", encoding="utf-8")
     stale_a.write_text("# stale-a", encoding="utf-8")
@@ -87,7 +87,7 @@ def test_diff_service_plans_remove_in_deterministic_path_order(tmp_path: Path) -
     plan = _create_diff_service().run(tmp_path)
 
     remove_paths = [
-        change.path.relative_to(generated_root).as_posix()
+        change.path.relative_to(generated_dir_path).as_posix()
         for change in plan.changes
         if change.change_type == "REMOVE"
     ]

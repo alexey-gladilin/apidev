@@ -28,7 +28,7 @@
 ### Фаза 3. Behavioral architecture checks
 
 - проверка `AR-005` через сценарии без side effects для `diff` и `apidev gen --check`;
-- проверка `AR-006` через negative tests для write boundary (`generated_dir`/`scaffold_dir` внутри `project_dir`);
+- проверка `AR-006` через negative tests для write boundary (`generated_dir`/`scaffold_dir` внутри `project_dir`) и запрета contour conflict (`generated_dir == scaffold_dir`, nested пересечение);
 - проверка `AR-007` через tests на single source path policy;
 - в будущем — review-oriented heuristics для `AR-009`.
 
@@ -45,7 +45,7 @@
 | AR-002 | no infra imports in app layer | `test_application_no_infra_imports.py` |
 | AR-003 | no direct I/O/format handling in core | `test_core_purity.py` |
 | AR-005 | side-effect safety | `test_pipeline_contract.py` |
-| AR-006 | out-of-bound write rejection for project-dir bounded generated/scaffold outputs | `test_write_boundary_policy.py` |
+| AR-006 | out-of-bound write rejection + contour conflict rejection for project-dir bounded generated/scaffold outputs | `test_write_boundary_policy.py` |
 | AR-007 | config path consistency | `test_config_path_single_source.py` |
 
 ## Целевые расширения
