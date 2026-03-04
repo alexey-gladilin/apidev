@@ -1,6 +1,6 @@
 [project]
 name = "apidev"
-version = "0.1.20"
+version = "0.1.21"
 description = "Contract-driven API code generator CLI"
 readme = "README.md"
 requires-python = ">=3.11"
