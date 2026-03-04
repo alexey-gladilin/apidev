@@ -38,11 +38,11 @@
 
 ## Readiness Checklist (pre-implement)
 - `openspec validate 012-integration --strict --no-interactive` проходит.
-- Path-boundary правило синхронизировано между delta-спекой и `docs/architecture/*` (AR-006).
+- Path-boundary правило синхронизировано между delta-спекой и implementation scope фаз 01-03; repository-wide sync с `docs/architecture/*` выполняется в phase 04 (task 4.4) как release-gate.
 - Для `init` задокументирована явная precedence matrix (`create|repair|force` x `integration-mode`).
 - Для `init` задокументирована file-scope matrix (`integration-mode` x `runtime` -> managed artifacts/forbidden mutations).
 - Для fail-fast зафиксирован diagnostics contract (`code`, `message`, `context`).
-- Для fail-fast зафиксированы стабильные error codes и canonical serialization diagnostics envelope.
+- Для fail-fast запланированы стабильные error codes и canonical serialization diagnostics envelope (task 4.6 с тестовым покрытием).
 - Функциональные задачи фаз 01-03 однозначны по scope, Verification и DoD.
 
 ## Связи

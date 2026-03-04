@@ -29,6 +29,59 @@ Compatibility alias:
 - Форма `--option=value` может поддерживаться CLI-парсером, но не используется как канонический стиль в репозитории.
 - Для флагов без аргумента используется только форма `--flag`.
 
+## Контракт profile-флагов `apidev init`
+
+Поддерживаемые profile-флаги:
+
+- `--runtime <fastapi|none>`
+- `--integration-mode <off|scaffold|full>`
+- `--integration-dir <path>`
+
+Нормативные правила:
+
+- в документации и примерах используется канонический синтаксис `--flag value`;
+- `--runtime` принимает только `fastapi` или `none`;
+- `--integration-mode` принимает только `off`, `scaffold` или `full`;
+- `--integration-mode full` с `--runtime none` запрещена (`config.INIT_MODE_CONFLICT`);
+- `--integration-dir` должен быть непустым относительным путем внутри `project_dir` (`validation.PATH_BOUNDARY_VIOLATION`);
+- невалидные enum-значения profile-флагов завершаются ошибкой валидации (`config.INIT_PROFILE_INVALID_ENUM`) до файловых операций.
+
+Канонические примеры:
+
+```bash
+apidev init --runtime fastapi --integration-mode scaffold --integration-dir integration
+apidev init --runtime none --integration-mode off --integration-dir integration
+```
+
+## UX profile-based bootstrap для `apidev init`
+
+Контур bootstrap profile-режимов работает без миграционного fallback:
+
+- `apidev init` управляет только init-managed файлами (`.apidev/config.toml`, sample contract и profile-managed templates);
+- команда не выполняет автоматическую миграцию legacy-структур и не переписывает произвольные пользовательские файлы вне init-managed scope.
+
+Precedence и режимы:
+
+- default режим: `create`;
+- `--repair` переключает режим в `repair`;
+- `--force` переключает режим в `force`;
+- одновременная передача `--repair` и `--force` запрещена и завершается CLI parsing ошибкой (exit code `2`);
+- profile-валидация (`--runtime`, `--integration-mode`, `--integration-dir`) выполняется до файловых операций.
+
+Поведение режимов в profile scope:
+
+- `create`: создает отсутствующие managed-файлы; при измененных managed-файлах завершает команду ошибкой и рекомендует `--repair` или `--force`;
+- `repair`: восстанавливает только невалидные/измененные managed-файлы в пределах выбранного profile scope;
+- `force`: перезаписывает все managed-файлы выбранного profile scope независимо от текущего содержимого.
+
+Матрица profile scope:
+
+- `--integration-mode off`: integration templates не bootstrap-ятся;
+- `--integration-mode scaffold --runtime none`: только `integration_handler_registry.py.j2` и `integration_error_mapper.py.j2`;
+- `--integration-mode scaffold --runtime fastapi`: `integration_handler_registry.py.j2`, `integration_router_factory.py.j2`, `integration_auth_registry.py.j2`, `integration_error_mapper.py.j2`;
+- `--integration-mode full --runtime fastapi`: scaffold-набор + `generated_operation_map.py.j2`, `generated_openapi_docs.py.j2`, `generated_router.py.j2`, `generated_schema.py.j2`;
+- `--integration-mode full --runtime none` невалиден (`config.INIT_MODE_CONFLICT`).
+
 ## Контракт структуры generated output
 
 Каноническая структура generated output для `apidev diff`/`apidev gen` — domain-first:
@@ -60,6 +113,22 @@ Compatibility alias:
 - если ни один флаг не указан, используется `generator.scaffold` из `.apidev/config.toml`;
 - при указании флага CLI имеет приоритет над config;
 - scaffold-файлы создаются только в режиме `create-if-missing` (существующие не перезаписываются).
+
+## Контракт OpenAPI extensions
+
+Параметр `.apidev/config.toml`:
+
+```toml
+[openapi]
+include_extensions = true
+```
+
+Правила:
+
+- `openapi.include_extensions` управляет только extension-полями `x-apidev-*` в `openapi_docs.py`;
+- при `include_extensions = false` extension-поля `x-apidev-*` не генерируются;
+- базовые OpenAPI-поля (`operationId`, `summary`, `description`, `deprecated`, `tags`, `security`, `responses`) не меняются;
+- default `include_extensions = true` сохраняет прежнее поведение генерации.
 
 ## Контракт endpoint-фильтров для `apidev gen`
 

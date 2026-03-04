@@ -55,6 +55,10 @@ class TemplatesConfig(BaseModel):
     dir: str = ".apidev/templates"
 
 
+class OpenAPIConfig(BaseModel):
+    include_extensions: bool = True
+
+
 class EvolutionConfig(BaseModel):
     compatibility_policy: Literal["warn", "strict"] = "warn"
     grace_period_releases: int = 2
@@ -80,4 +84,5 @@ class ApidevConfig(BaseModel):
     contracts: ContractsConfig = ContractsConfig()
     generator: GeneratorConfig = GeneratorConfig()
     templates: TemplatesConfig = TemplatesConfig()
+    openapi: OpenAPIConfig = OpenAPIConfig()
     evolution: EvolutionConfig = EvolutionConfig()

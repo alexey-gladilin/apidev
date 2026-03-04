@@ -694,3 +694,197 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
+
+
+def test_router_operation_map_auto_register_new_endpoint_without_router_edit(
+    tmp_path: Path,
+) -> None:
+    generated_root = _generate_bearer_contract_project(tmp_path)
+    integration_root = tmp_path / "integration"
+    integration_root.mkdir(parents=True, exist_ok=True)
+    (integration_root / "handler_registry.py").write_text(
+        """
+from typing import Any
+
+HANDLERS: dict[str, Any] = {}
+
+
+def resolve_handler(operation_id: str) -> Any:
+    return HANDLERS[operation_id]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (integration_root / "auth_registry.py").write_text(
+        """
+from typing import Any
+
+
+def resolve_auth_dependency(_auth_mode: str) -> Any:
+    return None
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    (generated_root / "billing" / "routes" / "get_invoice_v2.py").write_text(
+        """
+from typing import Any
+
+
+async def route(payload: dict[str, object], handler: Any) -> Any:
+    return await handler(payload)
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    inserted = str(generated_root)
+    project_root_inserted = str(tmp_path)
+    loaded_modules: list[str] = []
+    sys.path.insert(0, inserted)
+    sys.path.insert(1, project_root_inserted)
+    try:
+        router_factory_module = importlib.import_module("integration.router_factory")
+        loaded_modules.append("integration.router_factory")
+        handler_registry_module = importlib.import_module("integration.handler_registry")
+        loaded_modules.append("integration.handler_registry")
+        operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
+        operation_map["billing_get_invoice_v2"] = {
+            **cast(dict[str, Any], operation_map["billing_get_invoice"]),
+            "path": "/v2/invoices/{invoice_id}",
+            "router_module": "billing.routes.get_invoice_v2",
+            "bridge": {"callable": "billing.routes.get_invoice_v2.route"},
+        }
+
+        handlers = cast(dict[str, Any], getattr(handler_registry_module, "HANDLERS"))
+
+        async def _handler_v1(_request: Any) -> Any:
+            class _Result:
+                payload = {"version": "v1"}
+
+            return _Result()
+
+        async def _handler_v2(_payload: dict[str, object]) -> Any:
+            class _Result:
+                payload = {"version": "v2"}
+
+            return _Result()
+
+        handlers["billing_get_invoice"] = _handler_v1
+        handlers["billing_get_invoice_v2"] = _handler_v2
+
+        router = cast(Any, getattr(router_factory_module, "build_router"))()
+        registered = {
+            getattr(route_obj, "operation_id", None): getattr(route_obj, "path", None)
+            for route_obj in cast(list[Any], router.routes)
+        }
+        assert registered["billing_get_invoice"] == "/v1/invoices/{invoice_id}"
+        assert registered["billing_get_invoice_v2"] == "/v2/invoices/{invoice_id}"
+    finally:
+        if sys.path and sys.path[0] == inserted:
+            sys.path.pop(0)
+        if sys.path and sys.path[0] == project_root_inserted:
+            sys.path.pop(0)
+        elif len(sys.path) > 1 and sys.path[1] == project_root_inserted:
+            sys.path.pop(1)
+        for module_name in loaded_modules:
+            sys.modules.pop(module_name, None)
+        sys.modules.pop("operation_map", None)
+        sys.modules.pop("integration.auth_registry", None)
+        sys.modules.pop("integration.handler_registry", None)
+        sys.modules.pop("integration", None)
+        sys.modules.pop("billing", None)
+        sys.modules.pop("billing.routes", None)
+        sys.modules.pop("billing.routes.get_invoice", None)
+        sys.modules.pop("billing.routes.get_invoice_v2", None)
+        sys.modules.pop("billing.models", None)
+
+
+def test_router_operation_map_auto_register_reloads_route_callable_from_metadata(
+    tmp_path: Path,
+) -> None:
+    generated_root = _generate_bearer_contract_project(tmp_path)
+    integration_root = tmp_path / "integration"
+    integration_root.mkdir(parents=True, exist_ok=True)
+    (integration_root / "handler_registry.py").write_text(
+        """
+from typing import Any
+
+HANDLERS: dict[str, Any] = {}
+
+
+def resolve_handler(operation_id: str) -> Any:
+    return HANDLERS[operation_id]
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    (integration_root / "auth_registry.py").write_text(
+        """
+from typing import Any
+
+
+def resolve_auth_dependency(_auth_mode: str) -> Any:
+    return None
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    inserted = str(generated_root)
+    project_root_inserted = str(tmp_path)
+    loaded_modules: list[str] = []
+    sys.path.insert(0, inserted)
+    sys.path.insert(1, project_root_inserted)
+    try:
+        router_factory_module = importlib.import_module("integration.router_factory")
+        loaded_modules.append("integration.router_factory")
+        handler_registry_module = importlib.import_module("integration.handler_registry")
+        loaded_modules.append("integration.handler_registry")
+        route_module = importlib.import_module("billing.routes.get_invoice")
+        loaded_modules.append("billing.routes.get_invoice")
+
+        async def _original_handler(_request: Any) -> Any:
+            class _Result:
+                payload = {"source": "original-handler"}
+
+            return _Result()
+
+        handlers = cast(dict[str, Any], getattr(handler_registry_module, "HANDLERS"))
+        handlers["billing_get_invoice"] = _original_handler
+
+        router = cast(Any, getattr(router_factory_module, "build_router"))()
+        route = next(
+            route_obj
+            for route_obj in cast(list[Any], router.routes)
+            if getattr(route_obj, "operation_id", None) == "billing_get_invoice"
+        )
+        endpoint = cast(Any, getattr(route, "endpoint"))
+
+        async def _patched_route(payload: dict[str, object], handler: Any) -> Any:
+            class _Result:
+                payload = {"source": "patched-route"}
+
+            return _Result()
+
+        setattr(route_module, "route", _patched_route)
+        response_payload = asyncio.run(endpoint(payload={"invoice_id": "inv-001"}))
+        assert response_payload == {"source": "patched-route"}
+    finally:
+        if sys.path and sys.path[0] == inserted:
+            sys.path.pop(0)
+        if sys.path and sys.path[0] == project_root_inserted:
+            sys.path.pop(0)
+        elif len(sys.path) > 1 and sys.path[1] == project_root_inserted:
+            sys.path.pop(1)
+        for module_name in loaded_modules:
+            sys.modules.pop(module_name, None)
+        sys.modules.pop("operation_map", None)
+        sys.modules.pop("integration.auth_registry", None)
+        sys.modules.pop("integration.handler_registry", None)
+        sys.modules.pop("integration", None)
+        sys.modules.pop("billing", None)
+        sys.modules.pop("billing.routes", None)
+        sys.modules.pop("billing.routes.get_invoice", None)
+        sys.modules.pop("billing.models", None)

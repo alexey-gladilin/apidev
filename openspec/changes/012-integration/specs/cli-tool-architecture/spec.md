@@ -127,3 +127,22 @@
 - **THEN** `code` SHALL быть машинно-стабильным, а `message` SHALL оставаться человекочитаемым
 - **AND** `context` SHALL сериализоваться с лексикографическим порядком ключей без вывода отсутствующих полей
 - **AND** одинаковые входы SHALL давать байтово-идентичный diagnostics envelope
+
+## MODIFIED Requirements
+
+### Requirement: Safe Write Boundaries in Target Projects
+Граница записи SHALL использовать двухконтурную модель output-каталогов (`generated_dir` и `scaffold_dir`) внутри `project_dir`.
+
+Примечание supersede:
+- Эта норма уточняет и supersede-ит historical fallback-формулировку про единственный generated root.
+- Для `012-integration` source of truth по boundary-контракту: `generated_dir` и `scaffold_dir` как независимые output-контуры с единым path-boundary контролем внутри `project_dir`.
+
+#### Scenario: Write attempt outside project_dir boundaries
+- **WHEN** план генерации включает путь вне `project_dir` для `generated_dir` или `scaffold_dir`
+- **THEN** генерация SHALL завершаться fail-fast policy error
+- **AND** tool SHALL не записывать out-of-policy файлы
+
+#### Scenario: Output contour conflict is forbidden
+- **WHEN** `generated_dir` и `scaffold_dir` совпадают или один является подкаталогом другого
+- **THEN** `apidev` SHALL завершаться fail-fast validation error до файловых операций
+- **AND** diagnostics SHALL включать оба исходных пути и правило запрета пересечения output-контуров

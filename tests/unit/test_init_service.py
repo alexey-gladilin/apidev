@@ -2,7 +2,11 @@ from pathlib import Path
 
 import pytest
 
-from apidev.application.services.init_service import InitRepairRequiredError, InitService
+from apidev.application.services.init_service import (
+    InitPathBoundaryError,
+    InitRepairRequiredError,
+    InitService,
+)
 from apidev.infrastructure.config.toml_loader import default_config_text
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 
@@ -45,7 +49,7 @@ def test_init_creates_managed_templates(tmp_path: Path) -> None:
         default_config_text=default_config_text(),
     )
 
-    service.run(tmp_path)
+    service.run(tmp_path, integration_mode="full")
 
     for template_path in _managed_template_paths(tmp_path):
         assert template_path.exists()
@@ -158,12 +162,86 @@ def test_init_repair_restores_missing_managed_template(tmp_path: Path) -> None:
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
     )
-    service.run(tmp_path)
+    service.run(tmp_path, integration_mode="full")
     template_to_remove = tmp_path / ".apidev" / "templates" / "generated_router.py.j2"
     template_to_remove.unlink()
 
-    result = service.run(tmp_path, mode="repair")
+    result = service.run(tmp_path, mode="repair", integration_mode="full")
 
     assert result.status == "repaired"
     assert template_to_remove.exists()
     assert template_to_remove.read_text(encoding="utf-8").strip()
+
+
+@pytest.mark.parametrize(
+    ("contracts_dir", "templates_dir"),
+    [
+        ("/tmp/apidev-contracts-outside", ".apidev/templates"),
+        (".apidev/contracts", "/tmp/apidev-templates-outside"),
+        ("../contracts-outside", ".apidev/templates"),
+        (".apidev/contracts", "../templates-outside"),
+    ],
+)
+def test_init_repair_rejects_out_of_project_managed_dirs(
+    tmp_path: Path,
+    contracts_dir: str,
+    templates_dir: str,
+) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        f"""
+version = "1"
+[contracts]
+dir = "{contracts_dir}"
+[generator]
+generated_dir = ".apidev/output/api"
+[templates]
+dir = "{templates_dir}"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(InitPathBoundaryError):
+        service.run(tmp_path, mode="repair")
+
+
+@pytest.mark.parametrize(
+    ("contracts_dir", "templates_dir"),
+    [
+        ("/tmp/apidev-contracts-outside-force", ".apidev/templates"),
+        (".apidev/contracts", "/tmp/apidev-templates-outside-force"),
+        ("../contracts-outside-force", ".apidev/templates"),
+        (".apidev/contracts", "../templates-outside-force"),
+    ],
+)
+def test_init_force_rejects_out_of_project_managed_dirs(
+    tmp_path: Path,
+    contracts_dir: str,
+    templates_dir: str,
+) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        f"""
+version = "1"
+[contracts]
+dir = "{contracts_dir}"
+[generator]
+generated_dir = ".apidev/output/api"
+[templates]
+dir = "{templates_dir}"
+""".strip()
+        + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(InitPathBoundaryError):
+        service.run(tmp_path, mode="force")

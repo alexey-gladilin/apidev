@@ -58,7 +58,10 @@ def _default_help(ctx: Context) -> None:
         raise Exit(0)
 
 
-app.command("init", help="Initialize apidev project directory")(init_command)
+app.command(
+    "init",
+    help="Initialize apidev project directory and integration profile.",
+)(init_command)
 app.command("validate", help="Validate contracts and rules")(validate_command)
 app.command("diff", help="Preview generated file changes")(diff_command)
 app.command("gen", help="Generate code from contracts")(generate_command)

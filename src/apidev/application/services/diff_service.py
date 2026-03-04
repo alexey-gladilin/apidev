@@ -159,6 +159,7 @@ class DiffService:
             "generated_openapi_docs.py.j2",
             {
                 "registry_entries": registry_entries,
+                "include_extensions": config.openapi.include_extensions,
             },
         )
         openapi_docs_content = self._postprocess_python(

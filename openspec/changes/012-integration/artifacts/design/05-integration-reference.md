@@ -14,14 +14,20 @@ from integration.auth_registry import resolve_auth_dependency
 
 def build_router() -> APIRouter:
     router = APIRouter()
-    for operation_id, meta in OPERATION_MAP.items():
+    for operation_id in sorted(OPERATION_MAP):
+        meta = dict(OPERATION_MAP[operation_id])
         handler = resolve_handler(operation_id)
         auth_dep = resolve_auth_dependency(meta.get("auth", "public"))
         deps = [Depends(auth_dep)] if auth_dep else []
 
-        async def endpoint(_meta=meta, _handler=handler):
+        async def endpoint(payload=None, current_user=None, *, _meta=meta, _handler=handler):
             route = _load_generated_route(_meta["router_module"])
-            result = await route(payload={}, handler=_handler)
+            result = await invoke_route_with_context(
+                route_callable=route,
+                handler=_handler,
+                payload=payload,
+                current_user=current_user,
+            )
             return getattr(result, "payload", None) or {}
 
         router.add_api_route(
@@ -43,6 +49,7 @@ def build_router() -> APIRouter:
 - Runtime adapter должен регистрировать endpoint-ы через `APIRouter.add_api_route(...)` на основе `OPERATION_MAP`.
 - Новые endpoint-ы должны подключаться автоматически из `operation_map` без ручного добавления route-definition.
 - Для нового endpoint вручную добавляются только handler и mapping в integration-layer.
+- Route callable должен резолвиться по `router_module` внутри endpoint-вызова (lazy resolve), чтобы wiring всегда соответствовал актуальному `operation_map`.
 - В `add_api_route` обязателен проброс:
   - `operation_id`, `summary`, `description`, `deprecated`;
   - `responses` (success + declared errors);

@@ -78,12 +78,13 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
             "description": str(entry.get("description", "")),
             "deprecated": str(entry.get("deprecation_status", "active")) == "deprecated",
             "tags": [_resolve_domain_tag(entry, operation_id)],
+            "responses": _build_responses(entry),
+{% if include_extensions %}
             "x-apidev-auth": str(entry.get("auth", "public")),
             "x-apidev-deprecation": {
                 "status": str(entry.get("deprecation_status", "active")),
                 "deprecated_since_release": entry.get("deprecated_since_release"),
             },
-            "responses": _build_responses(entry),
             "x-apidev-errors": [
                 {
                     "code": str(error.get("code", "")),
@@ -93,6 +94,7 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
                 }
                 for error in entry.get("error_schemas", [])
             ],
+{% endif %}
         }
         if security is not None:
             operation["security"] = security

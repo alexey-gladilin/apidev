@@ -148,17 +148,17 @@ def build_router() -> APIRouter:
         handler = resolve_handler(operation_id)
         auth_dependency = resolve_auth_dependency(auth_mode)
         dependencies = [Depends(auth_dependency)] if auth_dependency is not None else []
-        route_callable = _load_generated_route(router_module)
-
         async def endpoint(
             payload: Mapping[str, object] | None = None,
             current_user: Any = None,
             *,
-            _route_callable: Callable[..., Awaitable[Any]] = route_callable,
+            _meta: Mapping[str, object] = meta,
             _handler: Any = handler,
         ) -> Any:
+            resolved_router_module = str(_meta["router_module"])
+            route_callable = _load_generated_route(resolved_router_module)
             result = await invoke_route_with_context(
-                route_callable=_route_callable,
+                route_callable=route_callable,
                 handler=_handler,
                 payload=payload,
                 current_user=current_user,

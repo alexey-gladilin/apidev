@@ -800,6 +800,158 @@ errors:
     assert get_operation["x-apidev-errors"][0]["example"] == {"code": "INVOICE_NOT_FOUND"}
 
 
+def test_generate_openapi_extensions_enabled_by_default(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    assert '"x-apidev-auth"' in openapi_docs_source
+    assert '"x-apidev-deprecation"' in openapi_docs_source
+    assert '"x-apidev-errors"' in openapi_docs_source
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = build_openapi_paths()
+
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert get_operation["x-apidev-auth"] == "bearer"
+    assert get_operation["x-apidev-deprecation"] == {
+        "status": "active",
+        "deprecated_since_release": None,
+    }
+    assert get_operation["x-apidev-errors"] == []
+
+
+def test_generate_openapi_extensions_can_be_disabled_without_affecting_core_fields(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[openapi]
+include_extensions = false
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+response:
+  status: 200
+  body:
+    type: object
+errors:
+  - code: INVOICE_NOT_FOUND
+    http_status: 404
+    body:
+      type: object
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_root = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_root / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_root / "openapi_docs.py").read_text(encoding="utf-8")
+    assert "x-apidev-" not in openapi_docs_source
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = build_openapi_paths()
+
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert "x-apidev-auth" not in get_operation
+    assert "x-apidev-deprecation" not in get_operation
+    assert "x-apidev-errors" not in get_operation
+    assert get_operation["operationId"] == "billing_get_invoice"
+    assert get_operation["summary"] == "Get invoice"
+    assert get_operation["description"] == "Get invoice details"
+    assert get_operation["tags"] == ["billing"]
+    assert get_operation["security"] == [{"bearerAuth": []}]
+    assert sorted(get_operation["responses"]) == ["200", "404"]
+
+
 def test_generate_openapi_uses_contract_response_status(tmp_path: Path) -> None:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(

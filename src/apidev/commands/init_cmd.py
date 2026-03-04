@@ -3,6 +3,55 @@ from typing import Annotated
 
 import typer
 
+_ALLOWED_RUNTIMES = ("fastapi", "none")
+_ALLOWED_INTEGRATION_MODES = ("off", "scaffold", "full")
+
+
+def _normalize_text_option(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value.strip()
+    return str(value).strip()
+
+
+def _validate_profile_options(runtime: object, integration_mode: object) -> None:
+    runtime_value = _normalize_text_option(runtime)
+    integration_mode_value = _normalize_text_option(integration_mode)
+
+    if runtime_value not in _ALLOWED_RUNTIMES:
+        raise typer.BadParameter(
+            "config.INIT_PROFILE_INVALID_ENUM: --runtime must be one of: fastapi, none."
+        )
+    if integration_mode_value not in _ALLOWED_INTEGRATION_MODES:
+        raise typer.BadParameter(
+            "config.INIT_PROFILE_INVALID_ENUM: --integration-mode must be one of: off, scaffold, full."
+        )
+    if runtime_value == "none" and integration_mode_value == "full":
+        raise typer.BadParameter(
+            "config.INIT_MODE_CONFLICT: --integration-mode full requires --runtime fastapi."
+        )
+
+
+def _validate_integration_dir(project_root: Path, integration_dir: object) -> None:
+    integration_dir_value = _normalize_text_option(integration_dir)
+    if not integration_dir_value:
+        raise typer.BadParameter(
+            "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must be a non-empty relative path inside project_dir."
+        )
+    integration_candidate = Path(integration_dir_value)
+    if integration_candidate.is_absolute():
+        raise typer.BadParameter(
+            "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must be a non-empty relative path inside project_dir."
+        )
+    resolved_integration_dir = (project_root / integration_candidate).resolve(strict=False)
+    try:
+        resolved_integration_dir.relative_to(project_root)
+    except ValueError as exc:
+        raise typer.BadParameter(
+            "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must stay inside project_dir."
+        ) from exc
+
 
 def init_command(
     project_dir: Path = Path("."),
@@ -20,10 +69,37 @@ def init_command(
             help="Overwrite all init-managed files with defaults.",
         ),
     ] = False,
+    runtime: Annotated[
+        str,
+        typer.Option(
+            "--runtime",
+            metavar="[fastapi|none]",
+            help="Integration runtime profile.",
+        ),
+    ] = "fastapi",
+    integration_mode: Annotated[
+        str,
+        typer.Option(
+            "--integration-mode",
+            metavar="[off|scaffold|full]",
+            help="Integration bootstrap mode.",
+        ),
+    ] = "scaffold",
+    integration_dir: Annotated[
+        str,
+        typer.Option(
+            "--integration-dir",
+            help="Integration directory (must stay inside project directory).",
+        ),
+    ] = "integration",
 ) -> None:
     from rich.console import Console
 
-    from apidev.application.services.init_service import InitRepairRequiredError, InitService
+    from apidev.application.services.init_service import (
+        InitPathBoundaryError,
+        InitRepairRequiredError,
+        InitService,
+    )
     from apidev.infrastructure.config.toml_loader import default_config_text
     from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 
@@ -31,6 +107,9 @@ def init_command(
 
     if repair and force:
         raise typer.BadParameter("Use either --repair or --force, not both.")
+    project_root = project_dir.resolve()
+    _validate_profile_options(runtime=runtime, integration_mode=integration_mode)
+    _validate_integration_dir(project_root=project_root, integration_dir=integration_dir)
 
     mode = "create"
     if repair:
@@ -40,7 +119,15 @@ def init_command(
 
     service = InitService(fs=LocalFileSystem(), default_config_text=default_config_text())
     try:
-        result = service.run(project_dir.resolve(), mode=mode)
+        result = service.run(
+            project_root,
+            mode=mode,
+            runtime=runtime,
+            integration_mode=integration_mode,
+        )
+    except InitPathBoundaryError as exc:
+        console.print(f"[red]ERROR[/red] {exc}")
+        raise typer.Exit(code=1) from exc
     except InitRepairRequiredError as exc:
         console.print(
             "[red]ERROR[/red] Project has invalid init-managed file(s). "

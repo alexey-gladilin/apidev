@@ -31,7 +31,7 @@
   - backward compatibility для legacy release-state форматов.
 
 ## Влияние
-- Затронутые спеки: `cli-tool-architecture` (ADDED requirement).
+- Затронутые спеки: `cli-tool-architecture` (ADDED + MODIFIED requirements для write-boundary контракта).
 - Затронутый код (на implement-фазе):
   - `src/apidev/core/models/config.py`
   - `src/apidev/application/services/diff_service.py`
@@ -53,5 +53,5 @@
 - Spec delta: [specs/cli-tool-architecture/spec.md](./specs/cli-tool-architecture/spec.md)
 
 ## Границы этапа
-Этот change описывает только proposal/design/plan и не включает production-реализацию.
-Implement выполняется отдельной командой (`/openspec-implement` или `/openspec-implement-single`) после approval.
+Этот change ведется в режиме implementation-continuation: часть задач уже закрыта в текущем baseline репозитория, оставшиеся пункты выполняются отдельной implement-командой.
+Implement выполняется через `/openspec-implement` или `/openspec-implement-single` для незавершенных задач из `tasks.md`.

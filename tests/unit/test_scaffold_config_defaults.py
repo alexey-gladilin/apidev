@@ -12,6 +12,7 @@ def test_config_model_sets_scaffold_defaults() -> None:
     assert config.generator.scaffold is True
     assert config.generator.scaffold_dir == "integration"
     assert config.generator.scaffold_write_policy == "create-missing"
+    assert config.openapi.include_extensions is True
 
 
 def test_default_config_text_contains_scaffold_defaults() -> None:
@@ -20,6 +21,14 @@ def test_default_config_text_contains_scaffold_defaults() -> None:
     assert "scaffold = true" in text
     assert 'scaffold_dir = "integration"' in text
     assert 'scaffold_write_policy = "create-missing"' in text
+    assert "[openapi]" in text
+    assert "include_extensions = true" in text
+
+
+def test_config_allows_disabling_openapi_extensions() -> None:
+    config = ApidevConfig.model_validate({"openapi": {"include_extensions": False}})
+
+    assert config.openapi.include_extensions is False
 
 
 def test_config_rejects_empty_generated_dir() -> None:

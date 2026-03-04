@@ -95,6 +95,31 @@ scaffold_write_policy = "create-missing"
   - `fail-on-conflict`: если целевой scaffold-файл уже существует, генерация завершается с ошибкой.
 - Недопустимое значение `generator.scaffold_write_policy` приводит к ошибке валидации конфигурации.
 
+### Profile-based bootstrap (`apidev init`) без миграционного контура
+
+`apidev init` использует profile-флаги как явный bootstrap-контракт:
+
+- `--runtime`: `fastapi | none`;
+- `--integration-mode`: `off | scaffold | full`;
+- `--integration-dir`: непустой относительный путь внутри `project_dir`.
+
+Precedence для режимов и операций записи:
+
+- если не указан ни `--repair`, ни `--force`, применяется режим `create`;
+- `--repair` и `--force` взаимоисключающие; совместное использование запрещено;
+- до записи файлов обязательно проходят enum/path проверки profile-параметров;
+- при `create` конфликт с измененными managed-файлами не исправляется автоматически: команда завершает выполнение и требует явного выбора `repair` или `force`;
+- `repair` изменяет только проблемные managed-файлы из профильного набора;
+- `force` перезаписывает весь профильный managed-набор.
+
+Profile-набор integration templates:
+
+- `off`: bootstrap templates отключен;
+- `scaffold + none`: `integration_handler_registry.py.j2`, `integration_error_mapper.py.j2`;
+- `scaffold + fastapi`: добавляются `integration_router_factory.py.j2` и `integration_auth_registry.py.j2`;
+- `full + fastapi`: scaffold-набор + `generated_operation_map.py.j2`, `generated_openapi_docs.py.j2`, `generated_router.py.j2`, `generated_schema.py.j2`;
+- `full + none`: невалидная комбинация (`config.INIT_MODE_CONFLICT`).
+
 ## Конфигурация Evolution и release-state
 
 Для compatibility/deprecation policy используется `.apidev/config.toml` (секция `[evolution]`) и release-state файл.
