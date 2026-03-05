@@ -25,7 +25,7 @@
 - Затронутые спеки: `cli-tool-architecture`.
 - Затронутая документация:
   - `docs/reference/contract-format.md`
-  - `docs/reference/cli-contract.md` (при необходимости для diagnostics/JSON-контрактов)
+  - `docs/reference/cli-contract.md` (обязательно для синхронизации diagnostics/JSON-контрактов)
 - Затронутый код (implement-фаза):
   - `src/apidev/core/models/contract.py`
   - `src/apidev/core/rules/contract_schema.py`

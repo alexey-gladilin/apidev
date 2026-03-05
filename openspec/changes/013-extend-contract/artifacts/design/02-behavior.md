@@ -4,11 +4,16 @@
 - Контракт допускает root-поле `request` как нормативное.
 - `request` поддерживает только разрешенные подблоки: `path`, `query`, `body`.
 - Любые неизвестные поля в `request` или глубже завершают `apidev validate` с fail-fast schema error и указанием точного пути поля.
+- `request` не обязателен для операций любого HTTP-метода, если операция не имеет входных path/query/body данных.
 
 ## 2. `request.path` и согласованность с route path
 - Если путь операции содержит `{param}`, эти параметры должны быть описаны в `request.path`.
 - Лишние параметры в `request.path`, отсутствующие в route path, запрещены.
 - Несогласованность множества параметров приводит к fail-fast validation error до генерации.
+- Сопоставление имен параметров SHALL быть case-sensitive и сравниваться по точному имени placeholder.
+- Дубли placeholder-имен в route path SHALL считаться невалидным контрактом и приводить к fail-fast validation error.
+- Нормализация имен path-параметров (lowercase/trim/alias) SHALL не выполняться.
+- Если `path` содержит placeholder-ы, отсутствие `request.path` считается невалидным контрактом (без auto-infer).
 
 ### 2.1 Матрица согласованности path params
 | Сценарий | Статус | Поведение |

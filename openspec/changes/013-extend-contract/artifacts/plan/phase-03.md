@@ -5,7 +5,7 @@
 
 ## Scope
 - Добавить unit/integration/contract тесты по request-модели и OpenAPI проекции.
-- Зафиксировать отсутствие регрессий для `response/errors` и legacy-контрактов без `request` (если допускается change-правилами).
+- Зафиксировать отсутствие регрессий для `response/errors` и legacy-контрактов без `request` (обязательная backward compatibility policy этого change).
 - Обновить документацию contract/CLI формата.
 - Подтвердить готовность change строгой OpenSpec-валидацией и plan handoff.
 
@@ -29,4 +29,5 @@
 - Тесты фиксируют happy-path и fail-fast сценарии request-контракта.
 - Документация отражает точный контракт `request.path/query/body` и примеры.
 - Регрессии по `response/errors` отсутствуют.
+- Legacy-контракты без `request` подтвержденно валидируются без migration-режима.
 - Strict OpenSpec validation проходит без ошибок.
