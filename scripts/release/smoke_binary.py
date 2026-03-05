@@ -54,6 +54,19 @@ def main() -> int:
         return result.returncode
     if "apidev" not in out.lower():
         raise RuntimeError("Smoke gate failed: expected apidev --help output")
+
+    version_result = subprocess.run(
+        [str(binary_path), "--version"],
+        capture_output=True,
+        text=True,
+    )
+    version_out = ((version_result.stdout or "") + (version_result.stderr or "")).strip()
+    if version_result.returncode != 0:
+        print("Binary --version stdout:", version_result.stdout, file=sys.stderr)
+        print("Binary --version stderr:", version_result.stderr, file=sys.stderr)
+        return version_result.returncode
+    if not version_out or version_out == "0.0.0":
+        raise RuntimeError("Smoke gate failed: expected non-fallback version from --version")
     return 0
 
 
