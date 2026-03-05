@@ -42,13 +42,6 @@
 - `/openspec-implement-single` — single-agent fallback
 - `/openspec-archive` — архивирование завершенного change
 
-Legacy/internal helpers:
-
-- `/research-codebase`
-- `/design-feature`
-
-
-
 ### Prompt workflow
 
 Для prompt-related сценариев действует отдельный regression reference:

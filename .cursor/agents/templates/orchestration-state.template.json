@@ -1,0 +1,14 @@
+{
+  "change_id": "<change-id>",
+  "mode": "UNSET",
+  "status": "active",
+  "epoch_id": 1,
+  "next_action": "run_spec_readiness_gate",
+  "last_completed_stage": "none",
+  "completed_tasks": [],
+  "blocked_tasks": [],
+  "rejection_counts": {},
+  "agent_identity_map": {},
+  "last_subagent_evidence": [],
+  "updated_at": "<ISO-8601>"
+}

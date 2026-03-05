@@ -41,7 +41,9 @@ description: Implement an approved OpenSpec change in single-agent mode (without
    - Retry up to 3 times
    - Then mark `[BLOCKED - NEEDS HUMAN REVIEW]`
 10. Finalization:
-   - Run format/lint/tests from project conventions
+   - Run format/lint/tests from project conventions with concrete commands (no placeholders):
+     - if `Makefile` has `format`, `lint`, `test` targets, run `make format`, `make lint`, `make test`
+     - otherwise run documented project-native equivalents
    - Ensure `tasks.md` status is accurate
    - Output completion summary with completed and blocked tasks
 

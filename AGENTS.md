@@ -22,7 +22,6 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Entry points:
   - `/openspec-proposal` as the documentation orchestrator (`proposal -> research -> design -> plan`, plus spec deltas and artifact sync).
   - `/openspec-implement` (multi-agent) or `/openspec-implement-single` (single-agent) for implementation.
-  - Legacy helpers (optional/internal): `/research-codebase`, `/design-feature`.
 - Source of truth:
   - Core change files under `openspec/changes/<change-id>/`.
   - Artifact folders under `openspec/changes/<change-id>/artifacts/{research,design,plan}`.

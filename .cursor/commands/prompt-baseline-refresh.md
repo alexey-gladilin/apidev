@@ -1,18 +1,18 @@
 ---
-name: /refresh-prompt-baseline
-id: refresh-prompt-baseline
+name: /prompt-baseline-refresh
+id: prompt-baseline-refresh
 category: Productivity
-description: Refresh prompt-guideline baseline for /improve-prompt and record what changed.
+description: Refresh prompt-guideline baseline for /prompt-improve and record what changed.
 argument-hint: [optional note]
 ---
 
 # Refresh Prompt Baseline
 
-Goal: keep `/improve-prompt` aligned with the latest prompt-engineering guidance while preserving stable runtime behavior.
+Goal: keep `/prompt-improve` aligned with the latest prompt-engineering guidance while preserving stable runtime behavior.
 
 ## Target File
 
-- `.cursor/commands/improve-prompt.md`
+- `.cursor/commands/prompt-improve.md`
 
 ## Sources
 
@@ -21,9 +21,9 @@ Goal: keep `/improve-prompt` aligned with the latest prompt-engineering guidance
 
 ## Process
 
-1. Read current `.cursor/commands/improve-prompt.md`.
+1. Read current `.cursor/commands/prompt-improve.md`.
 2. Check source guidance for material updates.
-3. Update in `improve-prompt.md`:
+3. Update in `prompt-improve.md`:
    - `Last checked` date;
    - `Guide snapshot hash`;
    - rewrite rules/structure only if needed;
@@ -61,7 +61,7 @@ Return exactly:
 ### Output Requirements
 
 - `Baseline Status`: checked date + whether meaningful source changes were found.
-- `Changes Applied`: bullet list of edits in `improve-prompt.md` (or `No changes`).
+- `Changes Applied`: bullet list of edits in `prompt-improve.md` (or `No changes`).
 - `Material Change Verdict`: one of `Material updates applied` or `No material baseline changes`.
 - `No-Regression Check`: confirm all invariants remain intact.
 

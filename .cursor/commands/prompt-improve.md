@@ -1,6 +1,6 @@
 ---
-name: /improve-prompt
-id: improve-prompt
+name: /prompt-improve
+id: prompt-improve
 category: Productivity
 description: Improve a raw prompt into a clear, execution-ready prompt with manual review and no auto-run.
 argument-hint: [goal/task] [raw prompt or constraints]

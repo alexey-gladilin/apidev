@@ -235,12 +235,15 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Continue with next task
 12. After all tasks complete or blocked:
    - Detect project quality gates from project docs/config (`AGENTS.md`, `README`, CI workflow, Makefile/package manager/python config`)
+   - Resolve concrete commands for execution:
+     - if `Makefile` has `format`, `lint`, `test` targets, use `make format`, `make lint`, `make test`
+     - otherwise use documented project-native equivalents
    - Run quality gates:
 
      ```bash
-     <project_format_command>
-     <project_lint_command>
-     <project_test_command>
+     make format
+     make lint
+     make test
      ```
 
    - If any fail → Report issues and mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`

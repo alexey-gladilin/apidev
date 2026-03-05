@@ -1,0 +1,30 @@
+{
+  "run_id": "<YYYYMMDD-HHMM-issue-slug>",
+  "status": "active",
+  "next_action": "run_research",
+  "risk_level": "UNSET",
+  "issue_summary": "",
+  "scope_paths": [],
+  "suspected_files": [],
+  "changed_files": [],
+  "quality_commands": {
+    "format": "",
+    "lint": "",
+    "test": ""
+  },
+  "gates": {
+    "research": "pending",
+    "coder": "pending",
+    "tester": "pending",
+    "security": "pending",
+    "qa": "pending"
+  },
+  "rejection_counts": {
+    "tester": 0,
+    "security": 0,
+    "qa": 0
+  },
+  "agent_identity_map": {},
+  "last_subagent_evidence": [],
+  "updated_at": "<ISO-8601>"
+}

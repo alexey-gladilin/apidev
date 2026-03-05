@@ -42,6 +42,8 @@ To launch a subagent:
 
 - **Change ID**: OpenSpec change identifier (e.g., `add-user-authentication`)
 - **Context**: Approved proposal in `openspec/changes/<change-id>/`
+- **Persistent Orchestration State**: `openspec/changes/<change-id>/artifacts/plan/orchestration-state.json`
+- **State Template**: `.cursor/agents/templates/orchestration-state.template.json`
 
 ---
 
@@ -71,7 +73,21 @@ To launch a subagent:
      - `openspec/changes/<change-id>/artifacts/plan/*`
    - Read relevant specs with deltas: `openspec/changes/<change-id>/specs/*/spec.md`
 
-3. **Pre-Flight Readiness Check (Mandatory Before Task Execution):**
+3. **Recovery + Rehydrate (Mandatory):**
+   - Read `openspec/changes/<change-id>/artifacts/plan/orchestration-state.json` if present.
+   - If missing, create it before any subagent launch from `.cursor/agents/templates/orchestration-state.template.json`, then set:
+     - `change_id`
+     - `updated_at` (ISO-8601)
+   - If present, treat it as source of truth for resume and continue from `next_action`.
+   - Never continue from conversational memory alone after context compression.
+   - If state is malformed or conflicts with `tasks.md`, STOP and output:
+
+     ```
+     WORKFLOW STOPPED: RECOVERY STATE INVALID
+     - Action Required: repair orchestration-state.json and tasks.md consistency.
+     ```
+
+4. **Pre-Flight Readiness Check (Mandatory Before Task Execution):**
    - Verify project coding conventions are documented (`AGENTS.md`, `openspec/AGENTS.md`, `README`, `docs`, contribution guides).
    - Verify test infrastructure is configured and runnable (framework + command documented in project config/docs).
    - If missing:
@@ -84,7 +100,7 @@ To launch a subagent:
        - Action Required: Document conventions and configure runnable test infrastructure.
        ```
 
-4. **Initialize Tracking:**
+5. **Initialize Tracking:**
    - Output current state:
 
      ```
@@ -95,7 +111,7 @@ To launch a subagent:
      - Blocked Tasks: <count of [BLOCKED - NEEDS HUMAN REVIEW] items>
      ```
 
-5. **Spec Readiness Gate (Mandatory):**
+6. **Spec Readiness Gate (Mandatory):**
    - Launch `spec-analyst` via Task tool with full OpenSpec context.
    - Wait for `SPEC READY` or `SPEC REJECTED`.
    - If `SPEC REJECTED` → STOP workflow before coding.
@@ -170,12 +186,18 @@ Use single-pass implementation for all pending tasks, then run all gates at the 
 1. **Verify Completion:**
 
    First, detect project quality gates from project docs/config (`AGENTS.md`, `README`, CI workflow, Makefile/package manager/python config).
+   Resolve concrete commands (no placeholders in execution logs):
+   - if `Makefile` has targets `format`, `lint`, `test`, use:
+     - `make format`
+     - `make lint`
+     - `make test`
+   - otherwise resolve nearest documented equivalents from project tooling.
 
    ```bash
    # All quality gates must pass
-   <project_format_command>
-   <project_lint_command>
-   <project_test_command>
+   make format
+   make lint
+   make test
    ```
 
    - If any fail → Report issues and mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`
@@ -276,6 +298,28 @@ After each task completion or rejection:
 
 1. Update tasks.md status immediately (single writer rule)
 2. Subagents (`coder`, `tester`, `security`, `qa`) must not edit tasks.md directly
+3. Persist `orchestration-state.json` immediately with:
+   - `next_action` (single explicit resume marker, e.g. `run_tester_for_wave_2`)
+   - `last_completed_stage`
+   - `completed_tasks` / `blocked_tasks`
+   - `rejection_counts`
+   - `agent_identity_map` updates
+   - `updated_at` (ISO-8601)
+4. Save state after every gate verdict (`SPEC READY`, `VERIFIED`, `SECURITY VERIFIED`, `APPROVED`, `REJECTION`) and after every `tasks.md` write.
+
+### Crash-Safe Continuation (No External Resume Script)
+
+The workflow must recover using persisted files only.
+
+1. On every fresh invocation (including after network loss, machine restart, or context compression), perform mandatory rehydrate from:
+   - `tasks.md`
+   - `orchestration-state.json`
+2. Continue strictly from `next_action`; do not recompute execution order from memory.
+3. If `status` in state is `completed` or `paused`, do not auto-resume execution.
+4. If state says a gate is pending, resume with that gate first (for example, run `tester` before launching a new `coder` task).
+5. If evidence is missing for the stage required by `next_action`, STOP and output:
+   - `WORKFLOW STOPPED: RESUME EVIDENCE MISSING`
+6. Never require an external watcher/supervisor for resume in this workflow.
 
 ### Mandatory Orchestration Audit
 
@@ -286,7 +330,6 @@ Before final completion summary, verify there is evidence of subagent execution 
 
 If any stage lacks evidence, the run is invalid and must terminate with:
 `WORKFLOW INVALID: SUBAGENT ORCHESTRATION MISSING`.
-3. Continue with next task
 
 ---
 
@@ -301,7 +344,8 @@ If any stage lacks evidence, the run is invalid and must terminate with:
 - In `BATCH`, pass all pending tasks to coder and run `tester -> security -> qa` only after full batch completion.
 - Trust TDD agents' decisions - do not override rejections
 - Keep tasks.md as single source of truth for progress
-- Run quality gates (format/lint/test) only at finalization
+- Keep `orchestration-state.json` as single source of truth for resume position (`next_action`) and orchestration continuity
+- Run quality gates (format/lint/test) only at finalization, with concrete executable commands (no `<project_*_command>` placeholders)
 - Do not commit code - that's done at session end
 - Focus on workflow orchestration and progress tracking
 
