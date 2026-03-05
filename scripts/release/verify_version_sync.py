@@ -30,13 +30,15 @@ def _read_pyproject_version(root: Path) -> str:
 def _read_init_version(root: Path) -> str:
     init_path = root / "src" / "apidev" / "__init__.py"
     text = init_path.read_text(encoding="utf-8")
-    match = re.search(r"^__version__\s*=\s*['\"]([^'\"]+)['\"]\s*$", text, flags=re.MULTILINE)
-    if not match:
-        raise ValueError("src/apidev/__init__.py: __version__ assignment is missing")
-    version = match.group(1).strip()
-    if not version:
-        raise ValueError("src/apidev/__init__.py: __version__ must be non-empty")
-    return version
+    dynamic_assignment = re.search(
+        r"^__version__\s*=\s*_resolve_package_version\(\)\s*$", text, flags=re.MULTILINE
+    )
+    if dynamic_assignment:
+        return _read_pyproject_version(root)
+
+    raise ValueError(
+        "src/apidev/__init__.py: expected '__version__ = _resolve_package_version()'"
+    )
 
 
 def _normalize_release_version(raw_version: str) -> str:
