@@ -1,11 +1,10 @@
 import sys
-import tomllib
-from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 import os
 from typing import Callable
 
 from typer import Context, Exit, Option, Typer, echo
+from apidev import __version__
 
 from apidev.commands.diff_cmd import diff_command
 from apidev.commands.generate_cmd import generate_command
@@ -70,25 +69,7 @@ app = Typer(
 
 
 def _resolve_cli_version() -> str:
-    # In local repo runs, prefer pyproject version so changes are visible immediately.
-    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
-    if pyproject_path.exists():
-        try:
-            payload = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-            project = payload.get("project")
-            if isinstance(project, dict):
-                pyproject_version = project.get("version")
-                if isinstance(pyproject_version, str) and pyproject_version.strip():
-                    return pyproject_version.strip()
-        except Exception:
-            pass
-
-    try:
-        return package_version("apidev")
-    except PackageNotFoundError:
-        from apidev import __version__
-
-        return __version__
+    return __version__
 
 
 @app.callback(invoke_without_command=True)
