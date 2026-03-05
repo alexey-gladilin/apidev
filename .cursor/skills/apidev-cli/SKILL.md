@@ -29,22 +29,32 @@ description: Использовать apidev CLI как инструментал
 
 Перед первым запуском в сессии:
 
-1. Выполнить `apidev --help`.
-2. Выполнить `apidev <command> --help` для доступных подкоманд.
-3. Если `apidev` недоступен, выполнить discovery через `uv run apidev ...`.
-4. Опираться только на реально найденные команды и флаги.
-5. Не выдумывать команды, даже если пользователь просит похожее действие.
-6. Учитывать глобальные опции `apidev` (`--install-completion`, `--show-completion`) только как сервисные; для прикладных задач использовать подкоманды.
+1. Выполнить `apidev --version` и сохранить `detected_version`.
+2. Выполнить `apidev --help`.
+3. Выполнить `apidev <command> --help` для доступных подкоманд.
+4. Если `apidev` недоступен, выполнить discovery через `uv run apidev ...`.
+5. Опираться только на реально найденные команды и флаги.
+6. Не выдумывать команды, даже если пользователь просит похожее действие.
+7. Учитывать глобальные опции `apidev` (`--version`, `-v`, `--install-completion`, `--show-completion`) только как сервисные; для прикладных задач использовать подкоманды.
+8. Сверять `detected_version` с `snapshot_version` из `references/cli-capabilities.md` и при несовпадении считать snapshot устаревшим.
 
 Smoke-набор discovery (фиксированный порядок):
 
-1. `apidev --help`
-2. `apidev init --help`
-3. `apidev validate --help`
-4. `apidev diff --help`
-5. `apidev gen --help`
+1. `apidev --version`
+2. `apidev --help`
+3. `apidev init --help`
+4. `apidev validate --help`
+5. `apidev diff --help`
+6. `apidev gen --help`
+7. `apidev version --help`
 
 Если `apidev` не найден, повторить тот же набор через `uv run apidev ...`.
+
+Version-gated актуализация:
+
+1. Если `detected_version` отличается от `snapshot_version`, переснять help-snapshot.
+2. Обновить `references/cli-capabilities.md` с новым `captured_at` и `snapshot_version`.
+3. В отчете пользователю явно указывать, что карта возможностей синхронизирована с текущей версией CLI.
 
 Актуальная карта команд и флагов: `references/cli-capabilities.md`.
 
@@ -105,7 +115,7 @@ Smoke-набор discovery (фиксированный порядок):
 
 ## Ограничения и эскалация
 
-- Не выполнять команды вне whitelist: `init`, `validate`, `diff`, `gen`.
+- Не выполнять команды вне whitelist: `init`, `validate`, `diff`, `gen`, `version`.
 - Если пользователь просит неизвестную команду, объяснять ограничение и предлагать ближайший поддерживаемый путь.
 - При конфликтующих флагах (например, `--scaffold` и `--no-scaffold`) останавливать запуск и просить уточнение.
 - Дополнительно валидировать известные конфликтные комбинации:
