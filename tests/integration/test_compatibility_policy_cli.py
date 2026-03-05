@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from apidev.infrastructure.output.writer import SafeWriter
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
 
 runner = CliRunner()
+PATH_PLACEHOLDER_PATTERN = re.compile(r"\{([^{}]+)\}")
 
 
 def _write_project_config(project_dir: Path) -> None:
@@ -36,6 +38,16 @@ dir = ".apidev/templates"
 
 
 def _write_contract(project_dir: Path, api_path: str) -> Path:
+    placeholders = sorted(set(PATH_PLACEHOLDER_PATTERN.findall(api_path)))
+    request_block = ""
+    if placeholders:
+        properties = "\n".join(
+            f"      {name}:\n        type: string\n        required: true" for name in placeholders
+        )
+        request_block = (
+            "request:\n" "  path:\n" "    type: object\n" "    properties:\n" f"{properties}\n"
+        )
+
     contract_path = project_dir / ".apidev" / "contracts" / "billing" / "get_invoice.yaml"
     contract_path.write_text(
         f"""
@@ -44,6 +56,7 @@ path: {api_path}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+{request_block}\
 response:
   status: 200
   body: {{type: object}}

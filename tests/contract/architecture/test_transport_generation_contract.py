@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
@@ -33,6 +34,12 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -146,6 +153,71 @@ errors: []
 
     with pytest.raises(SystemExit):
         generate_command(project_dir=tmp_path, check=False)
+
+
+def test_generated_transport_contract_keeps_legacy_request_backwards_compatibility(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "zeta").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "zeta" / "get_status.yaml").write_text(
+        """
+method: GET
+path: /v1/status
+auth: public
+summary: Get status
+description: Returns status
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    generate_command(project_dir=tmp_path, check=False, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_path = generated_dir_path / "operation_map.py"
+    openapi_docs_path = generated_dir_path / "openapi_docs.py"
+    request_model_path = generated_dir_path / "zeta" / "models" / "get_status_request.py"
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_path.read_text(encoding="utf-8"), {}, operation_map_namespace)
+    operation_map = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    legacy_entry = operation_map["zeta_get_status"]
+
+    assert legacy_entry["request"] == {"path": {}, "query": {}, "body": {}}
+
+    request_model_source = request_model_path.read_text(encoding="utf-8")
+    assert "SCHEMA_FRAGMENT = {}" in request_model_source
+
+    openapi_source = openapi_docs_path.read_text(encoding="utf-8").replace(
+        "from .operation_map import OPERATION_MAP\n\n", ""
+    )
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    operation = paths["/v1/status"]["get"]
+
+    assert "parameters" not in operation
+    assert "requestBody" not in operation
 
 
 def test_generate_rejects_unsafe_contract_filename_for_operation_id(tmp_path: Path) -> None:

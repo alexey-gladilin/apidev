@@ -35,6 +35,12 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}

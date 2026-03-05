@@ -37,7 +37,7 @@
 
 ## Readiness Checklist (pre-implement gate)
 - `proposal.md`, `design.md`, `artifacts/design/*`, `artifacts/plan/*`, `tasks.md` согласованы.
-- Все planning-задачи в `tasks.md` находятся в статусе `[ ]`.
+- `artifacts/plan/*` трактуются как planning-stage snapshot; фактический implementation-tracking ведется в `tasks.md` через `[x]/[ ]` и обновляется только orchestrator (single-writer rule).
 - Verification/DoD у каждой задачи формализованы и проверяемы.
 - Нетривиальные риски (strict validation, path consistency, optional query/body) отражены в фазах.
 

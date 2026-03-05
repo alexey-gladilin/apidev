@@ -148,6 +148,27 @@ include_extensions = true
 - базовые OpenAPI-поля (`operationId`, `summary`, `description`, `deprecated`, `tags`, `security`, `responses`) не меняются;
 - default `include_extensions = true` сохраняет прежнее поведение генерации.
 
+## Контракт `request.path/query/body` для CLI
+
+Поддерживаемая структура request-блока в контракте:
+
+- разрешены только `request.path`, `request.query`, `request.body`;
+- каждый из трех фрагментов должен быть schema-object;
+- неизвестные поля внутри `request` приводят к `validation.request-unknown-field`.
+
+Fail-fast правила path-consistency:
+
+- если route path содержит placeholder (`{...}`), а `request.path` отсутствует, `validate` возвращает `validation.missing-request-path`;
+- если placeholder-ы route и `request.path.properties` не совпадают, `validate` возвращает `validation.request-path-mismatch`;
+- при дублирующихся placeholder-ах в route используется `validation.duplicate-path-placeholder`.
+
+Контракт ожидаемой OpenAPI-проекции из `request`:
+
+- `request.path.properties` публикуются в `parameters` с `in=path`, обязательность всегда `true`;
+- `request.query.properties` публикуются в `parameters` с `in=query`, обязательность вычисляется из `required: true` на property-level;
+- `request.body` публикуется как `requestBody.content.application/json.schema`;
+- если request metadata пустая, `parameters` и `requestBody` отсутствуют в operation.
+
 ## Контракт endpoint-фильтров для `apidev gen`
 
 `apidev gen` поддерживает повторяемые фильтры:
@@ -199,6 +220,71 @@ apidev gen \
   --include-endpoint "billing.*" \
   --include-endpoint "contracts/v1/payments/*.yaml"
 ```
+
+## Примеры `validate` и `gen` для request-сценариев
+
+### `validate`: корректный request-контракт
+
+```bash
+apidev validate --project-dir /tmp/apidev-request-ok --json
+```
+
+Ожидание:
+
+- exit code `0`;
+- `summary.status = ok`;
+- diagnostics пустой массив.
+
+### `validate`: path placeholder без `request.path`
+
+```bash
+apidev validate --project-dir /tmp/apidev-request-missing-path --json
+```
+
+Ожидание:
+
+- exit code `1`;
+- в diagnostics есть `validation.missing-request-path`;
+- location указывает на `<contract>.yaml:request.path`.
+
+### `validate`: неизвестное поле в `request`
+
+```bash
+apidev validate --project-dir /tmp/apidev-request-unknown-field --json
+```
+
+Ожидание:
+
+- exit code `1`;
+- в diagnostics есть `validation.request-unknown-field`;
+- location указывает на `<contract>.yaml:request.<field>`.
+
+### `gen` + `gen --check`: OpenAPI-проекция request
+
+```bash
+# 0) Preconditions: git baseline + release-state должны существовать.
+cd /tmp/apidev-request-openapi
+git init
+git add .
+git commit -m "baseline for request-openapi scenario"
+git tag v0.1.0
+
+# 1) Первый apply-прогон создает/синхронизирует release-state
+#    (по умолчанию .apidev/release-state.json) и фиксирует baseline_ref.
+apidev gen --project-dir /tmp/apidev-request-openapi --baseline-ref v0.1.0
+
+# 2) Повторный check-прогон выполняется на неизмененном состоянии.
+apidev gen --check --project-dir /tmp/apidev-request-openapi --json
+```
+
+Ожидание:
+
+- precondition выполнен: существует git baseline (`v0.1.0`) и `.apidev/release-state.json` после первого `gen`;
+- после `gen` в `<generated_dir>/openapi_docs.py` operation содержит `parameters` и `requestBody`, если они заданы в `request`;
+- `request.path` проецируется в `parameters[*].in = "path"` и `required = true`;
+- `request.query` проецируется в `parameters[*].in = "query"` с property-level required;
+- `request.body` проецируется в `requestBody`;
+- `gen --check` на неизмененном состоянии возвращает `drift_status = no-drift` и exit code `0`.
 
 ## Контракт help и UX
 

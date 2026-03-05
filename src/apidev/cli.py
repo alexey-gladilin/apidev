@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 import os
-from typing import Callable
+from typing import Callable, cast
 
 from typer import Context, Exit, Option, Typer, echo
 from apidev import __version__
@@ -50,13 +50,16 @@ def _patch_typer_completion_shell_detection() -> None:
     if getattr(completion, "_APIDEV_SHELL_PATCHED", False):
         return
 
-    original_detector = completion._get_shell_name
+    original_detector_obj = getattr(completion, "_get_shell_name", None)
+    if not callable(original_detector_obj):
+        return
+    original_detector = cast(Callable[[], str | None], original_detector_obj)
 
     def _patched_detector() -> str | None:
         return _safe_detect_shell_name(original_detector)
 
-    completion._get_shell_name = _patched_detector
-    completion._APIDEV_SHELL_PATCHED = True
+    setattr(completion, "_get_shell_name", _patched_detector)
+    setattr(completion, "_APIDEV_SHELL_PATCHED", True)
 
 
 _patch_typer_completion_shell_detection()

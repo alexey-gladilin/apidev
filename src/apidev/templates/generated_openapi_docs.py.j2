@@ -64,6 +64,69 @@ def _build_responses(entry: dict[str, object]) -> dict[str, dict[str, object]]:
     return responses
 
 
+def _build_parameters_from_fragment(
+    schema_fragment: object,
+    *,
+    location: str,
+    required_by_default: bool,
+) -> list[dict[str, object]]:
+    if not isinstance(schema_fragment, dict):
+        return []
+    properties = schema_fragment.get("properties")
+    if not isinstance(properties, dict):
+        return []
+
+    parameters: list[dict[str, object]] = []
+    for name in sorted(properties):
+        raw_schema = properties.get(name)
+        if not isinstance(raw_schema, dict):
+            continue
+        required = required_by_default or raw_schema.get("required") is True
+        parameters.append(
+            {
+                "name": name,
+                "in": location,
+                "required": required,
+                "schema": dict(raw_schema),
+            }
+        )
+    return parameters
+
+
+def _build_request_parameters(entry: dict[str, object]) -> list[dict[str, object]]:
+    request = entry.get("request")
+    if not isinstance(request, dict):
+        return []
+    return [
+        *_build_parameters_from_fragment(
+            request.get("path"),
+            location="path",
+            required_by_default=True,
+        ),
+        *_build_parameters_from_fragment(
+            request.get("query"),
+            location="query",
+            required_by_default=False,
+        ),
+    ]
+
+
+def _build_request_body(entry: dict[str, object]) -> dict[str, object] | None:
+    request = entry.get("request")
+    if not isinstance(request, dict):
+        return None
+    body_schema = request.get("body")
+    if not isinstance(body_schema, dict) or not body_schema:
+        return None
+    return {
+        "content": {
+            "application/json": {
+                "schema": body_schema,
+            }
+        }
+    }
+
+
 def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
     """Build deterministic OpenAPI `paths` fragment from generated operation metadata."""
     paths: dict[str, dict[str, dict[str, object]]] = {}
@@ -98,6 +161,12 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
         }
         if security is not None:
             operation["security"] = security
+        parameters = _build_request_parameters(entry)
+        if parameters:
+            operation["parameters"] = parameters
+        request_body = _build_request_body(entry)
+        if request_body is not None:
+            operation["requestBody"] = request_body
         methods = paths.setdefault(path, {})
         methods[method] = operation
     return paths

@@ -19,6 +19,11 @@ OPERATION_MAP = {
         "response_example": {{ entry.response_example_literal }},
         "error_schemas": {{ entry.error_schemas_literal }},
         "error_examples": {{ entry.error_examples_literal }},
+        "request": {
+            "path": {{ entry.request_path_literal }},
+            "query": {{ entry.request_query_literal }},
+            "body": {{ entry.request_body_literal }},
+        },
         "router_module": {{ entry.router_module | tojson }},
         "models": {
             "request": {{ entry.models.request | tojson }},

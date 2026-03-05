@@ -14,6 +14,10 @@ SCHEMA_MISSING_FIELD = "SCHEMA_MISSING_FIELD"
 SCHEMA_INVALID_TYPE = "SCHEMA_INVALID_TYPE"
 SCHEMA_INVALID_VALUE = "SCHEMA_INVALID_VALUE"
 SCHEMA_UNKNOWN_FIELD = "SCHEMA_UNKNOWN_FIELD"
+REQUEST_UNKNOWN_FIELD = "validation.request-unknown-field"
+REQUEST_PATH_MISMATCH = "validation.request-path-mismatch"
+MISSING_REQUEST_PATH = "validation.missing-request-path"
+DUPLICATE_PATH_PLACEHOLDER = "validation.duplicate-path-placeholder"
 
 RULE_PARSE = "schema.yaml.parse"
 RULE_ROOT_SHAPE = "schema.contract.root"
@@ -24,7 +28,17 @@ RULE_FIELD_UNKNOWN = "schema.contract.unknown_field"
 JSON_SCHEMA_TYPES = {"object", "array", "string", "integer", "number", "boolean", "null"}
 HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 AUTH_MODES = {"public", "bearer"}
-ROOT_ALLOWED_FIELDS = {"method", "path", "auth", "summary", "description", "response", "errors"}
+ROOT_ALLOWED_FIELDS = {
+    "method",
+    "path",
+    "auth",
+    "summary",
+    "description",
+    "request",
+    "response",
+    "errors",
+}
+REQUEST_ALLOWED_FIELDS = {"path", "query", "body"}
 RESPONSE_ALLOWED_FIELDS = {"status", "body"}
 ERROR_ALLOWED_FIELDS = {"code", "http_status", "body", "example"}
 SCHEMA_ALLOWED_FIELDS = {
@@ -37,6 +51,7 @@ SCHEMA_ALLOWED_FIELDS = {
     "example",
 }
 PATH_SAFE_PATTERN = re.compile(r"^/[A-Za-z0-9\-._~/%{}:]*$")
+PATH_PLACEHOLDER_PATTERN = re.compile(r"\{([^{}]+)\}")
 
 
 def validate_contract_schema(
@@ -98,6 +113,7 @@ def validate_contract_schema(
     summary = data.get("summary")
     description = data.get("description")
     response = data.get("response")
+    request = data.get("request")
     errors = data.get("errors")
 
     diagnostics.extend(_require_type(relpath, "method", method, str))
@@ -105,6 +121,7 @@ def validate_contract_schema(
     diagnostics.extend(_require_type(relpath, "auth", auth, str))
     diagnostics.extend(_require_type(relpath, "summary", summary, str))
     diagnostics.extend(_require_type(relpath, "description", description, str))
+    diagnostics.extend(_require_type(relpath, "request", request, dict))
     diagnostics.extend(_require_type(relpath, "response", response, dict))
     diagnostics.extend(_require_type(relpath, "errors", errors, list))
 
@@ -220,6 +237,45 @@ def validate_contract_schema(
                 rule=RULE_FIELD_VALUE,
             )
         )
+
+    request_has_unknown_fields = False
+    request_path_fragment: Any = None
+    if isinstance(request, dict):
+        request_unknown_fields = _report_unknown_fields(
+            relpath,
+            "request",
+            request,
+            REQUEST_ALLOWED_FIELDS,
+            diagnostic_code=REQUEST_UNKNOWN_FIELD,
+        )
+        request_has_unknown_fields = bool(request_unknown_fields)
+        diagnostics.extend(request_unknown_fields)
+        if not request_unknown_fields:
+            for request_fragment in sorted(REQUEST_ALLOWED_FIELDS):
+                request_payload = request.get(request_fragment)
+                diagnostics.extend(
+                    _require_type(relpath, f"request.{request_fragment}", request_payload, dict)
+                )
+                if isinstance(request_payload, dict):
+                    diagnostics.extend(
+                        _validate_body_schema(
+                            relpath,
+                            f"request.{request_fragment}",
+                            request_payload,
+                            unknown_field_code=REQUEST_UNKNOWN_FIELD,
+                        )
+                    )
+        request_path_fragment = request.get("path")
+
+    diagnostics.extend(
+        _validate_request_path_consistency(
+            relpath=relpath,
+            route_path=path,
+            request=request,
+            request_path_fragment=request_path_fragment,
+            skip_checks=request_has_unknown_fields,
+        )
+    )
 
     response_status: Any = None
     response_body: Any = None
@@ -386,11 +442,21 @@ def _require_type(
 
 
 def _validate_body_schema(
-    relpath: str, field_name: str, schema_fragment: dict[str, Any]
+    relpath: str,
+    field_name: str,
+    schema_fragment: dict[str, Any],
+    *,
+    unknown_field_code: str = SCHEMA_UNKNOWN_FIELD,
 ) -> list[ValidationDiagnostic]:
     diagnostics: list[ValidationDiagnostic] = []
     diagnostics.extend(
-        _report_unknown_fields(relpath, field_name, schema_fragment, SCHEMA_ALLOWED_FIELDS)
+        _report_unknown_fields(
+            relpath,
+            field_name,
+            schema_fragment,
+            SCHEMA_ALLOWED_FIELDS,
+            diagnostic_code=unknown_field_code,
+        )
     )
 
     declared_type = schema_fragment.get("type")
@@ -660,8 +726,77 @@ def _normalize_error_example(
     return normalized_error
 
 
+def _validate_request_path_consistency(
+    *,
+    relpath: str,
+    route_path: Any,
+    request: Any,
+    request_path_fragment: Any,
+    skip_checks: bool,
+) -> list[ValidationDiagnostic]:
+    if skip_checks or not isinstance(route_path, str):
+        return []
+
+    placeholders = PATH_PLACEHOLDER_PATTERN.findall(route_path)
+    if not placeholders:
+        return []
+
+    duplicate_placeholders = sorted({name for name in placeholders if placeholders.count(name) > 1})
+    if duplicate_placeholders:
+        duplicate_list = ", ".join(duplicate_placeholders)
+        return [
+            ValidationDiagnostic(
+                code=DUPLICATE_PATH_PLACEHOLDER,
+                severity="error",
+                message=f"Duplicate path placeholder(s): {duplicate_list}.",
+                location=f"{relpath}:path",
+                rule=RULE_FIELD_VALUE,
+            )
+        ]
+
+    if not isinstance(request, dict) or not isinstance(request_path_fragment, dict):
+        return [
+            ValidationDiagnostic(
+                code=MISSING_REQUEST_PATH,
+                severity="error",
+                message=("Field 'request.path' is required when route path contains placeholders."),
+                location=f"{relpath}:request.path",
+                rule=RULE_REQUIRED_FIELD,
+            )
+        ]
+
+    request_properties = request_path_fragment.get("properties")
+    request_path_names = set(request_properties) if isinstance(request_properties, dict) else set()
+    route_path_names = set(placeholders)
+    if request_path_names == route_path_names:
+        return []
+
+    missing = sorted(route_path_names - request_path_names)
+    extra = sorted(request_path_names - route_path_names)
+    parts: list[str] = []
+    if missing:
+        parts.append(f"missing={','.join(missing)}")
+    if extra:
+        parts.append(f"extra={','.join(extra)}")
+    details = "; ".join(parts)
+    return [
+        ValidationDiagnostic(
+            code=REQUEST_PATH_MISMATCH,
+            severity="error",
+            message=f"Route path placeholders and request.path mismatch: {details}.",
+            location=f"{relpath}:request.path",
+            rule=RULE_FIELD_VALUE,
+        )
+    ]
+
+
 def _report_unknown_fields(
-    relpath: str, context_name: str, payload: dict[str, Any], allowed_fields: set[str]
+    relpath: str,
+    context_name: str,
+    payload: dict[str, Any],
+    allowed_fields: set[str],
+    *,
+    diagnostic_code: str = SCHEMA_UNKNOWN_FIELD,
 ) -> list[ValidationDiagnostic]:
     diagnostics: list[ValidationDiagnostic] = []
     for field_name in sorted(payload):
@@ -669,7 +804,7 @@ def _report_unknown_fields(
             continue
         diagnostics.append(
             ValidationDiagnostic(
-                code=SCHEMA_UNKNOWN_FIELD,
+                code=diagnostic_code,
                 severity="error",
                 message=f"Unknown field '{field_name}' in {context_name}.",
                 location=f"{relpath}:{context_name}.{field_name}",

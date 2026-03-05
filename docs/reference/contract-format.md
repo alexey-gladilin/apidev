@@ -21,7 +21,7 @@
 
 - API contract: YAML-файл операции в `.apidev/contracts/<domain>/<operation>.yaml` (этот документ).
 - Evolution contract: JSON release-state в `.apidev/release-state.json` (раздел ниже).
-- CLI diagnostics contract: machine-readable JSON envelope для `validate|diff|gen` в [docs/reference/cli-contract.md](docs/reference/cli-contract.md).
+- CLI diagnostics contract: machine-readable JSON envelope для `validate|diff|gen` в [cli-contract.md](./cli-contract.md).
 
 ## Размещение файлов
 
@@ -224,6 +224,8 @@ errors:
 
 Неизвестные root-поля запрещены.
 
+Поле `request` поддерживается как опциональный root-блок. Если `request` отсутствует, генератор использует пустую request-модель (`path/query/body = {}`).
+
 ### `method`
 
 - Тип: `string`
@@ -251,6 +253,32 @@ errors:
 - Тип: `string`
 - Обязательные
 - Не должны быть пустыми строками
+
+## Блок `request`
+
+- Тип: `object`
+- Опциональный
+- Допустимые поля: `path`, `query`, `body`
+- Любые другие поля внутри `request` запрещены и дают `validation.request-unknown-field`
+
+### `request.path`
+
+- Тип: `object` (schema-фрагмент, см. раздел ниже)
+- Используется для path-параметров route placeholder-ов (`/v1/items/{item_id}`)
+- Если в `path` есть placeholder-ы, `request.path` становится обязательным
+- Если набор placeholder-ов и набор `request.path.properties` не совпадает, валидация завершается с `validation.request-path-mismatch`
+
+### `request.query`
+
+- Тип: `object` (schema-фрагмент)
+- Используется для query-параметров
+- Для каждого `request.query.properties.<name>.required: true` в OpenAPI выставляется `required: true` у соответствующего query parameter
+
+### `request.body`
+
+- Тип: `object` (schema-фрагмент)
+- Используется как источник OpenAPI `requestBody.content.application/json.schema`
+- Пустой объект `{}` не формирует `requestBody` в OpenAPI
 
 ## Блок `response`
 
@@ -393,6 +421,73 @@ Root-level блок `examples` в контракте не поддерживае
 
 Если два контракта описывают одинаковые `method + path`, валидация завершается ошибкой.
 
+## Ожидаемая OpenAPI-проекция для `request`
+
+Нормативные правила проекции:
+
+- `request.path.properties.*` проецируется в OpenAPI `parameters` c `"in": "path"` и `"required": true`.
+- `request.query.properties.*` проецируется в OpenAPI `parameters` c `"in": "query"`; required вычисляется из `required: true` на уровне свойства.
+- `request.body` проецируется в OpenAPI `requestBody`.
+- Если `request.path/query/body` пустые, OpenAPI-узлы `parameters`/`requestBody` не создаются.
+
+Пример контракта:
+
+```yaml
+method: POST
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Update invoice
+description: Update invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+  query:
+    type: object
+    properties:
+      expand:
+        type: boolean
+        required: true
+      locale:
+        type: string
+  body:
+    type: object
+    properties:
+      include_history:
+        type: boolean
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+```
+
+Ожидаемая OpenAPI-проекция (фрагмент operation):
+
+```json
+{
+  "parameters": [
+    {"name": "invoice_id", "in": "path", "required": true, "schema": {"type": "string"}},
+    {"name": "expand", "in": "query", "required": true, "schema": {"type": "boolean", "required": true}},
+    {"name": "locale", "in": "query", "required": false, "schema": {"type": "string"}}
+  ],
+  "requestBody": {
+    "content": {
+      "application/json": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "include_history": {"type": "boolean"}
+          }
+        }
+      }
+    }
+  }
+}
+```
+
 ## Форматы вывода validate
 
 ### Human mode (по умолчанию)
@@ -417,7 +512,7 @@ Root-level блок `examples` в контракте не поддерживае
 - `location`
 - `rule`
 
-Нормативный cross-command формат machine-readable diagnostics для всех ключевых CLI-режимов (`validate|diff|gen`) задается в [docs/reference/cli-contract.md](docs/reference/cli-contract.md), раздел `Контракт machine-readable diagnostics (JSON)`.
+Нормативный cross-command формат machine-readable diagnostics для всех ключевых CLI-режимов (`validate|diff|gen`) задается в [cli-contract.md](./cli-contract.md), раздел `Контракт machine-readable diagnostics (JSON)`.
 
 ## Примеры невалидных сценариев
 
@@ -448,6 +543,39 @@ x_custom: true
 
 Результат: ошибка `SCHEMA_UNKNOWN_FIELD`.
 
+### Неизвестное поле в `request`
+
+```yaml
+request:
+  headers:
+    type: object
+    properties: {}
+```
+
+Результат: ошибка `validation.request-unknown-field` для `request.headers`.
+
+### Placeholder-ы route без `request.path`
+
+```yaml
+path: /v1/invoices/{invoice_id}
+```
+
+Результат: ошибка `validation.missing-request-path`.
+
+### Несовпадение placeholder-ов и `request.path`
+
+```yaml
+path: /v1/invoices/{invoice_id}/{line_id}
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+```
+
+Результат: ошибка `validation.request-path-mismatch`.
+
 ### Неподдерживаемый root-level `examples`
 
 ```yaml
@@ -472,11 +600,20 @@ Semantic-level:
 - `SEMANTIC_DUPLICATE_OPERATION_ID`
 - `SEMANTIC_DUPLICATE_ENDPOINT_SIGNATURE`
 
+Request-level:
+
+- `validation.request-unknown-field`
+- `validation.missing-request-path`
+- `validation.request-path-mismatch`
+- `validation.duplicate-path-placeholder`
+
 ## Практический чеклист перед PR
 
 - контракт лежит в корректной директории;
 - root-поля заполнены и не содержат неизвестных ключей;
 - `method/auth/path/status` соответствуют допустимым значениям;
+- `request` (если задан) содержит только `path/query/body`;
+- placeholder-ы в route совпадают с `request.path.properties`, если route содержит `{...}`;
 - `response.body` и `errors[*].body` имеют корректные schema-фрагменты;
 - `errors[*].code` уникальны и в формате `UPPER_SNAKE_CASE`;
 - `apidev validate` проходит в human и `--json` режимах.

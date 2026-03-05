@@ -749,6 +749,13 @@ path: /v1/items/{item_id}
 auth: public
 summary: S
 description: D
+request:
+  path:
+    type: object
+    properties:
+      item_id:
+        type: string
+        required: true
 response:
   status: 200
   body:
@@ -783,6 +790,13 @@ path: /v1/items/{item_id}
 auth: public
 summary: S
 description: D
+request:
+  path:
+    type: object
+    properties:
+      item_id:
+        type: string
+        required: true
 response:
   status: 200
   body:

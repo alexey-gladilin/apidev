@@ -12,7 +12,7 @@
 ## Verification Workflow
 - Проверить связность фазового плана: `phase-01.md` -> `phase-03.md`.
 - Проверить синхронизацию `plan <-> design <-> spec delta <-> tasks`.
-- Проверить, что в `tasks.md` все planning-задачи отмечены только как `[ ]`.
+- Учитывать, что plan-артефакты являются planning-stage snapshot: текущий прогресс реализации фиксируется только в `tasks.md` через статусы `[x]/[ ]` под single-writer контролем orchestrator.
 - Прогнать strict validation: `openspec validate 013-extend-contract --strict --no-interactive`.
 
 ## Связи

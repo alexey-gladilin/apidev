@@ -90,7 +90,9 @@ class DiffService:
             raw_scaffold_dir=config.generator.scaffold_dir,
         )
 
-        operations = self.loader.load(paths.contracts_dir)
+        operations = self._hydrate_loaded_operations_with_request_metadata(
+            self.loader.load(paths.contracts_dir)
+        )
         errors = ensure_unique_operation_ids(operations)
         if errors:
             raise ValueError("; ".join(errors))
@@ -677,6 +679,8 @@ class DiffService:
     def _build_operation_from_contract_data(
         self, contract_relpath: Path, data: dict[str, object]
     ) -> Operation:
+        request_data = data.get("request", {})
+        request_dict = request_data if isinstance(request_data, dict) else {}
         response_data = data.get("response", {})
         response_dict = response_data if isinstance(response_data, dict) else {}
         errors = data.get("errors", [])
@@ -693,9 +697,39 @@ class DiffService:
                 response_status=int(response_dict.get("status", 200)),
                 response_body=response_dict.get("body", {}),
                 errors=errors_list,
+                request_path=self._normalize_request_fragment(request_dict.get("path")),
+                request_query=self._normalize_request_fragment(request_dict.get("query")),
+                request_body=self._normalize_request_fragment(request_dict.get("body")),
             ),
             contract_relpath=contract_relpath,
         )
+
+    def _normalize_request_fragment(self, fragment: object) -> dict[str, object]:
+        if isinstance(fragment, dict):
+            return dict(fragment)
+        return {}
+
+    def _hydrate_loaded_operations_with_request_metadata(
+        self, operations: list[Operation]
+    ) -> list[Operation]:
+        for operation in operations:
+            request_path: dict[str, object] = {}
+            request_query: dict[str, object] = {}
+            request_body: dict[str, object] = {}
+            try:
+                source_data = yaml.safe_load(self.fs.read_text(operation.contract.source_path))
+            except (OSError, yaml.YAMLError):
+                source_data = None
+            if isinstance(source_data, dict):
+                request_data = source_data.get("request", {})
+                request_dict = request_data if isinstance(request_data, dict) else {}
+                request_path = self._normalize_request_fragment(request_dict.get("path"))
+                request_query = self._normalize_request_fragment(request_dict.get("query"))
+                request_body = self._normalize_request_fragment(request_dict.get("body"))
+            operation.contract.request_path = request_path
+            operation.contract.request_query = request_query
+            operation.contract.request_body = request_body
+        return operations
 
     def _run_git_command(self, project_dir: Path, args: tuple[str, ...]) -> str | None:
         try:
@@ -1025,6 +1059,9 @@ class DiffService:
             "error_examples_literal": self._python_literal(
                 [item["example"] for item in error_schemas]
             ),
+            "request_path_literal": self._python_literal(operation.contract.request_path),
+            "request_query_literal": self._python_literal(operation.contract.request_query),
+            "request_body_literal": self._python_literal(operation.contract.request_body),
             "router_module": f"{domain_segment}.routes.{operation_segment}",
             "models": {
                 "request": f"{module_root}_request.{class_base}Request",
@@ -1261,6 +1298,15 @@ class DiffService:
         return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     def _model_schema_fragment(self, operation: Operation, kind: str) -> object:
+        if kind == "request":
+            request_fragment = {
+                "path": dict(operation.contract.request_path),
+                "query": dict(operation.contract.request_query),
+                "body": dict(operation.contract.request_body),
+            }
+            if not any(request_fragment.values()):
+                return {}
+            return request_fragment
         if kind == "response":
             return operation.contract.response_body
         if kind == "error":

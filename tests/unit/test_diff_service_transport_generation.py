@@ -202,6 +202,59 @@ errors: []
     assert first_snapshot == second_snapshot
 
 
+def test_diff_service_request_model_schema_fragment_snapshot(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+  query:
+    type: object
+    properties:
+      include_payments:
+        type: boolean
+  body:
+    type: object
+    properties:
+      trace_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    request_model = next(
+        change for change in plan.changes if change.path.name == "get_invoice_request.py"
+    )
+
+    expected_fragment = """
+SCHEMA_FRAGMENT = {
+    "body": {"properties": {"trace_id": {"type": "string"}}, "type": "object"},
+    "path": {"properties": {"invoice_id": {"type": "string"}}, "type": "object"},
+    "query": {
+        "properties": {"include_payments": {"type": "boolean"}},
+        "type": "object",
+    },
+}
+""".strip()
+    assert expected_fragment in request_model.content
+
+
 def test_diff_service_normalizes_single_level_domain_and_operation_segments(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(
@@ -635,6 +688,97 @@ errors: []
     assert entry["domain"] == "billing"
 
 
+def test_operation_map_publishes_consistent_request_metadata_contract(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+  query:
+    type: object
+    properties:
+      expand:
+        type: boolean
+  body:
+    type: object
+    properties:
+      include_history:
+        type: boolean
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+    _write_contract(
+        tmp_path,
+        "zeta/get_status.yaml",
+        """
+method: GET
+path: /v1/status
+auth: public
+summary: Get status
+description: Returns status
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, namespace)
+    operation_map_value = cast(dict[str, dict[str, object]], namespace["OPERATION_MAP"])
+
+    for entry in operation_map_value.values():
+        assert "request" in entry
+        request_metadata = cast(dict[str, object], entry["request"])
+        assert set(request_metadata.keys()) == {"path", "query", "body"}
+        assert isinstance(request_metadata["path"], dict)
+        assert isinstance(request_metadata["query"], dict)
+        assert isinstance(request_metadata["body"], dict)
+
+    billing_entry = operation_map_value["billing_get_invoice"]
+    assert billing_entry["request"] == {
+        "path": {
+            "properties": {"invoice_id": {"type": "string"}},
+            "type": "object",
+        },
+        "query": {
+            "properties": {"expand": {"type": "boolean"}},
+            "type": "object",
+        },
+        "body": {
+            "properties": {"include_history": {"type": "boolean"}},
+            "type": "object",
+        },
+    }
+
+    legacy_entry = operation_map_value["zeta_get_status"]
+    assert legacy_entry["request"] == {
+        "path": {},
+        "query": {},
+        "body": {},
+    }
+
+
 def test_openapi_projection_includes_domain_tags_security_and_error_responses(
     tmp_path: Path,
 ) -> None:
@@ -685,3 +829,116 @@ errors:
     assert get_operation["security"] == [{"bearerAuth": []}]
     assert "200" in get_operation["responses"]
     assert "404" in get_operation["responses"]
+
+
+def test_openapi_projection_builds_parameters_and_request_body_from_request_metadata(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/update_invoice.yaml",
+        """
+method: POST
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Update invoice
+description: Update invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+  query:
+    type: object
+    properties:
+      expand:
+        type: boolean
+        required: true
+      locale:
+        type: string
+  body:
+    type: object
+    properties:
+      include_history:
+        type: boolean
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+    _write_contract(
+        tmp_path,
+        "zeta/get_status.yaml",
+        """
+method: GET
+path: /v1/status
+auth: public
+summary: Get status
+description: Returns status
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+
+    openapi_source = openapi_docs.content.replace(
+        "from .operation_map import OPERATION_MAP\n\n", ""
+    )
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+
+    post_operation = paths["/v1/invoices/{invoice_id}"]["post"]
+    assert post_operation["parameters"] == [
+        {
+            "in": "path",
+            "name": "invoice_id",
+            "required": True,
+            "schema": {"type": "string"},
+        },
+        {
+            "in": "query",
+            "name": "expand",
+            "required": True,
+            "schema": {"required": True, "type": "boolean"},
+        },
+        {
+            "in": "query",
+            "name": "locale",
+            "required": False,
+            "schema": {"type": "string"},
+        },
+    ]
+    assert post_operation["requestBody"] == {
+        "content": {
+            "application/json": {
+                "schema": {
+                    "properties": {"include_history": {"type": "boolean"}},
+                    "type": "object",
+                }
+            }
+        }
+    }
+
+    get_operation = paths["/v1/status"]["get"]
+    assert "parameters" not in get_operation
+    assert "requestBody" not in get_operation

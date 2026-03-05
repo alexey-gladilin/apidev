@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -14,3 +14,6 @@ class EndpointContract:
     response_status: int
     response_body: dict[str, Any]
     errors: list[dict[str, Any]]
+    request_path: dict[str, Any] = field(default_factory=dict)
+    request_query: dict[str, Any] = field(default_factory=dict)
+    request_body: dict[str, Any] = field(default_factory=dict)

@@ -134,6 +134,338 @@ errors:
     assert '"description": "Invoice identifier"' in response_model.read_text(encoding="utf-8")
 
 
+def test_generate_request_model_schema_snapshot_from_request_fragments(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+  query:
+    type: object
+    properties:
+      expand:
+        type: string
+  body:
+    type: object
+    properties:
+      comment:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+    request_model = (
+        tmp_path / ".apidev" / "output" / "api" / "billing" / "models" / "get_invoice_request.py"
+    )
+    content = request_model.read_text(encoding="utf-8")
+
+    expected_fragment = """
+SCHEMA_FRAGMENT = {
+    "body": {"properties": {"comment": {"type": "string"}}, "type": "object"},
+    "path": {"properties": {"invoice_id": {"type": "string"}}, "type": "object"},
+    "query": {"properties": {"expand": {"type": "string"}}, "type": "object"},
+}
+    """.strip()
+    assert expected_fragment in content
+
+
+def test_generate_legacy_contract_without_request_keeps_projection_backwards_compatible(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "zeta").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "zeta" / "get_status.yaml").write_text(
+        """
+method: GET
+path: /v1/status
+auth: public
+summary: Get status
+description: Returns status
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    request_model_source = (
+        generated_dir_path / "zeta" / "models" / "get_status_request.py"
+    ).read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+    assert operation_map_value["zeta_get_status"]["request"] == {
+        "path": {},
+        "query": {},
+        "body": {},
+    }
+    assert "SCHEMA_FRAGMENT = {}" in request_model_source
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    get_operation = paths["/v1/status"]["get"]
+
+    assert "parameters" not in get_operation
+    assert "requestBody" not in get_operation
+
+
+def test_generate_openapi_request_projection_snapshot_from_request_metadata(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "contracts" / "zeta").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+
+[contracts]
+dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[templates]
+dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "update_invoice.yaml").write_text(
+        """
+method: POST
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Update invoice
+description: Update invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+  query:
+    type: object
+    properties:
+      expand:
+        type: boolean
+        required: true
+      locale:
+        type: string
+  body:
+    type: object
+    properties:
+      include_history:
+        type: boolean
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "zeta" / "get_status.yaml").write_text(
+        """
+method: GET
+path: /v1/status
+auth: public
+summary: Get status
+description: Returns status
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+
+    expected_post_operation = {
+        "operationId": "billing_update_invoice",
+        "summary": "Update invoice",
+        "description": "Update invoice details",
+        "deprecated": False,
+        "tags": ["billing"],
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "object"},
+                        "example": None,
+                    }
+                },
+            }
+        },
+        "x-apidev-auth": "bearer",
+        "x-apidev-deprecation": {
+            "status": "active",
+            "deprecated_since_release": None,
+        },
+        "x-apidev-errors": [],
+        "security": [{"bearerAuth": []}],
+        "parameters": [
+            {
+                "in": "path",
+                "name": "invoice_id",
+                "required": True,
+                "schema": {"type": "string"},
+            },
+            {
+                "in": "query",
+                "name": "expand",
+                "required": True,
+                "schema": {"required": True, "type": "boolean"},
+            },
+            {
+                "in": "query",
+                "name": "locale",
+                "required": False,
+                "schema": {"type": "string"},
+            },
+        ],
+        "requestBody": {
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "properties": {"include_history": {"type": "boolean"}},
+                        "type": "object",
+                    }
+                }
+            }
+        },
+    }
+    assert paths["/v1/invoices/{invoice_id}"]["post"] == expected_post_operation
+
+    expected_get_operation = {
+        "operationId": "zeta_get_status",
+        "summary": "Get status",
+        "description": "Returns status",
+        "deprecated": False,
+        "tags": ["zeta"],
+        "responses": {
+            "200": {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {"type": "object"},
+                        "example": None,
+                    }
+                },
+            }
+        },
+        "x-apidev-auth": "public",
+        "x-apidev-deprecation": {
+            "status": "active",
+            "deprecated_since_release": None,
+        },
+        "x-apidev-errors": [],
+    }
+    assert paths["/v1/status"]["get"] == expected_get_operation
+
+
 def test_generate_creates_domain_package_markers_and_runtime_imports(tmp_path: Path) -> None:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(
