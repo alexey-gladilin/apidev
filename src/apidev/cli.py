@@ -5,7 +5,7 @@ from pathlib import Path
 import os
 from typing import Callable
 
-from typer import Context, Exit, Typer, echo
+from typer import Context, Exit, Option, Typer, echo
 
 from apidev.commands.diff_cmd import diff_command
 from apidev.commands.generate_cmd import generate_command
@@ -92,7 +92,20 @@ def _resolve_cli_version() -> str:
 
 
 @app.callback(invoke_without_command=True)
-def _default_help(ctx: Context) -> None:
+def _default_help(
+    ctx: Context,
+    version: bool = Option(
+        False,
+        "--version",
+        "-v",
+        help="Print application version and exit.",
+        is_eager=True,
+    ),
+) -> None:
+    if version:
+        echo(_resolve_cli_version())
+        raise Exit(0)
+
     if ctx.invoked_subcommand is None:
         from rich.console import Console
         from rich.panel import Panel
@@ -119,6 +132,11 @@ app.command("validate", help="Validate contracts and rules")(validate_command)
 app.command("diff", help="Preview generated file changes")(diff_command)
 app.command("gen", help="Generate code from contracts")(generate_command)
 app.command("generate", hidden=True)(generate_command)
+
+
+@app.command("version", help="Print application version")
+def version_command() -> None:
+    echo(_resolve_cli_version())
 
 
 def main() -> None:

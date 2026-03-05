@@ -2,7 +2,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from apidev.cli import app, _safe_detect_shell_name
+import apidev.cli as cli
 from apidev.application.dto.diagnostics import ValidationResult
 from apidev.application.dto.generation_plan import (
     CompatibilityDiagnostic,
@@ -29,7 +29,7 @@ def test_shell_detection_fallback_handles_shellingham_runtime_error(monkeypatch)
     def _failing_detector() -> str | None:
         raise RuntimeError("Shell detection not implemented for 'posix'")
 
-    assert _safe_detect_shell_name(_failing_detector) == "zsh"
+    assert cli._safe_detect_shell_name(_failing_detector) == "zsh"
 
 
 def test_shell_detection_fallback_handles_missing_shellingham_backend(monkeypatch) -> None:
@@ -38,7 +38,7 @@ def test_shell_detection_fallback_handles_missing_shellingham_backend(monkeypatc
     def _missing_backend_detector() -> str | None:
         raise ModuleNotFoundError("No module named 'shellingham.posix'", name="shellingham.posix")
 
-    assert _safe_detect_shell_name(_missing_backend_detector) == "bash"
+    assert cli._safe_detect_shell_name(_missing_backend_detector) == "bash"
 
 
 def test_shell_detection_fallback_defaults_to_bash_without_shell_env(monkeypatch) -> None:
@@ -47,12 +47,12 @@ def test_shell_detection_fallback_defaults_to_bash_without_shell_env(monkeypatch
     def _failing_detector() -> str | None:
         raise RuntimeError("Shell detection not implemented for 'posix'")
 
-    assert _safe_detect_shell_name(_failing_detector) == "bash"
+    assert cli._safe_detect_shell_name(_failing_detector) == "bash"
 
 
 def test_shell_detection_fallback_handles_none_from_detector(monkeypatch) -> None:
     monkeypatch.setenv("SHELL", "/bin/zsh")
-    assert _safe_detect_shell_name(lambda: None) == "zsh"
+    assert cli._safe_detect_shell_name(lambda: None) == "zsh"
 
 
 def _read_cli_contract() -> str:
@@ -60,7 +60,7 @@ def _read_cli_contract() -> str:
 
 
 def test_no_args_shows_help_by_default() -> None:
-    result = runner.invoke(app, [])
+    result = runner.invoke(cli.app, [])
 
     assert result.exit_code == 0
     assert "Usage:" in result.output
@@ -68,22 +68,40 @@ def test_no_args_shows_help_by_default() -> None:
 
 
 def test_root_help_supports_short_flag() -> None:
-    result = runner.invoke(app, ["-h"])
+    result = runner.invoke(cli.app, ["-h"])
 
     assert result.exit_code == 0
     assert "Usage:" in result.output
     assert "Commands" in result.output
 
 
+def test_root_version_supports_long_flag(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "_resolve_cli_version", lambda: "9.9.9")
+
+    result = runner.invoke(cli.app, ["--version"])
+
+    assert result.exit_code == 0
+    assert result.output == "9.9.9\n"
+
+
+def test_root_version_supports_short_flag(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "_resolve_cli_version", lambda: "9.9.9")
+
+    result = runner.invoke(cli.app, ["-v"])
+
+    assert result.exit_code == 0
+    assert result.output == "9.9.9\n"
+
+
 def test_subcommand_help_supports_short_flag() -> None:
-    result = runner.invoke(app, ["init", "-h"])
+    result = runner.invoke(cli.app, ["init", "-h"])
 
     assert result.exit_code == 0
     assert "--project-dir" in result.output
 
 
 def test_gen_command_available_with_short_help() -> None:
-    result = runner.invoke(app, ["gen", "-h"])
+    result = runner.invoke(cli.app, ["gen", "-h"])
 
     assert result.exit_code == 0
     assert "Usage:" in result.output
@@ -91,7 +109,7 @@ def test_gen_command_available_with_short_help() -> None:
 
 
 def test_init_rejects_repair_and_force_together() -> None:
-    result = runner.invoke(app, ["init", "--repair", "--force"])
+    result = runner.invoke(cli.app, ["init", "--repair", "--force"])
 
     assert result.exit_code == 2
     assert "Use either --repair or --force, not both." in result.output
@@ -136,6 +154,15 @@ def test_cli_contract_documents_compatibility_diagnostics_in_top_level_for_diff_
         assert phrase in contract
 
 
+def test_version_command_prints_resolved_app_version(monkeypatch) -> None:
+    monkeypatch.setattr(cli, "_resolve_cli_version", lambda: "9.9.9")
+
+    result = runner.invoke(cli.app, ["version"])
+
+    assert result.exit_code == 0
+    assert result.output == "9.9.9\n"
+
+
 def test_validate_json_uses_unified_envelope_and_namespaced_codes(monkeypatch) -> None:
     def _fake_run(self, project_dir: Path) -> ValidationResult:
         return ValidationResult(
@@ -169,7 +196,7 @@ def test_validate_json_uses_unified_envelope_and_namespaced_codes(monkeypatch) -
 
     monkeypatch.setattr(ValidateService, "run", _fake_run)
 
-    result = runner.invoke(app, ["validate", "--json"])
+    result = runner.invoke(cli.app, ["validate", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -207,7 +234,7 @@ def test_diff_json_mode_returns_unified_envelope(monkeypatch) -> None:
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
     monkeypatch.setattr(DiffService, "run", _fake_diff)
 
-    result = runner.invoke(app, ["diff", "--json"])
+    result = runner.invoke(cli.app, ["diff", "--json"])
 
     assert result.exit_code == 0
     payload = __import__("json").loads(result.output)
@@ -236,7 +263,7 @@ def test_diff_json_drift_exit_semantics_keep_preview_non_blocking(monkeypatch) -
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
     monkeypatch.setattr(DiffService, "run", _fake_diff)
 
-    result = runner.invoke(app, ["diff", "--json"])
+    result = runner.invoke(cli.app, ["diff", "--json"])
 
     assert result.exit_code == 0
     payload = __import__("json").loads(result.output)
@@ -272,7 +299,7 @@ def test_gen_check_json_mode_returns_unified_envelope(monkeypatch) -> None:
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
     monkeypatch.setattr(GenerateService, "run", _fake_generate)
 
-    result = runner.invoke(app, ["gen", "--check", "--json"])
+    result = runner.invoke(cli.app, ["gen", "--check", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -318,7 +345,7 @@ def test_gen_apply_json_merges_compatibility_and_generation_taxonomy(monkeypatch
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
     monkeypatch.setattr(GenerateService, "run", _fake_generate)
 
-    result = runner.invoke(app, ["gen", "--json"])
+    result = runner.invoke(cli.app, ["gen", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -373,7 +400,7 @@ def test_diff_json_keeps_compatibility_diagnostics_deterministic_and_in_summary(
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
     monkeypatch.setattr(DiffService, "run", _fake_diff)
 
-    result = runner.invoke(app, ["diff", "--json"])
+    result = runner.invoke(cli.app, ["diff", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -400,7 +427,7 @@ def test_diff_json_preflight_validation_failure_returns_unified_envelope(monkeyp
 
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
 
-    result = runner.invoke(app, ["diff", "--json"])
+    result = runner.invoke(cli.app, ["diff", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -430,7 +457,7 @@ def test_gen_json_preflight_validation_failure_returns_unified_envelope(monkeypa
 
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
 
-    result = runner.invoke(app, ["gen", "--json"])
+    result = runner.invoke(cli.app, ["gen", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -460,7 +487,7 @@ def test_gen_check_json_preflight_validation_failure_returns_unified_envelope(mo
 
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
 
-    result = runner.invoke(app, ["gen", "--check", "--json"])
+    result = runner.invoke(cli.app, ["gen", "--check", "--json"])
 
     assert result.exit_code == 1
     payload = __import__("json").loads(result.output)
@@ -474,7 +501,7 @@ def test_gen_check_json_preflight_validation_failure_returns_unified_envelope(mo
 
 
 def test_gen_help_documents_endpoint_filter_flags() -> None:
-    result = runner.invoke(app, ["gen", "-h"])
+    result = runner.invoke(cli.app, ["gen", "-h"])
 
     assert result.exit_code == 0
     assert "--include-endpoint" in result.output
@@ -503,7 +530,7 @@ def test_gen_passes_endpoint_filters_to_generate_service(monkeypatch) -> None:
     monkeypatch.setattr(GenerateService, "run", _fake_generate)
 
     result = runner.invoke(
-        app,
+        cli.app,
         [
             "gen",
             "--include-endpoint",
@@ -548,7 +575,7 @@ def test_gen_text_mode_prints_generation_diagnostics_on_error(monkeypatch) -> No
     monkeypatch.setattr(ValidateService, "run", _fake_validate)
     monkeypatch.setattr(GenerateService, "run", _fake_generate)
 
-    result = runner.invoke(app, ["gen", "--include-endpoint", "["])
+    result = runner.invoke(cli.app, ["gen", "--include-endpoint", "["])
 
     assert result.exit_code == 1
     assert "[generation.invalid-endpoint-pattern] include-endpoint[0]" in result.output
