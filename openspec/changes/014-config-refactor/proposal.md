@@ -14,7 +14,6 @@
 ```toml
 [paths]
 templates_dir = ".apidev/templates"
-release_state_file = ".apidev/release-state.json"
 
 [inputs]
 contracts_dir = ".apidev/contracts"
@@ -28,6 +27,7 @@ scaffold_dir = ".apidev/integration"
 scaffold_write_policy = "create-missing"
 
 [evolution]
+release_state_file = ".apidev/release-state.json"
 compatibility_policy = "warn"
 grace_period_releases = 2
 
@@ -36,7 +36,7 @@ include_extensions = true
 ```
 
 ## Влияние
-- Affected specs: `config` (new).
+- Affected specs: `config` (new), `contract-evolution-integration` (modified).
 - Affected code:
   - `src/apidev/core/models/config.py`
   - `src/apidev/infrastructure/config/toml_loader.py`

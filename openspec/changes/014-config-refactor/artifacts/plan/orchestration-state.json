@@ -1,0 +1,31 @@
+{
+  "change_id": "014-config-refactor",
+  "mode": "UNSET",
+  "status": "active",
+  "epoch_id": 1,
+  "next_action": "select_execution_mode",
+  "last_completed_stage": "spec_readiness_gate",
+  "completed_tasks": [],
+  "blocked_tasks": [],
+  "rejection_counts": {
+    "spec_readiness_gate": 1
+  },
+  "agent_identity_map": {
+    "spec-analyst": "019cc378-623a-79c3-a5ec-d2e17fbe2cca"
+  },
+  "last_subagent_evidence": [
+    {
+      "stage": "spec_readiness_gate",
+      "agent": "019cc378-623a-79c3-a5ec-d2e17fbe2cca",
+      "verdict": "SPEC REJECTED",
+      "timestamp": "2026-03-06T14:06:03Z"
+    },
+    {
+      "stage": "spec_readiness_gate",
+      "agent": "019cc382-28dc-77a1-9f22-e8e7fc38fe73",
+      "verdict": "SPEC READY",
+      "timestamp": "2026-03-06T14:17:40Z"
+    }
+  ],
+  "updated_at": "2026-03-06T14:17:40Z"
+}

@@ -10,7 +10,6 @@
 ### Requirement: Нормативный набор ключей нового формата
 Система SHALL реализовать следующий набор секций и ключей в `.apidev/config.toml`:
 - `paths.templates_dir`
-- `paths.release_state_file`
 - `inputs.contracts_dir`
 - `inputs.shared_models_dir`
 - `generator.generated_dir`
@@ -18,6 +17,7 @@
 - `generator.scaffold`
 - `generator.scaffold_dir`
 - `generator.scaffold_write_policy`
+- `evolution.release_state_file`
 - `evolution.compatibility_policy`
 - `evolution.grace_period_releases`
 - `openapi.include_extensions`
@@ -46,3 +46,29 @@
 - **WHEN** в конфиге присутствует ключ, не входящий в новый контракт
 - **THEN** загрузка завершается ошибкой валидации до бизнес-операций
 - **AND** diagnostics содержит путь до ключа и сообщение о нарушении контракта
+
+### Requirement: Детерминированная валидация неизвестных секций и ключей
+Система SHALL принимать только явно объявленные секции и ключи канонического контракта; любая лишняя секция или ключ SHALL приводить к fail-fast ошибке с детерминированным путем ключа в diagnostics.
+
+#### Scenario: Обнаружена неизвестная секция
+- **WHEN** в `.apidev/config.toml` присутствует секция вне набора `paths`, `inputs`, `generator`, `evolution`, `openapi`
+- **THEN** загрузка завершается fail-fast ошибкой до выполнения команд `validate`, `diff`, `gen`, `init`
+- **AND** diagnostics содержит детерминированный `key_path` для неизвестной секции
+
+#### Scenario: Обнаружен неизвестный ключ в известной секции
+- **WHEN** в известной секции указан ключ, не объявленный в нормативном наборе
+- **THEN** загрузка завершается fail-fast ошибкой до выполнения бизнес-операций
+- **AND** diagnostics содержит детерминированный `key_path` для неизвестного ключа
+
+### Requirement: Детерминированное разрешение путей конфигурации
+Система SHALL разрешать относительные пути из `.apidev/config.toml` относительно `project_dir`, выполнять нормализацию пути до boundary-check и запрещать выход за пределы `project_dir`.
+
+#### Scenario: Разрешение относительного пути внутри проекта
+- **WHEN** путь в конфиге задан относительно (включая `evolution.release_state_file`)
+- **THEN** система разрешает путь относительно `project_dir`
+- **AND** использует нормализованный путь для последующих операций
+
+#### Scenario: Попытка выхода за пределы `project_dir`
+- **WHEN** после нормализации путь указывает за пределы `project_dir`
+- **THEN** загрузка завершается fail-fast ошибкой валидации
+- **AND** diagnostics детерминированно включает поля `key_path`, `resolved_path`, `project_dir`, `error_code`
