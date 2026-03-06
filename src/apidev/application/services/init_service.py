@@ -7,6 +7,7 @@ import tomllib
 from apidev.application.dto.resolved_paths import ResolvedPaths, resolve_paths
 from apidev.core.constants import APIDEV_CONFIG_RELATIVE_PATH
 from apidev.core.models.config import ApidevConfig
+from apidev.core.path_boundary import is_resolved_path_within_root
 from apidev.core.ports.filesystem import FileSystemPort
 
 DEFAULT_HEALTH_CONTRACT = """method: GET
@@ -235,13 +236,11 @@ class InitService:
 
     def _ensure_path_in_project(self, *, project_root: Path, candidate: Path) -> None:
         resolved_candidate = candidate.resolve(strict=False)
-        try:
-            resolved_candidate.relative_to(project_root)
-        except ValueError as exc:
+        if not is_resolved_path_within_root(candidate, project_root):
             raise InitPathBoundaryError(
                 path=resolved_candidate,
                 project_root=project_root,
-            ) from exc
+            )
 
     def _load_managed_templates(
         self,

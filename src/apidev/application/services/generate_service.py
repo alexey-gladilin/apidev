@@ -11,6 +11,7 @@ from apidev.application.dto.generation_plan import (
 from apidev.application.services.diff_service import DiffService
 from apidev.core.constants import DEFAULT_COMPATIBILITY_POLICY
 from apidev.core.models.release_state import validate_baseline_ref
+from apidev.core.path_boundary import resolve_relative_path_within_root
 from apidev.core.ports.config_loader import ConfigLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
@@ -362,17 +363,7 @@ class GenerateService:
         self.fs.write_text(release_state_path, json.dumps(payload))
 
     def _resolve_release_state_path(self, project_dir: Path, raw_path: str) -> Path | None:
-        project_root = project_dir.resolve()
-        candidate = Path(raw_path)
-        if candidate.is_absolute():
-            return None
-
-        resolved = (project_root / candidate).resolve(strict=False)
-        try:
-            resolved.relative_to(project_root)
-        except ValueError:
-            return None
-        return resolved
+        return resolve_relative_path_within_root(project_dir, raw_path)
 
     def _resolve_baseline_ref_for_release_state_bootstrap(
         self,

@@ -1,8 +1,8 @@
 """Shared baseline-ref parsing and resolution for CLI commands."""
 
 import typer
-from typer.models import OptionInfo
 
+from apidev.commands.common.option_resolution import unwrap_option_default
 from apidev.core.models.release_state import validate_baseline_ref
 
 
@@ -18,6 +18,5 @@ def parse_baseline_ref(value: str | None) -> str | None:
 
 def resolve_baseline_ref(value: object) -> str | None:
     """Resolve baseline-ref from Typer option or raw value."""
-    if isinstance(value, OptionInfo):
-        return parse_baseline_ref(value.default)
-    return parse_baseline_ref(value if isinstance(value, str) else None)
+    current = unwrap_option_default(value, max_depth=8)
+    return parse_baseline_ref(current if isinstance(current, str) else None)

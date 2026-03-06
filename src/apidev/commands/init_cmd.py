@@ -5,6 +5,8 @@ import tomllib
 import typer
 import tomli_w
 
+from apidev.core.path_boundary import resolve_relative_path_within_root
+
 _ALLOWED_RUNTIMES = ("fastapi", "none")
 _ALLOWED_INTEGRATION_MODES = ("off", "scaffold", "full")
 InitMode = Literal["create", "repair", "force"]
@@ -55,17 +57,13 @@ def _validate_integration_dir(project_root: Path, integration_dir: object) -> No
             "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must be a non-empty relative path inside project_dir."
         )
     integration_candidate = Path(integration_dir_value)
-    if integration_candidate.is_absolute():
-        raise typer.BadParameter(
-            "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must be a non-empty relative path inside project_dir."
-        )
-    resolved_integration_dir = (project_root / integration_candidate).resolve(strict=False)
-    try:
-        resolved_integration_dir.relative_to(project_root)
-    except ValueError as exc:
+    resolved_integration_dir = resolve_relative_path_within_root(
+        project_root, integration_candidate
+    )
+    if resolved_integration_dir is None:
         raise typer.BadParameter(
             "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must stay inside project_dir."
-        ) from exc
+        )
 
 
 def _profile_default_config_text(base_text: str, integration_dir: str) -> str:

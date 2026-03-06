@@ -9,6 +9,7 @@ from pydantic import ValidationError
 from apidev.core.constants import APIDEV_CONFIG_RELATIVE_PATH
 from apidev.core.models.config import ApidevConfig
 from apidev.core.models.release_state import ReleaseState
+from apidev.core.path_boundary import resolve_relative_path_within_root
 from apidev.core.ports.config_loader import ConfigLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
 
@@ -85,20 +86,17 @@ class TomlConfigLoader(ConfigLoaderPort):
             raise ValueError(self._format_validation_error(path, exc)) from exc
 
     def _resolve_path(self, project_dir: Path, raw_path: str) -> Path:
-        project_root = project_dir.resolve()
-        candidate = Path(raw_path)
-        if candidate.is_absolute():
-            raise ValueError(
-                f"Invalid release state path '{raw_path}': absolute paths are not allowed"
-            )
-
-        resolved = (project_root / candidate).resolve(strict=False)
-        try:
-            resolved.relative_to(project_root)
-        except ValueError as exc:
+        resolved = resolve_relative_path_within_root(project_dir, raw_path)
+        if resolved is None:
+            candidate = Path(raw_path)
+            project_root = project_dir.resolve(strict=False)
+            if candidate.is_absolute():
+                raise ValueError(
+                    f"Invalid release state path '{raw_path}': absolute paths are not allowed"
+                )
             raise ValueError(
                 f"Invalid release state path '{raw_path}': path must stay inside project directory '{project_root}'"
-            ) from exc
+            )
         return resolved
 
     def _validate_release_state_file_size(self, path: Path) -> None:

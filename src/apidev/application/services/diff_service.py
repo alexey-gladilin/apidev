@@ -32,6 +32,7 @@ from apidev.core.models.baseline_snapshot import BaselineSnapshot
 from apidev.core.models.contract import EndpointContract
 from apidev.core.models.release_state import validate_baseline_ref
 from apidev.core.models.operation import Operation
+from apidev.core.path_boundary import is_path_within_root, resolve_relative_path_within_root
 from apidev.core.ports.config_loader import ConfigLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
@@ -882,7 +883,7 @@ class DiffService:
     ) -> Path:
         project_root = project_dir.resolve()
         generated_dir_path_resolved = generated_dir_path.resolve(strict=False)
-        if not self._is_relative_to(generated_dir_path_resolved, project_root):
+        if not is_path_within_root(generated_dir_path_resolved, project_root):
             raise ValueError(
                 f"Invalid generator.generated_dir '{generated_dir_path}': "
                 f"path must stay inside project directory '{project_root}'."
@@ -899,8 +900,8 @@ class DiffService:
                 "absolute paths are not allowed."
             )
 
-        scaffold_root = (project_root / candidate).resolve(strict=False)
-        if not self._is_relative_to(scaffold_root, project_root):
+        scaffold_root = resolve_relative_path_within_root(project_root, candidate)
+        if scaffold_root is None:
             raise ValueError(
                 f"Invalid generator.scaffold_dir '{raw_scaffold_dir}': "
                 f"path must stay inside project directory '{project_root}'."
@@ -913,14 +914,7 @@ class DiffService:
         return scaffold_root
 
     def _paths_overlap(self, left: Path, right: Path) -> bool:
-        return self._is_relative_to(left, right) or self._is_relative_to(right, left)
-
-    def _is_relative_to(self, candidate: Path, root: Path) -> bool:
-        try:
-            candidate.relative_to(root)
-            return True
-        except ValueError:
-            return False
+        return is_path_within_root(left, right) or is_path_within_root(right, left)
 
     def _scaffold_template_targets(self, scaffold_root: Path) -> tuple[Path, ...]:
         return tuple(scaffold_root / filename for filename, _ in self._SCAFFOLD_TEMPLATES)
@@ -1003,22 +997,10 @@ class DiffService:
     def _is_protected_remove_path(
         self, resolved_path: Path, protected_roots: tuple[Path, ...]
     ) -> bool:
-        for root in protected_roots:
-            try:
-                resolved_path.relative_to(root)
-                return True
-            except ValueError:
-                continue
-        return False
+        return any(is_path_within_root(resolved_path, root) for root in protected_roots)
 
     def _is_path_within_any_root(self, path: Path, roots: tuple[Path, ...]) -> bool:
-        for root in roots:
-            try:
-                path.relative_to(root)
-                return True
-            except ValueError:
-                continue
-        return False
+        return any(is_path_within_root(path, root) for root in roots)
 
     def _stable_remove_sort_key(
         self, path: Path, generated_dir_path_resolved: Path

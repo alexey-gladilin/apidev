@@ -3,36 +3,22 @@ from pathlib import Path
 
 import typer
 
+from apidev.commands.common.option_resolution import unwrap_option_default
+
 
 def _normalize_flag(value: object) -> bool:
-    candidate = value
-    for _ in range(64):
-        if isinstance(candidate, bool):
-            return candidate
-        default = getattr(candidate, "default", None)
-        if default is candidate:
-            break
-        if default is not None or hasattr(candidate, "default"):
-            candidate = default
-            continue
-        break
+    candidate = unwrap_option_default(value)
+    if isinstance(candidate, bool):
+        return candidate
     return bool(candidate)
 
 
 def _normalize_patterns(value: object) -> list[str]:
-    candidate = value
-    for _ in range(64):
-        if candidate is None:
-            return []
-        if isinstance(candidate, (list, tuple)):
-            return [str(item) for item in candidate]
-        default = getattr(candidate, "default", None)
-        if default is candidate:
-            break
-        if default is not None or hasattr(candidate, "default"):
-            candidate = default
-            continue
-        break
+    candidate = unwrap_option_default(value)
+    if candidate is None:
+        return []
+    if isinstance(candidate, (list, tuple)):
+        return [str(item) for item in candidate]
     return [str(candidate)]
 
 

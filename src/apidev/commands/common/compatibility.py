@@ -1,8 +1,8 @@
 import typer
-from typer.models import OptionInfo
 from rich.console import Console
 from typing import cast
 
+from apidev.commands.common.option_resolution import unwrap_option_default
 from apidev.application.dto.diagnostics import sort_diagnostics
 from apidev.application.dto.generation_plan import CompatibilityPolicy
 from apidev.core.constants import (
@@ -13,22 +13,7 @@ from apidev.core.constants import (
 
 
 def parse_compatibility_policy(policy: object) -> str | None:
-    current = policy
-    for _ in range(8):
-        if isinstance(current, OptionInfo):
-            current = current.default
-            continue
-        if current is None:
-            return None
-        if isinstance(current, str):
-            break
-        if hasattr(current, "default"):
-            default = getattr(current, "default")
-            if default is current:
-                break
-            current = default
-            continue
-        break
+    current = unwrap_option_default(policy, max_depth=8)
 
     if current is None:
         return None
@@ -42,18 +27,16 @@ def parse_compatibility_policy(policy: object) -> str | None:
 
 
 def resolve_compatibility_policy(cli_policy: str | None, config_policy: str) -> CompatibilityPolicy:
-    current: object = cli_policy if cli_policy is not None else config_policy
-    for _ in range(8):
-        if current is None:
-            return DEFAULT_COMPATIBILITY_POLICY
-        if isinstance(current, str):
-            normalized = parse_compatibility_policy(current) or DEFAULT_COMPATIBILITY_POLICY
-            if normalized in COMPATIBILITY_POLICIES:
-                return cast(CompatibilityPolicy, normalized)
-        if hasattr(current, "default"):
-            current = getattr(current, "default")
-            continue
-        break
+    current = unwrap_option_default(
+        cli_policy if cli_policy is not None else config_policy,
+        max_depth=8,
+    )
+    if current is None:
+        return DEFAULT_COMPATIBILITY_POLICY
+    if isinstance(current, str):
+        normalized = parse_compatibility_policy(current) or DEFAULT_COMPATIBILITY_POLICY
+        if normalized in COMPATIBILITY_POLICIES:
+            return cast(CompatibilityPolicy, normalized)
     value = str(current).strip().lower()
     raise ValueError(
         f"Invalid compatibility policy '{value}'. Expected one of: "
