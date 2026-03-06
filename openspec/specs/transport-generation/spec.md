@@ -1,5 +1,8 @@
-## MODIFIED Requirements
+# transport-generation Specification
 
+## Purpose
+TBD - created by archiving change 002-transport-generation. Update Purpose after archive.
+## Requirements
 ### Requirement: Transport Model Generation
 `apidev gen` SHALL generate deterministic transport models for request, response, and declared error payloads from validated contracts in domain-first generated layout.
 
@@ -12,6 +15,19 @@
 - **WHEN** контракт расположен по пути `<domain>/<operation>.yaml`
 - **THEN** generation SHALL produce router artifact in `<domain>/routes/<operation>.py`
 - **AND** generated code SHALL not contain business logic implementations
+
+### Requirement: Minimal Runnable Transport Layer
+`apidev gen` SHALL generate a minimal runnable transport layer that can route validated operations to manual handler bridge implementations.
+
+#### Scenario: Generated endpoint wiring is runnable
+- **WHEN** generation completes for a project with valid contracts
+- **THEN** generated router artifacts SHALL provide endpoint signatures and wiring stubs required for runtime startup
+- **AND** generated code SHALL not contain business logic implementations
+
+#### Scenario: Manual handler bridge contract is explicit
+- **WHEN** a developer integrates generated transport with manual handlers
+- **THEN** generated artifacts SHALL expose stable bridge signatures for handler invocation
+- **AND** missing handler implementations SHALL fail deterministically during integration checks
 
 ### Requirement: Stable Operation Registry Contract
 Generation SHALL maintain a stable operation registry contract that maps `operation_id` to transport metadata used by runtime and tests, including domain-qualified module references.
@@ -30,6 +46,19 @@ Generation SHALL maintain a stable operation registry contract that maps `operat
 - **WHEN** generation runs multiple times on unchanged contracts/templates
 - **THEN** operation registry output SHALL preserve deterministic ordering and content
 - **AND** drift checks SHALL report no differences for unchanged inputs
+
+### Requirement: Generated/Manual Ownership Boundary for Transport
+Transport generation SHALL preserve clear ownership boundaries between generated transport artifacts and manual domain logic.
+
+#### Scenario: Generated output does not overwrite manual logic
+- **WHEN** `apidev gen` applies changes
+- **THEN** writer behavior SHALL remain restricted to configured generated root
+- **AND** manual application modules outside generated root SHALL not be modified
+
+#### Scenario: Business logic remains manual-owned
+- **WHEN** transport artifacts are regenerated
+- **THEN** generated files SHALL contain only transport-facing contracts, routing, and schema metadata
+- **AND** repository/service policy logic SHALL stay in manual-owned files
 
 ### Requirement: Clean Break Layout Policy
 Transport generation SHALL treat domain-first generated layout as the only canonical output format for this change.
@@ -155,3 +184,4 @@ Transport generation SHALL define deterministic import/package policy for single
 - **WHEN** two different contracts resolve to the same normalized generated target path
 - **THEN** generation SHALL fail with deterministic collision diagnostic
 - **AND** no ambiguous overwrite between operations SHALL be allowed
+
