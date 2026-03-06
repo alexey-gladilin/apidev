@@ -1,11 +1,11 @@
 ## 1. Спецификация формата
-- [ ] 1.1 Согласовать canonical contract shape для shared model files, `$ref`, shorthand `$...` refs и operation-local models.
-- [ ] 1.2 Зафиксировать список допустимых мест использования ссылок: property node, `items.ref`, при наличии поддержки `values.ref` и аналогичных составных узлов.
-- [ ] 1.3 Описать semantic boundary между shared models и operation-local models с позитивными и негативными примерами.
-- [ ] 1.4 Зафиксировать directory layout и правила различения `operation contract` vs `shared model contract` для аналитиков, разработчиков и tooling.
+- [x] 1.1 Согласовать canonical contract shape для shared model files, `$ref`, shorthand `$...` refs и operation-local models.
+- [x] 1.2 Зафиксировать список допустимых мест использования ссылок: property node, `items.ref`, при наличии поддержки `values.ref` и аналогичных составных узлов.
+- [x] 1.3 Описать semantic boundary между shared models и operation-local models с позитивными и негативными примерами.
+- [x] 1.4 Зафиксировать directory layout и правила различения `operation contract` vs `shared model contract` для аналитиков, разработчиков и tooling.
 
 ## 2. Подготовка `apidev`
-- [ ] 2.1 Обновить `docs/reference/contract-format.md`, добавив второй canonical YAML contract kind для shared models и их расположение.
+- [x] 2.1 Обновить `docs/reference/contract-format.md`, добавив второй canonical YAML contract kind для shared models и их расположение.
 - [ ] 2.2 Обновить Pydantic contract models и loader для поддержки shared model files и `ref`.
 - [ ] 2.3 Добавить поддержку `contracts.shared_models_dir` с дефолтом `.apidev/models`.
 - [ ] 2.4 Добавить semantic validation: missing ref, scope leak, wrong directory/contract_type mismatch, duplicate names, cycle policy, ambiguous resolution.

@@ -17,9 +17,21 @@
 
 ## Канонические форматы контрактов в APIDev
 
-В проекте используются три нормативных формата контрактов:
+В проекте используются четыре нормативных формата контрактов (contract kinds), из которых для этой задачи важны два YAML-контракта:
 
-- API contract: YAML-файл операции в `.apidev/contracts/<domain>/<operation>.yaml` (этот документ).
+- API contract: YAML-файл операции в `.apidev/contracts/<domain>/<operation>.yaml`.
+- Shared model contract: YAML-файл переиспользуемой модели в `.apidev/models/<namespace>/<model>.yaml`.
+
+Канонические canonical-идентификаторы типов:
+
+- `contract_type: operation` — для API-контрактов
+- `contract_type: shared_model` — для shared model contracts
+
+Для корректного определения типа файла инструментами действуют оба признака одновременно: ожидаемое расположение и `contract_type`.
+
+По умолчанию:
+- операции: `contract_type` для API-контракта может быть задан явно как `operation` или отсутствовать в transition-режиме, файл должен лежать в `.apidev/contracts`;
+- shared models: `contract_type` обязателен и равен `shared_model`, файл должен лежать в `.apidev/models`.
 - Evolution contract: JSON release-state в `.apidev/release-state.json` (раздел ниже).
 - CLI diagnostics contract: machine-readable JSON envelope для `validate|diff|gen` в [cli-contract.md](./cli-contract.md).
 
@@ -34,6 +46,34 @@
 
 - `.apidev/contracts/system/health.yaml`
 - `.apidev/contracts/billing/create_invoice.yaml`
+
+Виды YAML-контрактов:
+
+- API operation contract: описывает ровно одну API-операцию.
+- Shared model contract: описывает одну переиспользуемую модель.
+
+Различение видов выполняется через пару признаков:
+
+- директорию контракта;
+- `contract_type` в корне файла:
+  - `contract_type: operation` (рекомендуется, но legacy-режим допускает отсутствие в transition mode);
+  - `contract_type: shared_model` (обязательно для shared model contracts).
+
+### Как распознать тип контракта в рабочих практиках
+
+- Для аналитика: если файл описывает endpoint и лежит в `.apidev/contracts`, это operation contract; если описание повторно используется в нескольких местах и расположено в `.apidev/models`, это shared model contract.
+- Для разработчика: operation contract влияет на runtime-обработку и route-сигнатуру (`method`, `path`, `auth`, `response`, `errors`), shared model contract — только на типовую модель и граф зависимостей.
+- Для tooling: `contract_type` проверяется в первую очередь вместе с фактическим расположением файла, поэтому parser должен отклонять:
+  - shared model в `.apidev/contracts`;
+  - operation contract в `.apidev/models`.
+
+Валидация должна быть детерминированной: `contract_type` + расположение = источник истины при диагностике ошибок и построении graph-зависимостей.
+
+Shared model contracts располагаются в `.apidev/models`:
+
+- `.apidev/models/common/pagination_request.yaml`
+- `.apidev/models/common/sort_descriptor.yaml`
+- `.apidev/models/billing/page_info.yaml`
 
 ## Целевая структура generated output
 
@@ -209,6 +249,57 @@ errors:
           required: true
 ```
 
+## Формат shared model contract
+
+Обязательные root-поля для shared model contract:
+
+- `contract_type`
+- `name`
+- `description`
+- `model`
+
+### `contract_type`
+
+- Тип: `string`
+- Обязательное
+- Допустимое значение: `shared_model`
+
+### `name`
+
+- Тип: `string`
+- Обязательное
+- Не пустое
+
+### `description`
+
+- Тип: `string`
+- Обязательное
+
+### `model`
+
+- Тип: `object`
+- Обязательное
+- Должно соответствовать правилам schema-фрагмента (`type`, `properties`, `items`, ...).
+
+Shared model contract не должен содержать поля `method`, `path`, `auth`, `request`, `response`, `errors`.
+
+Пример:
+
+```yaml
+contract_type: shared_model
+name: PaginationRequest
+description: Used by list endpoints
+model:
+  type: object
+  properties:
+    page:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+```
+
 ## Контракт верхнего уровня
 
 Обязательные поля root-объекта:
@@ -219,6 +310,11 @@ errors:
 - `description`
 - `response`
 - `errors`
+
+Опциональные поля root-объекта:
+
+- `request`
+- `local_models`
 
 Неизвестные root-поля запрещены.
 
@@ -254,6 +350,56 @@ errors:
 - Тип: `string`
 - Обязательное
 - Не должно быть пустой строкой
+
+## Использование shared models в operation contracts
+
+В `request`/`response` schema fragment узлы доступны в двух формах:
+
+- inline schema fragment (`type`, `properties`, `items`, ...);
+- reference node с `$ref`.
+
+Reference node должен содержать `$ref` и не содержит собственного inline-shape.
+
+Допустимые варианты:
+
+- `$ref: common.PaginationRequest`
+- `$ref: Billing.PageInfo`
+- shorthand в scalar/edge-позициях: `$users.UserSummary`
+
+Reference node допускается в:
+
+- `request.path.properties.*`
+- `request.query.properties.*`
+- `request.body.properties.*`
+- `response.body.properties.*`
+- `errors[*].body.properties.*`
+- `*.items`
+- `*.values` для map-like схем (для узлов, которые поддерживают контейнерное представление значений), где используется тот же контрактный паттерн ссылки
+
+Альтернативно, если требуется уточнить, что ссылка стоит в краткой форме, допустима запись `$ModelName` в узлах с scalar/edge-семантикой (без дополнительных inline-параметров).
+
+## Operation-local models
+
+`local_models` доступны только внутри owning operation и могут содержать именованные модели,
+которые используются локально в пределах одного контракта.
+
+- `local_models` не создают отдельные файлы;
+- `shared models` не могут ссылаться на `local_models`;
+- другие операции не могут ссылаться на `local_models`.
+
+### Семантическая граница: shared model vs operation-local model
+
+**Позитивные**:
+
+- Общая модель `PaginationRequest` описывается в `.apidev/models/common/pagination_request.yaml` как `contract_type: shared_model` и используется в нескольких operation contracts через `$ref: common.PaginationRequest`.
+- Локальная модель `CreateUserAddress` описывается в `local_models` конкретной операции и используется только внутри этого operation contract через `$ref: CreateUserAddress`.
+- Shared model может ссылаться на другой shared model, если это допустимо правилами разрешения ссылок.
+
+**Негативные**:
+
+- Operation-local модель, объявленная внутри одной операции, не должна использоваться другой операцией через `$ref`.
+- Shared model контракт не должен определять поля `method`, `path`, `auth`, `request`, `response`, `errors`.
+- Операционный файл в `.apidev/contracts` не может объявлять `contract_type: shared_model`.
 
 ## Блок `request`
 
@@ -355,6 +501,10 @@ errors:
 - `description`
 - `enum`
 - `example`
+- `$ref`
+
+`$ref` вводит ссылочный узел и является альтернативой inline-shape.
+Если указан `$ref`, inline-поля (`type`, `properties`, `items`, `required`, `description`, `enum`, `example`) в том же узле запрещены.
 
 Неизвестные поля запрещены.
 
