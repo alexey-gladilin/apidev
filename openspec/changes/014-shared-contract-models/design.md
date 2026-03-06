@@ -438,7 +438,7 @@ graph LR
 ## Примеры миграции
 
 Подробные примеры вынесены в артефакт:
-- [migration-examples.md](/Users/alex/1.PROJECTS/Personal/devtools/uidev/openspec/changes/add-shared-contract-models-in-apidev/artifacts/examples/migration-examples.md)
+- [migration-examples.md](./artifacts/examples/migration-examples.md)
 
 Ключевые сценарии миграции:
 - повторяющийся `pagination` в request body нескольких операций;
@@ -454,6 +454,14 @@ graph LR
 6. Добавить CLI introspection command для dependency graph.
 7. Подготовить migration guide и pilot-пакет контрактов.
 
-## Открытые вопросы
-- Нужен ли reserved namespace `common/*` в первой версии?
-- Поддерживать ли recursive self-reference в future change или сразу закладывать расширение?
+## Решения по ранее открытым вопросам
+
+### Namespace policy для `common/*` в v1
+- Reserved namespace в первой версии не вводится.
+- `common` трактуется как обычный namespace без привилегий и без fallback-семантики.
+- Разрешение short-name остается единым для всех namespace: если short-name не может быть детерминированно разрешен, validation возвращает ambiguity error.
+
+### Политика циклов и recursive self-reference в v1
+- В первой версии запрещаются все циклы ссылок в model graph, включая direct self-reference и взаимные циклы между двумя и более моделями.
+- `apidev validate` обязан отклонять такие контракты на этапе graph-aware validation с machine-readable диагностикой `cycle_path`.
+- Поддержка безопасной recursive materialization может быть добавлена только отдельным будущим change с явным обновлением spec/design.

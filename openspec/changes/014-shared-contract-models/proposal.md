@@ -20,8 +20,8 @@
 - Affected specs:
   - `apidev-shared-contract-models` (new)
 - Affected docs:
-  - `openspec/changes/add-shared-contract-models-in-apidev/design.md`
-  - `openspec/changes/add-shared-contract-models-in-apidev/tasks.md`
+  - `openspec/changes/014-shared-contract-models/design.md`
+  - `openspec/changes/014-shared-contract-models/tasks.md`
 - Affected code (planned):
   - contract schema and semantic validation in `apidev`
   - contract normalization/model registry in `apidev`
