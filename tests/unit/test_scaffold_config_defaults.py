@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 
+from apidev.core.constants import DEFAULT_INTEGRATION_DIR
 from apidev.core.models.config import ApidevConfig
 from apidev.infrastructure.config.toml_loader import default_config_text
 
@@ -10,7 +11,7 @@ def test_config_model_sets_scaffold_defaults() -> None:
     config = ApidevConfig()
 
     assert config.generator.scaffold is True
-    assert config.generator.scaffold_dir == ".apidev/integration"
+    assert config.generator.scaffold_dir == DEFAULT_INTEGRATION_DIR
     assert config.generator.scaffold_write_policy == "create-missing"
     assert config.inputs.shared_models_dir == ".apidev/models"
     assert config.inputs.contracts_dir == ".apidev/contracts"
@@ -22,7 +23,7 @@ def test_default_config_text_contains_scaffold_defaults() -> None:
     text = default_config_text()
 
     assert "scaffold = true" in text
-    assert 'scaffold_dir = ".apidev/integration"' in text
+    assert f'scaffold_dir = "{DEFAULT_INTEGRATION_DIR}"' in text
     assert 'scaffold_write_policy = "create-missing"' in text
     assert 'contracts_dir = ".apidev/contracts"' in text
     assert 'shared_models_dir = ".apidev/models"' in text

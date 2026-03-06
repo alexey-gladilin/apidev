@@ -5,6 +5,7 @@ from typing import Any, cast
 import pytest
 
 from apidev.application.services.diff_service import DiffService
+from apidev.core.constants import DEFAULT_INTEGRATION_DIR
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
@@ -118,7 +119,7 @@ errors: []
         "zeta/models/get_status_response.py",
         "zeta/models/get_status_error.py",
     ]
-    scaffold_paths = _planned_paths_within_root(plan, tmp_path / ".apidev" / "integration")
+    scaffold_paths = _planned_paths_within_root(plan, tmp_path / DEFAULT_INTEGRATION_DIR)
     assert scaffold_paths == [
         "handler_registry.py",
         "router_factory.py",

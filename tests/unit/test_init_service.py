@@ -82,17 +82,6 @@ def test_init_creates_managed_templates(tmp_path: Path) -> None:
         assert template_path.read_text(encoding="utf-8").strip()
 
 
-def test_init_creates_scaffold_dir_from_config(tmp_path: Path) -> None:
-    service = InitService(
-        fs=LocalFileSystem(),
-        default_config_text=default_config_text(),
-    )
-
-    service.run(tmp_path, integration_mode="scaffold")
-
-    assert (tmp_path / ".apidev" / "output" / "integration").exists()
-
-
 def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) -> None:
     service = InitService(
         fs=LocalFileSystem(),

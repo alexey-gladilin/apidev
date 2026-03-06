@@ -13,7 +13,6 @@ class ResolvedPaths:
     shared_models_dir: Path
     templates_dir: Path
     generated_dir_path: Path
-    scaffold_dir_path: Path
 
 
 def _resolve(project_dir: Path, raw_path: str) -> Path:
@@ -32,5 +31,4 @@ def resolve_paths(project_dir: Path, config: ApidevConfig) -> ResolvedPaths:
         shared_models_dir=_resolve(project_dir, config.contracts.shared_models_dir),
         templates_dir=_resolve(project_dir, config.templates.dir),
         generated_dir_path=_resolve(project_dir, config.generator.generated_dir),
-        scaffold_dir_path=_resolve(project_dir, config.generator.scaffold_dir),
     )

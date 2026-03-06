@@ -12,7 +12,12 @@ from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
 from apidev.infrastructure.output.python_postprocessor import PythonPostprocessor
 from apidev.infrastructure.output.writer import SafeWriter
+from apidev.core.constants import DEFAULT_INTEGRATION_DIR
 from apidev.infrastructure.templates.jinja_renderer import JinjaTemplateRenderer
+
+INTEGRATION_DIR = Path(DEFAULT_INTEGRATION_DIR)
+INTEGRATION_PACKAGE_ROOT = INTEGRATION_DIR.parent
+INTEGRATION_PACKAGE_NAME = INTEGRATION_DIR.name
 
 
 def _generate_bearer_contract_project(tmp_path: Path) -> Path:
@@ -64,7 +69,7 @@ def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_m
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -86,8 +91,10 @@ def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_m
         loaded_modules.append(response_module_name)
         response_class = cast(Any, getattr(response_module, response_class_name))
 
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         invoke_route_with_context = cast(
             Any, getattr(router_factory_module, "invoke_route_with_context")
         )
@@ -121,9 +128,9 @@ def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_m
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -139,7 +146,7 @@ def test_auth_integration_generated_route_keeps_token_decode_manual(tmp_path: Pa
     assert "jwt" not in route_source.lower()
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -187,7 +194,7 @@ def test_auth_integration_generated_route_keeps_token_decode_manual(tmp_path: Pa
 def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -209,8 +216,10 @@ def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path:
         loaded_modules.append(response_module_name)
         response_class = cast(Any, getattr(response_module, response_class_name))
 
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         invoke_route_with_context = cast(
             Any, getattr(router_factory_module, "invoke_route_with_context")
         )
@@ -246,9 +255,9 @@ def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -256,7 +265,7 @@ def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path:
 
 def test_integration_router_factory_builds_router_from_operation_map(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -284,15 +293,19 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
-        handler_registry_module = importlib.import_module("integration.handler_registry")
-        loaded_modules.append("integration.handler_registry")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
+        handler_registry_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.handler_registry"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.handler_registry")
 
         async def _manual_handler(_request: Any) -> Any:
             class _Result:
@@ -324,9 +337,9 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -334,7 +347,7 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
 
 def test_integration_router_factory_rejects_non_string_method_metadata(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -363,13 +376,15 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
         operation_map["billing_get_invoice"]["method"] = ["GET"]
 
@@ -385,9 +400,9 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -395,7 +410,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
 
 def test_integration_router_factory_normalizes_optional_metadata_fields(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -424,13 +439,15 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
         operation_map["billing_get_invoice"]["description"] = "   "
 
@@ -453,9 +470,9 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -481,7 +498,7 @@ def test_integration_router_factory_rejects_null_empty_and_blank_required_metada
     metadata_value: object,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -510,13 +527,15 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
         operation_entry = cast(dict[str, object], operation_map["billing_get_invoice"])
         operation_entry["method"] = "GET"
@@ -535,9 +554,9 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
             sys.path.pop(1)
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -545,7 +564,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
 
 def test_integration_router_factory_uses_domain_metadata_for_swagger_tag(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -574,13 +593,15 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
         operation_entry = cast(dict[str, object], operation_map["billing_get_invoice"])
         operation_entry["method"] = "GET"
@@ -606,9 +627,9 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -618,7 +639,7 @@ def test_integration_router_factory_rejects_manual_tags_in_operation_metadata(
     tmp_path: Path,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -647,13 +668,15 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
         operation_entry = cast(dict[str, object], operation_map["billing_get_invoice"])
         operation_entry["method"] = "GET"
@@ -673,9 +696,9 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.models", None)
@@ -685,7 +708,7 @@ def test_router_operation_map_auto_register_new_endpoint_without_router_edit(
     tmp_path: Path,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -722,15 +745,19 @@ async def route(payload: dict[str, object], handler: Any) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
-        handler_registry_module = importlib.import_module("integration.handler_registry")
-        loaded_modules.append("integration.handler_registry")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
+        handler_registry_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.handler_registry"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.handler_registry")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
         operation_map["billing_get_invoice_v2"] = {
             **cast(dict[str, Any], operation_map["billing_get_invoice"]),
@@ -773,9 +800,9 @@ async def route(payload: dict[str, object], handler: Any) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.routes.get_invoice", None)
@@ -787,7 +814,7 @@ def test_router_operation_map_auto_register_reloads_route_callable_from_metadata
     tmp_path: Path,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / ".apidev" / "integration"
+    integration_root = tmp_path / INTEGRATION_DIR
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -813,15 +840,19 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path / ".apidev")
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
     try:
-        router_factory_module = importlib.import_module("integration.router_factory")
-        loaded_modules.append("integration.router_factory")
-        handler_registry_module = importlib.import_module("integration.handler_registry")
-        loaded_modules.append("integration.handler_registry")
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
+        handler_registry_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.handler_registry"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.handler_registry")
         route_module = importlib.import_module("billing.routes.get_invoice")
         loaded_modules.append("billing.routes.get_invoice")
 
@@ -861,9 +892,9 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         for module_name in loaded_modules:
             sys.modules.pop(module_name, None)
         sys.modules.pop("operation_map", None)
-        sys.modules.pop("integration.auth_registry", None)
-        sys.modules.pop("integration.handler_registry", None)
-        sys.modules.pop("integration", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
         sys.modules.pop("billing", None)
         sys.modules.pop("billing.routes", None)
         sys.modules.pop("billing.routes.get_invoice", None)
