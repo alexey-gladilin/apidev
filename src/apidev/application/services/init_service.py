@@ -11,7 +11,6 @@ from apidev.core.ports.filesystem import FileSystemPort
 DEFAULT_CONTRACT = """method: GET
 path: /v1/health
 auth: public
-summary: Health endpoint
 description: Returns health status.
 response:
   status: 200

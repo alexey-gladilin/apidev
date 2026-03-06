@@ -97,6 +97,3 @@
 - `docs/architecture/architecture-rules.md`
 - `docs/reference/cli-contract.md`
 - `docs/process/testing-strategy.md`
-- `openspec/changes/006-safety-drift/specs/safety-drift/spec.md`
-- `openspec/changes/007-update-domain-first-transport-layout/specs/transport-generation/spec.md`
-- `openspec/changes/008-release-state/specs/contract-evolution-integration/spec.md`

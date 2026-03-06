@@ -1,4 +1,5 @@
 from pathlib import Path
+import ast
 from typing import Any, cast
 
 import pytest
@@ -132,7 +133,6 @@ errors: []
     )
     assert '"method": "POST"' in operation_map.content
     assert '"path": "/v1/items"' in operation_map.content
-    assert '"summary": "Create item"' in operation_map.content
     assert '"description": "Creates item"' in operation_map.content
     assert '"response_status": 201' in operation_map.content
     assert '"contract_fingerprint": "' in operation_map.content
@@ -150,14 +150,12 @@ errors: []
     assert '"callable": "alpha.routes.create_item.route"' in operation_map.content
 
     router = next(change for change in plan.changes if change.path.name == "create_item.py")
-    assert '"summary": "Create item"' in router.content
     assert '"description": "Creates item"' in router.content
     assert '"contract_fingerprint": "' in router.content
 
     request_model = next(
         change for change in plan.changes if change.path.name == "create_item_request.py"
     )
-    assert 'summary: str = "Create item"' in request_model.content
     assert 'description: str = "Creates item"' in request_model.content
     assert "contract_fingerprint: str" in request_model.content
 
@@ -168,7 +166,6 @@ errors: []
     assert '"description": "Item identifier"' in response_model.content
 
     openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
-    assert '"summary": str(entry.get("summary", ""))' in openapi_docs.content
     assert '"description": str(entry.get("description", ""))' in openapi_docs.content
     assert 'response_status = str(int(entry.get("response_status", 200)))' in openapi_docs.content
     assert "response_status: {" in openapi_docs.content
@@ -242,17 +239,21 @@ errors: []
         change for change in plan.changes if change.path.name == "get_invoice_request.py"
     )
 
-    expected_fragment = """
-SCHEMA_FRAGMENT = {
-    "body": {"properties": {"trace_id": {"type": "string"}}, "type": "object"},
-    "path": {"properties": {"invoice_id": {"type": "string"}}, "type": "object"},
-    "query": {
-        "properties": {"include_payments": {"type": "boolean"}},
-        "type": "object",
-    },
-}
-""".strip()
-    assert expected_fragment in request_model.content
+    expected_fragment = {
+        "body": {"properties": {"trace_id": {"type": "string"}}, "type": "object"},
+        "path": {"properties": {"invoice_id": {"type": "string"}}, "type": "object"},
+        "query": {
+            "properties": {"include_payments": {"type": "boolean"}},
+            "type": "object",
+        },
+    }
+    fragment_source = (
+        request_model.content.split("SCHEMA_FRAGMENT = ", 1)[1]
+        .split("\nSCHEMA_EXAMPLE", 1)[0]
+        .strip()
+    )
+    request_model_fragment = ast.literal_eval(fragment_source)
+    assert request_model_fragment == expected_fragment
 
 
 def test_diff_service_normalizes_single_level_domain_and_operation_segments(tmp_path: Path) -> None:

@@ -10,7 +10,6 @@ class {{ model.class_name }}:
     schema_kind: str = {{ model.kind | tojson }}
     http_method: str = {{ model.method | tojson }}
     http_path: str = {{ model.path | tojson }}
-    summary: str = {{ model.summary | tojson }}
     description: str = {{ model.description | tojson }}
     deprecation_status: str = {{ model.deprecation_status | tojson }}
     deprecated_since_release: int | None = {{ model.deprecated_since_release_literal }}

@@ -145,7 +145,6 @@ contract_type: operation
 method: POST
 path: /v1/users/search
 auth: bearer
-summary: Search users
 description: Returns paginated user list
 request:
   body:

@@ -86,7 +86,6 @@ errors:
 
     assert '"method": "GET"' in operation_map_source
     assert '"path": "/v1/invoices/{invoice_id}"' in operation_map_source
-    assert '"summary": "Get invoice"' in operation_map_source
     assert '"description": "Get invoice details"' in operation_map_source
     assert '"deprecation_status": "active"' in operation_map_source
     assert '"deprecated_since_release": None' in operation_map_source
@@ -105,13 +104,11 @@ errors:
     assert (
         '"error": "billing.models.get_invoice_error.BillingGetInvoiceError"' in operation_map_source
     )
-    assert '"summary": "Get invoice"' in router_source
     assert '"description": "Get invoice details"' in router_source
     assert '"deprecation_status": "active"' in router_source
     assert '"deprecated_since_release": None' in router_source
     assert '"contract_fingerprint": "' in router_source
     assert "def build_openapi_paths()" in openapi_docs_source
-    assert '"summary": str(entry.get("summary", ""))' in openapi_docs_source
     assert '"description": str(entry.get("description", ""))' in openapi_docs_source
     assert '"deprecated": ' in openapi_docs_source
     assert 'entry.get("deprecation_status", "active")' in openapi_docs_source

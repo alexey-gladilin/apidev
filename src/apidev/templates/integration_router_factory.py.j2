@@ -25,7 +25,6 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for scaffold tests wi
         endpoint: Callable[..., Awaitable[Any]]
         methods: set[str]
         operation_id: str | None
-        summary: str | None
         description: str | None
         deprecated: bool
         responses: dict[int, dict[str, object]]
@@ -43,7 +42,6 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for scaffold tests wi
             *,
             methods: list[str],
             operation_id: str | None = None,
-            summary: str | None = None,
             description: str | None = None,
             deprecated: bool = False,
             responses: dict[int, dict[str, object]] | None = None,
@@ -56,7 +54,6 @@ except ModuleNotFoundError:  # pragma: no cover - fallback for scaffold tests wi
                     endpoint=endpoint,
                     methods={method.upper() for method in methods},
                     operation_id=operation_id,
-                    summary=summary,
                     description=description,
                     deprecated=deprecated,
                     responses=responses or {},
@@ -170,7 +167,6 @@ def build_router() -> APIRouter:
             endpoint,
             methods=[method],
             operation_id=operation_id,
-            summary=_optional_string(meta, "summary"),
             description=_optional_string(meta, "description"),
             deprecated=str(meta.get("deprecation_status", "active")) == "deprecated",
             responses=_build_responses(meta),

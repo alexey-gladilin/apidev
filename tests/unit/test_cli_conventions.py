@@ -174,7 +174,6 @@ def test_validate_json_uses_unified_envelope_and_namespaced_codes(monkeypatch) -
                         method="GET",
                         path="/v1/health",
                         auth="public",
-                        summary="Health",
                         description="Health endpoint",
                         response_status=200,
                         response_body={"type": "object"},

@@ -89,7 +89,6 @@ def validate_contract_schema(
         "method",
         "path",
         "auth",
-        "summary",
         "description",
         "response",
         "errors",
@@ -217,16 +216,6 @@ def validate_contract_schema(
                 )
             )
 
-    if isinstance(summary, str) and not summary.strip():
-        diagnostics.append(
-            ValidationDiagnostic(
-                code=SCHEMA_INVALID_VALUE,
-                severity="error",
-                message="Field 'summary' must be non-empty.",
-                location=f"{relpath}:summary",
-                rule=RULE_FIELD_VALUE,
-            )
-        )
     if isinstance(description, str) and not description.strip():
         diagnostics.append(
             ValidationDiagnostic(
@@ -412,7 +401,6 @@ def validate_contract_schema(
             method=str(method).strip().upper(),
             path=str(path).strip(),
             auth=str(auth).strip().lower(),
-            summary=str(summary).strip(),
             description=str(description).strip(),
             response_status=int(response_status),
             response_body=dict(response_body),

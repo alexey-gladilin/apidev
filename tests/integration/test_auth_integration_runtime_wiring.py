@@ -434,7 +434,6 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
         router_factory_module = importlib.import_module("integration.router_factory")
         loaded_modules.append("integration.router_factory")
         operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
-        operation_map["billing_get_invoice"]["summary"] = None
         operation_map["billing_get_invoice"]["description"] = "   "
 
         router = cast(Any, getattr(router_factory_module, "build_router"))()
@@ -444,7 +443,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
             if getattr(route_obj, "operation_id", None) == "billing_get_invoice"
         )
 
-        assert getattr(route, "summary", "sentinel") is None
+        assert getattr(route, "summary", None) is None
         assert getattr(route, "description", "sentinel") is None
     finally:
         if sys.path and sys.path[0] == inserted:

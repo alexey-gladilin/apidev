@@ -137,7 +137,6 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
         security = _resolve_security(entry)
         operation = {
             "operationId": operation_id,
-            "summary": str(entry.get("summary", "")),
             "description": str(entry.get("description", "")),
             "deprecated": str(entry.get("deprecation_status", "active")) == "deprecated",
             "tags": [_resolve_domain_tag(entry, operation_id)],

@@ -9,7 +9,6 @@ OPERATION_MAP = {
         "path": {{ entry.path | tojson }},
         "auth": {{ entry.auth | tojson }},
         "domain": {{ entry.router_module.split(".")[0] | tojson }},
-        "summary": {{ entry.summary | tojson }},
         "description": {{ entry.description | tojson }},
         "response_status": {{ entry.response_status }},
         "deprecation_status": {{ entry.deprecation_status | tojson }},

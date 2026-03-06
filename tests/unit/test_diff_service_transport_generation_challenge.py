@@ -88,7 +88,6 @@ errors: []
     operation_map = next(
         change for change in plan.changes if change.path.name == "operation_map.py"
     )
-    assert '"summary": "None"' in operation_map.content
     assert '"description": "None"' in operation_map.content
 
 

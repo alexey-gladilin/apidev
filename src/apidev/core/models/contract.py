@@ -9,7 +9,6 @@ class EndpointContract:
     method: str
     path: str
     auth: str
-    summary: str
     description: str
     response_status: int
     response_body: dict[str, Any]

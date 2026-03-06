@@ -54,13 +54,14 @@ class YamlContractLoader(ContractLoaderPort, ContractDocumentLoaderPort):
             operation_id = build_operation_id(str(rel))
             data = document.data if isinstance(document.data, dict) else {}
 
+            description = str(data.get("description", "")).strip()
+
             contract = EndpointContract(
                 source_path=path,
                 method=str(data.get("method", "GET")).upper(),
                 path=str(data.get("path", "/")),
                 auth=str(data.get("auth", "public")),
-                summary=str(data.get("summary", "")),
-                description=str(data.get("description", "")),
+                description=description,
                 response_status=int(data.get("response", {}).get("status", 200)),
                 response_body=data.get("response", {}).get("body", {}),
                 errors=data.get("errors", []),

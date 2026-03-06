@@ -685,6 +685,7 @@ class DiffService:
         response_dict = response_data if isinstance(response_data, dict) else {}
         errors = data.get("errors", [])
         errors_list = errors if isinstance(errors, list) else []
+        raw_description = str(data.get("description", "")).strip()
         return Operation(
             operation_id=build_operation_id(str(contract_relpath)),
             contract=EndpointContract(
@@ -692,8 +693,7 @@ class DiffService:
                 method=str(data.get("method", "GET")).upper(),
                 path=str(data.get("path", "/")),
                 auth=str(data.get("auth", "public")),
-                summary=str(data.get("summary", "")),
-                description=str(data.get("description", "")),
+                description=raw_description,
                 response_status=int(response_dict.get("status", 200)),
                 response_body=response_dict.get("body", {}),
                 errors=errors_list,
@@ -1044,7 +1044,6 @@ class DiffService:
             "method": operation.contract.method,
             "path": operation.contract.path,
             "auth": operation.contract.auth,
-            "summary": operation.contract.summary,
             "description": operation.contract.description,
             "response_status": operation.contract.response_status,
             "deprecation_status": deprecation["status"],
@@ -1111,7 +1110,6 @@ class DiffService:
             "kind": kind,
             "method": operation.contract.method,
             "path": operation.contract.path,
-            "summary": operation.contract.summary,
             "description": operation.contract.description,
             "deprecation_status": deprecation["status"],
             "deprecated_since_release": deprecation["deprecated_since_release"],
@@ -1280,7 +1278,6 @@ class DiffService:
             "method": operation.contract.method,
             "path": operation.contract.path,
             "auth": operation.contract.auth,
-            "summary": operation.contract.summary,
             "description": operation.contract.description,
             "response": {
                 "status": operation.contract.response_status,

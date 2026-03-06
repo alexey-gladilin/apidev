@@ -10,7 +10,6 @@
 method: POST
 path: /v1/invoices/search
 auth: bearer
-summary: List invoices
 description: Returns paginated invoices
 request:
   body:
@@ -42,7 +41,6 @@ errors: []
 method: POST
 path: /v1/users/search
 auth: bearer
-summary: List users
 description: Returns paginated users
 request:
   body:
@@ -97,7 +95,6 @@ contract_type: operation
 method: POST
 path: /v1/invoices/search
 auth: bearer
-summary: List invoices
 description: Returns paginated invoices
 request:
   body:
@@ -120,7 +117,6 @@ contract_type: operation
 method: POST
 path: /v1/users/search
 auth: bearer
-summary: List users
 description: Returns paginated users
 request:
   body:

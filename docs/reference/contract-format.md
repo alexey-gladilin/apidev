@@ -186,7 +186,6 @@ Precedence для режимов и операций записи:
 method: GET
 path: /v1/health
 auth: public
-summary: Health endpoint
 description: Returns health status.
 response:
   status: 200
@@ -217,7 +216,6 @@ errors:
 - `method`
 - `path`
 - `auth`
-- `summary`
 - `description`
 - `response`
 - `errors`
@@ -248,11 +246,14 @@ errors:
 - Допустимые значения: `public`, `bearer`
 - Значение нормализуется в lowercase
 
-### `summary` и `description`
+### `description`
+
+Поле `summary` больше не используется для контрактов операций и считается избыточным.
+
 
 - Тип: `string`
-- Обязательные
-- Не должны быть пустыми строками
+- Обязательное
+- Не должно быть пустой строкой
 
 ## Блок `request`
 
@@ -436,7 +437,6 @@ Root-level блок `examples` в контракте не поддерживае
 method: POST
 path: /v1/invoices/{invoice_id}
 auth: bearer
-summary: Update invoice
 description: Update invoice details
 request:
   path:

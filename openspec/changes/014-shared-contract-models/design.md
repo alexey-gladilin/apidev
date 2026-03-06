@@ -129,7 +129,6 @@ contract_type: operation
 method: POST
 path: /v1/users/search
 auth: bearer
-summary: Search users
 description: Returns paginated user list
 request:
   body:
@@ -192,7 +191,6 @@ contract_type: operation
 method: POST
 path: /v1/users
 auth: bearer
-summary: Create user
 description: Creates user profile
 local_models:
   CreateUserAddress:

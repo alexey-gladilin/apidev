@@ -1,5 +1,6 @@
 import json
 import importlib
+import ast
 from pathlib import Path
 import sys
 from typing import Any, cast
@@ -199,14 +200,16 @@ errors: []
     )
     content = request_model.read_text(encoding="utf-8")
 
-    expected_fragment = """
-SCHEMA_FRAGMENT = {
-    "body": {"properties": {"comment": {"type": "string"}}, "type": "object"},
-    "path": {"properties": {"invoice_id": {"type": "string"}}, "type": "object"},
-    "query": {"properties": {"expand": {"type": "string"}}, "type": "object"},
-}
-    """.strip()
-    assert expected_fragment in content
+    expected_fragment = {
+        "body": {"properties": {"comment": {"type": "string"}}, "type": "object"},
+        "path": {"properties": {"invoice_id": {"type": "string"}}, "type": "object"},
+        "query": {"properties": {"expand": {"type": "string"}}, "type": "object"},
+    }
+    fragment_source = (
+        content.split("SCHEMA_FRAGMENT = ", 1)[1].split("\nSCHEMA_EXAMPLE", 1)[0].strip()
+    )
+    actual_fragment = ast.literal_eval(fragment_source)
+    assert actual_fragment == expected_fragment
 
 
 def test_generate_legacy_contract_without_request_keeps_projection_backwards_compatible(
@@ -384,7 +387,6 @@ errors: []
 
     expected_post_operation = {
         "operationId": "billing_update_invoice",
-        "summary": "Update invoice",
         "description": "Update invoice details",
         "deprecated": False,
         "tags": ["billing"],
@@ -441,7 +443,6 @@ errors: []
 
     expected_get_operation = {
         "operationId": "zeta_get_status",
-        "summary": "Get status",
         "description": "Returns status",
         "deprecated": False,
         "tags": ["zeta"],
@@ -1277,7 +1278,6 @@ errors:
     assert "x-apidev-deprecation" not in get_operation
     assert "x-apidev-errors" not in get_operation
     assert get_operation["operationId"] == "billing_get_invoice"
-    assert get_operation["summary"] == "Get invoice"
     assert get_operation["description"] == "Get invoice details"
     assert get_operation["tags"] == ["billing"]
     assert get_operation["security"] == [{"bearerAuth": []}]
