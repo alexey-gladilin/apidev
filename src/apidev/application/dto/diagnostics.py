@@ -2,20 +2,25 @@ from dataclasses import dataclass, field
 import json
 from typing import Mapping, Sequence
 
+from apidev.core.constants import (
+    DIAG_CODE_INIT_MODE_CONFLICT,
+    DIAG_CODE_INIT_PROFILE_INVALID_ENUM,
+    DIAG_CODE_PATH_BOUNDARY_VIOLATION,
+)
 from apidev.core.models.diagnostic import ValidationDiagnostic
 from apidev.core.models.operation import Operation
 
 Severity = str
 
 FAIL_FAST_ERROR_CODES: tuple[str, ...] = (
-    "validation.PATH_BOUNDARY_VIOLATION",
+    DIAG_CODE_PATH_BOUNDARY_VIOLATION,
     "validation.OUTPUT_CONTOUR_CONFLICT",
     "validation.INVALID_SCAFFOLD_WRITE_POLICY",
     "validation.MANUAL_TAGS_FORBIDDEN",
     "validation.RELEASE_STATE_INVALID_KEY",
     "validation.RELEASE_STATE_TYPE_MISMATCH",
-    "config.INIT_PROFILE_INVALID_ENUM",
-    "config.INIT_MODE_CONFLICT",
+    DIAG_CODE_INIT_PROFILE_INVALID_ENUM,
+    DIAG_CODE_INIT_MODE_CONFLICT,
 )
 
 

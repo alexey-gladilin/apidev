@@ -5,13 +5,23 @@ import tomllib
 import typer
 import tomli_w
 
+from apidev.core.constants import (
+    DEFAULT_INIT_INTEGRATION_MODE,
+    DEFAULT_INIT_RUNTIME,
+    DEFAULT_INTEGRATION_DIR,
+    DIAG_CODE_INIT_MODE_CONFLICT,
+    DIAG_CODE_INIT_PROFILE_INVALID_ENUM,
+    DIAG_CODE_PATH_BOUNDARY_VIOLATION,
+    INIT_INTEGRATION_MODES,
+    INIT_INTEGRATION_MODES_DISPLAY,
+    INIT_RUNTIMES,
+    INIT_RUNTIMES_DISPLAY,
+    InitIntegrationMode,
+    InitRuntimeProfile,
+)
 from apidev.core.path_boundary import resolve_relative_path_within_root
 
-_ALLOWED_RUNTIMES = ("fastapi", "none")
-_ALLOWED_INTEGRATION_MODES = ("off", "scaffold", "full")
 InitMode = Literal["create", "repair", "force"]
-RuntimeProfile = Literal["fastapi", "none"]
-IntegrationMode = Literal["off", "scaffold", "full"]
 
 
 def _normalize_text_option(value: object) -> str:
@@ -24,25 +34,28 @@ def _normalize_text_option(value: object) -> str:
 
 def _validate_profile_options(
     runtime: object, integration_mode: object
-) -> tuple[RuntimeProfile, IntegrationMode]:
+) -> tuple[InitRuntimeProfile, InitIntegrationMode]:
     runtime_value = _normalize_text_option(runtime)
     integration_mode_value = _normalize_text_option(integration_mode)
 
-    if runtime_value not in _ALLOWED_RUNTIMES:
+    if runtime_value not in INIT_RUNTIMES:
         raise typer.BadParameter(
-            "config.INIT_PROFILE_INVALID_ENUM: --runtime must be one of: fastapi, none."
+            f"{DIAG_CODE_INIT_PROFILE_INVALID_ENUM}: "
+            f"--runtime must be one of: {INIT_RUNTIMES_DISPLAY}."
         )
-    if integration_mode_value not in _ALLOWED_INTEGRATION_MODES:
+    if integration_mode_value not in INIT_INTEGRATION_MODES:
         raise typer.BadParameter(
-            "config.INIT_PROFILE_INVALID_ENUM: --integration-mode must be one of: off, scaffold, full."
+            f"{DIAG_CODE_INIT_PROFILE_INVALID_ENUM}: "
+            f"--integration-mode must be one of: {INIT_INTEGRATION_MODES_DISPLAY}."
         )
     if runtime_value == "none" and integration_mode_value == "full":
         raise typer.BadParameter(
-            "config.INIT_MODE_CONFLICT: --integration-mode full requires --runtime fastapi."
+            f"{DIAG_CODE_INIT_MODE_CONFLICT}: "
+            "--integration-mode full requires --runtime fastapi."
         )
-    runtime_profile: RuntimeProfile = "fastapi" if runtime_value == "fastapi" else "none"
+    runtime_profile: InitRuntimeProfile = "fastapi" if runtime_value == "fastapi" else "none"
     if integration_mode_value == "off":
-        integration_mode_profile: IntegrationMode = "off"
+        integration_mode_profile: InitIntegrationMode = "off"
     elif integration_mode_value == "scaffold":
         integration_mode_profile = "scaffold"
     else:
@@ -54,7 +67,8 @@ def _validate_integration_dir(project_root: Path, integration_dir: object) -> No
     integration_dir_value = _normalize_text_option(integration_dir)
     if not integration_dir_value:
         raise typer.BadParameter(
-            "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must be a non-empty relative path inside project_dir."
+            f"{DIAG_CODE_PATH_BOUNDARY_VIOLATION}: "
+            "--integration-dir must be a non-empty relative path inside project_dir."
         )
     integration_candidate = Path(integration_dir_value)
     resolved_integration_dir = resolve_relative_path_within_root(
@@ -62,7 +76,8 @@ def _validate_integration_dir(project_root: Path, integration_dir: object) -> No
     )
     if resolved_integration_dir is None:
         raise typer.BadParameter(
-            "validation.PATH_BOUNDARY_VIOLATION: --integration-dir must stay inside project_dir."
+            f"{DIAG_CODE_PATH_BOUNDARY_VIOLATION}: "
+            "--integration-dir must stay inside project_dir."
         )
 
 
@@ -98,7 +113,7 @@ def init_command(
             metavar="[fastapi|none]",
             help="Integration runtime profile.",
         ),
-    ] = "fastapi",
+    ] = DEFAULT_INIT_RUNTIME,
     integration_mode: Annotated[
         str,
         typer.Option(
@@ -106,14 +121,14 @@ def init_command(
             metavar="[off|scaffold|full]",
             help="Integration bootstrap mode.",
         ),
-    ] = "scaffold",
+    ] = DEFAULT_INIT_INTEGRATION_MODE,
     integration_dir: Annotated[
         str,
         typer.Option(
             "--integration-dir",
             help="Integration directory (must stay inside project directory).",
         ),
-    ] = "integration",
+    ] = DEFAULT_INTEGRATION_DIR,
 ) -> None:
     from rich.console import Console
 

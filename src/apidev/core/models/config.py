@@ -14,6 +14,7 @@ from apidev.core.constants import (
     DEFAULT_TEMPLATES_DIR,
     SCAFFOLD_WRITE_POLICIES,
     SCAFFOLD_WRITE_POLICIES_DISPLAY,
+    DEFAULT_INTEGRATION_DIR,
     ScaffoldWritePolicy,
 )
 from apidev.core.ports.python_postprocessor import PythonPostprocessMode
@@ -28,7 +29,7 @@ class GeneratorConfig(BaseModel):
     generated_dir: str = DEFAULT_GENERATED_DIR
     postprocess: PythonPostprocessMode = "auto"
     scaffold: bool = True
-    scaffold_dir: str = "integration"
+    scaffold_dir: str = DEFAULT_INTEGRATION_DIR
     scaffold_write_policy: ScaffoldWritePolicy = DEFAULT_SCAFFOLD_WRITE_POLICY
 
     @field_validator("generated_dir")

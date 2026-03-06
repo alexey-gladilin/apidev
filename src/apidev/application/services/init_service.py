@@ -5,7 +5,14 @@ from typing import Literal
 import tomllib
 
 from apidev.application.dto.resolved_paths import ResolvedPaths, resolve_paths
-from apidev.core.constants import APIDEV_CONFIG_RELATIVE_PATH
+from apidev.core.constants import (
+    APIDEV_CONFIG_RELATIVE_PATH,
+    DEFAULT_INIT_INTEGRATION_MODE,
+    DEFAULT_INIT_RUNTIME,
+    DIAG_CODE_INIT_MODE_CONFLICT,
+    InitIntegrationMode,
+    InitRuntimeProfile,
+)
 from apidev.core.models.config import ApidevConfig
 from apidev.core.path_boundary import is_resolved_path_within_root
 from apidev.core.ports.filesystem import FileSystemPort
@@ -132,8 +139,8 @@ class InitService:
         self,
         project_dir: Path,
         mode: Literal["create", "repair", "force"] = "create",
-        runtime: Literal["fastapi", "none"] = "fastapi",
-        integration_mode: Literal["off", "scaffold", "full"] = "scaffold",
+        runtime: InitRuntimeProfile = DEFAULT_INIT_RUNTIME,
+        integration_mode: InitIntegrationMode = DEFAULT_INIT_INTEGRATION_MODE,
     ) -> "InitResult":
         project_root = project_dir.resolve(strict=False)
         config_path = project_root / APIDEV_CONFIG_RELATIVE_PATH
@@ -245,8 +252,8 @@ class InitService:
     def _load_managed_templates(
         self,
         *,
-        runtime: Literal["fastapi", "none"],
-        integration_mode: Literal["off", "scaffold", "full"],
+        runtime: InitRuntimeProfile,
+        integration_mode: InitIntegrationMode,
     ) -> dict[str, str]:
         if integration_mode == "off":
             template_files: tuple[str, ...] = ()
@@ -258,7 +265,8 @@ class InitService:
         else:
             if runtime == "none":
                 raise ValueError(
-                    "config.INIT_MODE_CONFLICT: --integration-mode full requires --runtime fastapi."
+                    f"{DIAG_CODE_INIT_MODE_CONFLICT}: "
+                    "--integration-mode full requires --runtime fastapi."
                 )
             template_files = (
                 self._SCAFFOLD_TEMPLATES_FASTAPI + self._GENERATED_INTEGRATION_TEMPLATES

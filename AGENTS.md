@@ -22,10 +22,31 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Entry points:
   - `/openspec-proposal` as the documentation orchestrator (`proposal -> research -> design -> plan`, plus spec deltas and artifact sync).
   - `/openspec-implement` (multi-agent) or `/openspec-implement-single` (single-agent) for implementation.
+  - `/bugfix-implement` as bugfix/refactor-fix multi-agent orchestrator (without OpenSpec change-id).
 - Source of truth:
   - Core change files under `openspec/changes/<change-id>/`.
   - Artifact folders under `openspec/changes/<change-id>/artifacts/{research,design,plan}`.
   - `tasks.md` is the execution tracker; only orchestrator updates task statuses (single writer rule).
+
+## Bugfix Workflow (Multi-Agent Only)
+
+- Command: `/bugfix-implement [issue-description]`
+- Scope: bugfix/incident/refactor-fix work that does not require an OpenSpec change-id.
+- Required pipeline: `codebase-researcher -> coder -> tester -> (security for medium/high risk) -> qa`.
+- Orchestrator-only rule: the command acts as coordinator and must not implement fixes directly.
+- Mandatory capability gate before any codebase analysis or edits:
+  - Preferred tooling: Task tool with subagent routing.
+  - Compatible fallback: `spawn_agent`/`send_input`/`wait`.
+- Mandatory probe run:
+  - launch a minimal `codebase-researcher` subagent task;
+  - persist runtime evidence (`task id` or `agent/session id`, verdict token, timestamp).
+- If subagent tooling is unavailable or probe evidence is missing, stop immediately:
+  - `WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE`
+- If the orchestrator is about to perform direct implementation edits, stop immediately:
+  - `WORKFLOW INVALID: ORCHESTRATOR ROLE VIOLATION`
+- Persistent resume state is required:
+  - `.cursor/workflows/bugfix/<run-id>/state.json`
+  - resume strictly from `next_action` and persisted evidence only.
 
 ## Repository Conventions
 
