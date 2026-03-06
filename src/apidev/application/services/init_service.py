@@ -8,7 +8,7 @@ from apidev.application.dto.resolved_paths import ResolvedPaths, resolve_paths
 from apidev.core.models.config import ApidevConfig
 from apidev.core.ports.filesystem import FileSystemPort
 
-DEFAULT_CONTRACT = """method: GET
+DEFAULT_HEALTH_CONTRACT = """method: GET
 path: /v1/health
 auth: public
 description: Returns health status.
@@ -32,6 +32,75 @@ errors:
         message:
           type: string
           required: true
+"""
+
+DEFAULT_USERS_SEARCH_CONTRACT = """method: POST
+path: /v1/users/search
+auth: bearer
+description: Searches users with shared request and response models.
+request:
+  body:
+    $ref: common.PaginationRequest
+response:
+  status: 200
+  body:
+    $ref: users.SearchUsersResponse
+errors:
+  - code: INTERNAL_ERROR
+    http_status: 500
+    body:
+      type: object
+      properties:
+        error_code:
+          type: string
+          required: true
+        message:
+          type: string
+          required: true
+"""
+
+DEFAULT_PAGINATION_REQUEST_MODEL = """contract_type: shared_model
+name: PaginationRequest
+description: Shared request model used by list and search endpoints.
+model:
+  type: object
+  properties:
+    page:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+"""
+
+DEFAULT_USER_SUMMARY_MODEL = """contract_type: shared_model
+name: UserSummary
+description: Shared user projection returned by search endpoints.
+model:
+  type: object
+  properties:
+    id:
+      type: string
+      required: true
+    email:
+      type: string
+      required: true
+"""
+
+DEFAULT_SEARCH_USERS_RESPONSE_MODEL = """contract_type: shared_model
+name: SearchUsersResponse
+description: Shared response payload for user search.
+model:
+  type: object
+  properties:
+    items:
+      type: array
+      required: true
+      items:
+        $ref: users.UserSummary
+    total:
+      type: integer
+      required: true
 """
 
 
@@ -75,21 +144,22 @@ class InitService:
         changed = 0
         invalid_paths: list[Path] = []
 
-        for directory in (paths.apidev_dir, paths.contracts_dir, paths.templates_dir):
+        for directory in (
+            paths.apidev_dir,
+            paths.contracts_dir,
+            paths.shared_models_dir,
+            paths.templates_dir,
+        ):
             if not self.fs.exists(directory):
                 self.fs.mkdir(directory, parents=True)
                 changed += 1
 
-        sample_contract = paths.contracts_dir / "system" / "health.yaml"
         managed_templates = self._load_managed_templates(
             runtime=runtime,
             integration_mode=integration_mode,
         )
 
-        managed_defaults = {
-            paths.config_path: self.default_config_text,
-            sample_contract: DEFAULT_CONTRACT,
-        }
+        managed_defaults = self._build_managed_defaults(paths)
         for template_name, template_content in managed_templates.items():
             managed_defaults[paths.templates_dir / template_name] = template_content
 
@@ -126,6 +196,20 @@ class InitService:
             self.fs.write_text(file_path, default_content)
         return InitResult(status="forced", changed=changed + len(managed_defaults))
 
+    def _build_managed_defaults(self, paths: ResolvedPaths) -> dict[Path, str]:
+        return {
+            paths.config_path: self.default_config_text,
+            paths.contracts_dir / "system" / "health.yaml": DEFAULT_HEALTH_CONTRACT,
+            paths.contracts_dir / "users" / "search.yaml": DEFAULT_USERS_SEARCH_CONTRACT,
+            paths.shared_models_dir
+            / "common"
+            / "pagination_request.yaml": DEFAULT_PAGINATION_REQUEST_MODEL,
+            paths.shared_models_dir / "users" / "user_summary.yaml": DEFAULT_USER_SUMMARY_MODEL,
+            paths.shared_models_dir
+            / "users"
+            / "search_users_response.yaml": DEFAULT_SEARCH_USERS_RESPONSE_MODEL,
+        }
+
     def _load_existing_config(self, config_path: Path) -> ApidevConfig | None:
         if not self.fs.exists(config_path):
             return None
@@ -142,6 +226,7 @@ class InitService:
             paths.apidev_dir,
             paths.config_path,
             paths.contracts_dir,
+            paths.shared_models_dir,
             paths.templates_dir,
         )
         for managed_path in managed_paths:

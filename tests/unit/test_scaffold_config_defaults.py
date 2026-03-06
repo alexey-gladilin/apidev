@@ -12,6 +12,7 @@ def test_config_model_sets_scaffold_defaults() -> None:
     assert config.generator.scaffold is True
     assert config.generator.scaffold_dir == "integration"
     assert config.generator.scaffold_write_policy == "create-missing"
+    assert config.contracts.shared_models_dir == ".apidev/models"
     assert config.openapi.include_extensions is True
 
 
@@ -21,6 +22,7 @@ def test_default_config_text_contains_scaffold_defaults() -> None:
     assert "scaffold = true" in text
     assert 'scaffold_dir = "integration"' in text
     assert 'scaffold_write_policy = "create-missing"' in text
+    assert 'shared_models_dir = ".apidev/models"' in text
     assert "[openapi]" in text
     assert "include_extensions = true" in text
 

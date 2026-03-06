@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 _KNOWN_NAMESPACES = {"validation", "compatibility", "generation", "runtime", "config"}
 
@@ -24,15 +25,19 @@ class ValidationDiagnostic:
     message: str
     location: str
     rule: str
+    context: dict[str, Any] | None = None
 
-    def as_dict(self) -> dict[str, str]:
-        return {
+    def as_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
             "code": self.code,
             "severity": self.severity,
             "message": self.message,
             "location": self.location,
             "rule": self.rule,
         }
+        if self.context:
+            payload["context"] = self.context
+        return payload
 
     def normalized_code(self) -> str:
         return _normalize_namespaced_code(self.code, default_namespace="validation")

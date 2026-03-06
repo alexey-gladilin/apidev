@@ -58,7 +58,7 @@ apidev init --runtime none --integration-mode off --integration-dir integration
 
 Контур bootstrap profile-режимов работает без миграционного fallback:
 
-- `apidev init` управляет только init-managed файлами (`.apidev/config.toml`, sample contract и profile-managed templates);
+- `apidev init` управляет только init-managed файлами (`.apidev/config.toml`, sample operation/shared-model contracts и profile-managed templates);
 - команда не выполняет автоматическую миграцию legacy-структур и не переписывает произвольные пользовательские файлы вне init-managed scope.
 
 Precedence и режимы:

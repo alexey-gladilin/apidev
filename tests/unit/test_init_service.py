@@ -43,6 +43,32 @@ def test_init_writes_default_contract_with_property_level_required(tmp_path: Pat
     assert second.status == "already_initialized"
 
 
+def test_init_creates_ref_based_sample_contract_and_shared_models(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+
+    service.run(tmp_path)
+
+    search_contract = (
+        tmp_path / ".apidev" / "contracts" / "users" / "search.yaml"
+    ).read_text(encoding="utf-8")
+    pagination_model = (
+        tmp_path / ".apidev" / "models" / "common" / "pagination_request.yaml"
+    ).read_text(encoding="utf-8")
+    response_model = (
+        tmp_path / ".apidev" / "models" / "users" / "search_users_response.yaml"
+    ).read_text(encoding="utf-8")
+
+    assert "path: /v1/users/search" in search_contract
+    assert "$ref: common.PaginationRequest" in search_contract
+    assert "$ref: users.SearchUsersResponse" in search_contract
+    assert "contract_type: shared_model" in pagination_model
+    assert "name: PaginationRequest" in pagination_model
+    assert "items:\n        $ref: users.UserSummary" in response_model
+
+
 def test_init_creates_managed_templates(tmp_path: Path) -> None:
     service = InitService(
         fs=LocalFileSystem(),
@@ -64,6 +90,21 @@ def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) ->
     service.run(tmp_path)
     (tmp_path / ".apidev" / "contracts" / "system" / "health.yaml").write_text(
         "method: POST\npath: /broken\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(InitRepairRequiredError):
+        service.run(tmp_path, mode="create")
+
+
+def test_init_create_requires_repair_for_invalid_shared_model(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    (tmp_path / ".apidev" / "models" / "common" / "pagination_request.yaml").write_text(
+        "contract_type: shared_model\nname: Broken\n",
         encoding="utf-8",
     )
 
@@ -155,6 +196,38 @@ dir = ".apidev/templates"
     assert result.status == "repaired"
     assert custom_contract.exists()
     assert "method: GET" in custom_contract.read_text(encoding="utf-8")
+
+
+def test_init_repair_restores_missing_shared_model_in_custom_dir(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+[contracts]
+dir = "spec/contracts"
+shared_models_dir = "spec/models"
+[generator]
+generated_dir = ".apidev/output/api"
+[templates]
+dir = ".apidev/templates"
+""".strip() + "\n",
+        encoding="utf-8",
+    )
+
+    custom_model = tmp_path / "spec" / "models" / "common" / "pagination_request.yaml"
+    custom_model.parent.mkdir(parents=True, exist_ok=True)
+    custom_model.write_text("contract_type: shared_model\nname: PaginationRequest\n", encoding="utf-8")
+    custom_model.unlink()
+
+    result = service.run(tmp_path, mode="repair")
+
+    assert result.status == "repaired"
+    assert custom_model.exists()
+    assert "name: PaginationRequest" in custom_model.read_text(encoding="utf-8")
 
 
 def test_init_repair_restores_missing_managed_template(tmp_path: Path) -> None:

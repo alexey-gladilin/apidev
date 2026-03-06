@@ -53,8 +53,18 @@ class YamlContractLoader(ContractLoaderPort, ContractDocumentLoaderPort):
             rel = document.contract_relpath
             operation_id = build_operation_id(str(rel))
             data = document.data if isinstance(document.data, dict) else {}
+            contract_type = str(data.get("contract_type", "operation")).strip().lower()
+            if contract_type == "shared_model":
+                continue
+            if contract_type != "operation":
+                raise ValueError(
+                    f"Invalid contract_type '{contract_type}' at {rel}. "
+                    "Expected 'operation' or 'shared_model'."
+                )
 
             description = str(data.get("description", "")).strip()
+            request = data.get("request", {}) if isinstance(data.get("request"), dict) else {}
+            response = data.get("response", {}) if isinstance(data.get("response"), dict) else {}
 
             contract = EndpointContract(
                 source_path=path,
@@ -62,9 +72,18 @@ class YamlContractLoader(ContractLoaderPort, ContractDocumentLoaderPort):
                 path=str(data.get("path", "/")),
                 auth=str(data.get("auth", "public")),
                 description=description,
-                response_status=int(data.get("response", {}).get("status", 200)),
-                response_body=data.get("response", {}).get("body", {}),
+                response_status=int(response.get("status", 200)),
+                response_body=response.get("body", {}),
                 errors=data.get("errors", []),
+                request_path=(
+                    request.get("path", {}) if isinstance(request.get("path"), dict) else {}
+                ),
+                request_query=(
+                    request.get("query", {}) if isinstance(request.get("query"), dict) else {}
+                ),
+                request_body=(
+                    request.get("body", {}) if isinstance(request.get("body"), dict) else {}
+                ),
             )
             operations.append(
                 Operation(operation_id=operation_id, contract=contract, contract_relpath=rel)

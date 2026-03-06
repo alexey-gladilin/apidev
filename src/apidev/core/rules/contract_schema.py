@@ -4,7 +4,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from apidev.core.models.contract import EndpointContract
+from pydantic import ValidationError
+
+from apidev.core.models.contract import (
+    EndpointContract,
+    RefSchemaNodeModel,
+    SharedModelContractModel,
+)
 from apidev.core.models.contract_document import ContractDocument
 from apidev.core.models.diagnostic import ValidationDiagnostic
 
@@ -29,19 +35,23 @@ JSON_SCHEMA_TYPES = {"object", "array", "string", "integer", "number", "boolean"
 HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
 AUTH_MODES = {"public", "bearer"}
 ROOT_ALLOWED_FIELDS = {
+    "contract_type",
     "method",
     "path",
     "auth",
     "summary",
     "description",
+    "local_models",
     "request",
     "response",
     "errors",
 }
+SHARED_ROOT_ALLOWED_FIELDS = {"contract_type", "name", "description", "model"}
 REQUEST_ALLOWED_FIELDS = {"path", "query", "body"}
 RESPONSE_ALLOWED_FIELDS = {"status", "body"}
 ERROR_ALLOWED_FIELDS = {"code", "http_status", "body", "example"}
 SCHEMA_ALLOWED_FIELDS = {
+    "$ref",
     "type",
     "properties",
     "items",
@@ -85,6 +95,23 @@ def validate_contract_schema(
         )
         return None, diagnostics
 
+    contract_type = data.get("contract_type")
+    diagnostics.extend(_require_type(relpath, "contract_type", contract_type, str))
+    if isinstance(contract_type, str):
+        normalized_contract_type = contract_type.strip().lower()
+        if normalized_contract_type == "shared_model":
+            return _validate_shared_model_contract(document, data)
+        if normalized_contract_type != "operation":
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message="Field 'contract_type' must be either 'operation' or 'shared_model'.",
+                    location=f"{relpath}:contract_type",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+
     required_fields = (
         "method",
         "path",
@@ -114,6 +141,7 @@ def validate_contract_schema(
     response = data.get("response")
     request = data.get("request")
     errors = data.get("errors")
+    local_models = data.get("local_models")
 
     diagnostics.extend(_require_type(relpath, "method", method, str))
     diagnostics.extend(_require_type(relpath, "path", path, str))
@@ -123,6 +151,7 @@ def validate_contract_schema(
     diagnostics.extend(_require_type(relpath, "request", request, dict))
     diagnostics.extend(_require_type(relpath, "response", response, dict))
     diagnostics.extend(_require_type(relpath, "errors", errors, list))
+    diagnostics.extend(_require_type(relpath, "local_models", local_models, dict))
 
     if isinstance(method, str) and not method.strip():
         diagnostics.append(
@@ -392,8 +421,32 @@ def validate_contract_schema(
     else:
         normalized_errors = []
 
+    normalized_local_models: dict[str, dict[str, Any]] = {}
+    if isinstance(local_models, dict):
+        for model_name, model_schema in sorted(local_models.items()):
+            prefix = f"local_models.{model_name}"
+            diagnostics.extend(_require_type(relpath, prefix, model_schema, dict))
+            if isinstance(model_name, str) and not model_name.strip():
+                diagnostics.append(
+                    ValidationDiagnostic(
+                        code=SCHEMA_INVALID_VALUE,
+                        severity="error",
+                        message="Field 'local_models' contains an empty model name.",
+                        location=f"{relpath}:local_models",
+                        rule=RULE_FIELD_VALUE,
+                    )
+                )
+            if not isinstance(model_schema, dict):
+                continue
+            diagnostics.extend(_validate_body_schema(relpath, prefix, model_schema))
+            normalized_local_models[model_name] = dict(model_schema)
+
     if diagnostics:
         return None, diagnostics
+
+    request_path_schema = request.get("path") if isinstance(request, dict) else {}
+    request_query_schema = request.get("query") if isinstance(request, dict) else {}
+    request_body_schema = request.get("body") if isinstance(request, dict) else {}
 
     return (
         EndpointContract(
@@ -405,6 +458,12 @@ def validate_contract_schema(
             response_status=int(response_status),
             response_body=dict(response_body),
             errors=normalized_errors,
+            request_path=dict(request_path_schema) if isinstance(request_path_schema, dict) else {},
+            request_query=(
+                dict(request_query_schema) if isinstance(request_query_schema, dict) else {}
+            ),
+            request_body=dict(request_body_schema) if isinstance(request_body_schema, dict) else {},
+            local_models=normalized_local_models,
         ),
         diagnostics,
     )
@@ -447,6 +506,10 @@ def _validate_body_schema(
         )
     )
 
+    if "$ref" in schema_fragment:
+        diagnostics.extend(_validate_ref_schema_node(relpath, field_name, schema_fragment))
+        return diagnostics
+
     declared_type = schema_fragment.get("type")
     if declared_type is not None:
         if not isinstance(declared_type, str):
@@ -481,7 +544,12 @@ def _validate_body_schema(
         if isinstance(properties, dict):
             for prop_name, prop_schema in sorted(properties.items()):
                 prop_field_name = f"{field_name}.properties.{prop_name}"
-                diagnostics.extend(_require_type(relpath, prop_field_name, prop_schema, dict))
+                if isinstance(prop_schema, str):
+                    diagnostics.extend(
+                        _validate_shorthand_ref(relpath, prop_field_name, prop_schema)
+                    )
+                else:
+                    diagnostics.extend(_require_type(relpath, prop_field_name, prop_schema, dict))
                 if isinstance(prop_schema, dict):
                     diagnostics.extend(_validate_body_schema(relpath, prop_field_name, prop_schema))
                 required_value = (
@@ -504,7 +572,11 @@ def _validate_body_schema(
 
     items = schema_fragment.get("items")
     if items is not None:
-        diagnostics.extend(_require_type(relpath, f"{field_name}.items", items, dict))
+        if isinstance(items, str):
+            diagnostics.extend(_validate_shorthand_ref(relpath, f"{field_name}.items", items))
+            items = None
+        else:
+            diagnostics.extend(_require_type(relpath, f"{field_name}.items", items, dict))
         if isinstance(items, dict):
             diagnostics.extend(_validate_body_schema(relpath, f"{field_name}.items", items))
 
@@ -812,3 +884,152 @@ def _type_name(expected_type: type[Any]) -> str:
     if expected_type is list:
         return "array"
     return expected_type.__name__
+
+
+def _validate_shorthand_ref(
+    relpath: str, field_name: str, value: str
+) -> list[ValidationDiagnostic]:
+    if value.startswith("$") and len(value.strip()) > 1:
+        return []
+    return [
+        ValidationDiagnostic(
+            code=SCHEMA_INVALID_VALUE,
+            severity="error",
+            message=f"Field '{field_name}' must use '$ModelRef' shorthand for string refs.",
+            location=f"{relpath}:{field_name}",
+            rule=RULE_FIELD_VALUE,
+        )
+    ]
+
+
+def _validate_ref_schema_node(
+    relpath: str, field_name: str, schema_fragment: dict[str, Any]
+) -> list[ValidationDiagnostic]:
+    diagnostics: list[ValidationDiagnostic] = []
+    ref_payload = dict(schema_fragment)
+    try:
+        parsed = RefSchemaNodeModel.model_validate(ref_payload)
+    except ValidationError:
+        parsed = None
+    if parsed is None:
+        ref_value = schema_fragment.get("$ref")
+        if ref_value is None:
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_MISSING_FIELD,
+                    severity="error",
+                    message=f"Missing required field '{field_name}.$ref'.",
+                    location=f"{relpath}:{field_name}.$ref",
+                    rule=RULE_REQUIRED_FIELD,
+                )
+            )
+        else:
+            diagnostics.extend(_require_type(relpath, f"{field_name}.$ref", ref_value, str))
+    else:
+        if not parsed.ref.strip():
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message=f"Field '{field_name}.$ref' must be non-empty.",
+                    location=f"{relpath}:{field_name}.$ref",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+
+    forbidden_inline_fields = ("type", "properties", "items", "enum", "example")
+    for field in forbidden_inline_fields:
+        if field in schema_fragment:
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message=f"Field '{field_name}.{field}' is not allowed for '$ref' nodes.",
+                    location=f"{relpath}:{field_name}.{field}",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+    return diagnostics
+
+
+def _validate_shared_model_contract(
+    document: ContractDocument, data: dict[str, Any]
+) -> tuple[None, list[ValidationDiagnostic]]:
+    diagnostics: list[ValidationDiagnostic] = []
+    relpath = _location(document.contract_relpath)
+
+    diagnostics.extend(
+        _report_unknown_fields(relpath, "contract", data, SHARED_ROOT_ALLOWED_FIELDS)
+    )
+    required_fields = ("contract_type", "name", "description", "model")
+    for field_name in required_fields:
+        if field_name not in data:
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_MISSING_FIELD,
+                    severity="error",
+                    message=f"Missing required field '{field_name}'.",
+                    location=f"{relpath}:{field_name}",
+                    rule=RULE_REQUIRED_FIELD,
+                )
+            )
+
+    diagnostics.extend(_require_type(relpath, "name", data.get("name"), str))
+    diagnostics.extend(_require_type(relpath, "description", data.get("description"), str))
+    diagnostics.extend(_require_type(relpath, "model", data.get("model"), dict))
+
+    if isinstance(data.get("name"), str) and not str(data.get("name")).strip():
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SCHEMA_INVALID_VALUE,
+                severity="error",
+                message="Field 'name' must be non-empty.",
+                location=f"{relpath}:name",
+                rule=RULE_FIELD_VALUE,
+            )
+        )
+    if isinstance(data.get("description"), str) and not str(data.get("description")).strip():
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SCHEMA_INVALID_VALUE,
+                severity="error",
+                message="Field 'description' must be non-empty.",
+                location=f"{relpath}:description",
+                rule=RULE_FIELD_VALUE,
+            )
+        )
+
+    try:
+        payload = SharedModelContractModel.model_validate(data)
+    except ValidationError:
+        payload = None
+    if payload is not None:
+        if payload.contract_type.strip().lower() != "shared_model":
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message="Field 'contract_type' must be 'shared_model'.",
+                    location=f"{relpath}:contract_type",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+    elif isinstance(data.get("contract_type"), str):
+        if str(data.get("contract_type")).strip().lower() != "shared_model":
+            diagnostics.append(
+                ValidationDiagnostic(
+                    code=SCHEMA_INVALID_VALUE,
+                    severity="error",
+                    message="Field 'contract_type' must be 'shared_model'.",
+                    location=f"{relpath}:contract_type",
+                    rule=RULE_FIELD_VALUE,
+                )
+            )
+
+    model_fragment = data.get("model")
+    if isinstance(model_fragment, dict):
+        diagnostics.extend(_validate_body_schema(relpath, "model", model_fragment))
+
+    if diagnostics:
+        return None, diagnostics
+    return None, []

@@ -6,6 +6,7 @@ from pydantic import BaseModel, field_validator
 
 class ContractsConfig(BaseModel):
     dir: str = ".apidev/contracts"
+    shared_models_dir: str = ".apidev/models"
 
 
 class GeneratorConfig(BaseModel):

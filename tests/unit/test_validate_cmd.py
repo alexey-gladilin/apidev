@@ -14,6 +14,12 @@ def _write_contract(root: Path, relpath: str, body: str) -> None:
     target.write_text(body.strip(), encoding="utf-8")
 
 
+def _write_shared_model(root: Path, relpath: str, body: str) -> None:
+    target = root / ".apidev" / "models" / relpath
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(body.strip(), encoding="utf-8")
+
+
 def test_validate_json_output_success(tmp_path: Path) -> None:
     _write_contract(
         tmp_path,
@@ -112,3 +118,50 @@ errors: []
     assert result.exit_code == 1
     assert "method" in result.output
     assert "SCHEMA_INVALID_VALUE" in result.output
+
+
+def test_validate_json_output_includes_machine_readable_cycle_diagnostics(tmp_path: Path) -> None:
+    _write_shared_model(
+        tmp_path,
+        "common/a.yaml",
+        """
+contract_type: shared_model
+name: A
+description: A model
+model:
+  type: object
+  properties:
+    b:
+      $ref: common.B
+""",
+    )
+    _write_shared_model(
+        tmp_path,
+        "common/b.yaml",
+        """
+contract_type: shared_model
+name: B
+description: B model
+model:
+  type: object
+  properties:
+    a:
+      $ref: common.A
+""",
+    )
+
+    result = runner.invoke(app, ["validate", "--project-dir", str(tmp_path), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    cycle_diagnostics = [
+        item
+        for item in payload["diagnostics"]
+        if item["code"] == "validation.contract-reference-cycle"
+    ]
+    assert cycle_diagnostics
+    assert cycle_diagnostics[0]["context"]["cycle_path"] == [
+        "shared_model:common.A",
+        "shared_model:common.B",
+        "shared_model:common.A",
+    ]

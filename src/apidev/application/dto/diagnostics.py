@@ -145,7 +145,7 @@ def serialize_validation_diagnostic(
     *,
     source: str = "validate-service",
 ) -> dict[str, object]:
-    return {
+    payload: dict[str, object] = {
         "code": diagnostic.normalized_code(),
         "severity": diagnostic.severity,
         "location": diagnostic.location,
@@ -154,3 +154,6 @@ def serialize_validation_diagnostic(
         "source": source,
         "rule": diagnostic.rule,
     }
+    if diagnostic.context:
+        payload["context"] = canonicalize_context(diagnostic.context)
+    return payload

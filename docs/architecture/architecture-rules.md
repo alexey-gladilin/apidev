@@ -29,6 +29,7 @@
 |---|---|---|
 | AR-004 | `commands` остаются thin adapters | снижение связности и упрощение CLI слоя |
 | AR-009 | инварианты модели не должны расползаться из `core` в `application` | удержание domain semantics ближе к модели |
+| AR-011 | повторяющиеся path/config literals и allowed values выносятся в именованные константы на подходящем уровне модуля или общего shared source | снижение расхождений, упрощение сопровождения и review |
 
 ## Future candidate rules
 
@@ -60,13 +61,14 @@ core -> filesystem I/O and format parsing
 - Generated/manual boundary является обязательной safety policy.
 - Для write-boundary запрещены contour conflicts: `generated_dir == scaffold_dir`, `generated_dir` вложен в `scaffold_dir` и наоборот; нарушение — fail-fast до файловых операций.
 - Внутренний технический identifier `generated_root` в коде допускается как legacy naming для пути `generator.generated_dir`; нормативная терминология документации использует `generated_dir`.
+- Повторяющиеся path literals, magic strings и списки допустимых значений не должны размножаться без необходимости: локальный повтор выносится в модульную константу, межмодульный — в shared constants/path module.
 - Документация проекта пишется на русском языке, code artifacts — на английском языке.
 
 ## Классификация нарушений
 
 - `Critical` — нарушение направления зависимостей core или write-boundary policy.
 - `Major` — concrete infra import в application, нарушение side-effect policy, raw format parsing inside core.
-- `Minor` — рост связности в commands, дублирование config literals, локальные нарушения языковой политики.
+- `Minor` — рост связности в commands, дублирование config/path literals и allowed values, локальные нарушения языковой политики.
 
 ## Процедура обновления правил
 

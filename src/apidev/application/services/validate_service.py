@@ -21,7 +21,10 @@ class ValidateService:
         paths = resolve_paths(project_dir, config)
 
         operations: list[Operation] = []
-        for document in self.loader.load_documents(paths.contracts_dir):
+        operation_documents = self.loader.load_documents(paths.contracts_dir)
+        shared_model_documents = self.loader.load_documents(paths.shared_models_dir)
+
+        for document in operation_documents:
             contract, schema_diagnostics = validate_contract_schema(document)
             result.diagnostics.extend(schema_diagnostics)
             if contract is None:
@@ -35,8 +38,18 @@ class ValidateService:
                 )
             )
 
+        for document in shared_model_documents:
+            _, schema_diagnostics = validate_contract_schema(document)
+            result.diagnostics.extend(schema_diagnostics)
+
         result.operations = operations
-        result.diagnostics.extend(validate_semantic_rules(operations))
+        result.diagnostics.extend(
+            validate_semantic_rules(
+                operations,
+                operation_documents=operation_documents,
+                shared_model_documents=shared_model_documents,
+            )
+        )
         result.diagnostics.sort(
             key=lambda diagnostic: (diagnostic.location, diagnostic.normalized_code())
         )

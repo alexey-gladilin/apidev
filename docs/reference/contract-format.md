@@ -360,11 +360,27 @@ model:
 
 Reference node должен содержать `$ref` и не содержит собственного inline-shape.
 
+Явное правило для reference node:
+
+- Валидно: в узле присутствует только `$ref`.
+- Невалидно: в том же узле вместе с `$ref` указаны inline-поля (`type`, `properties`, `items`, `required`, `description`, `enum`, `example`, `minimum`, `maximum`).
+
+Валидный пример:
+
+```yaml
+request:
+  body:
+    type: object
+    properties:
+      pagination:
+        $ref: common.PaginationRequest
+```
+
 Допустимые варианты:
 
 - `$ref: common.PaginationRequest`
 - `$ref: Billing.PageInfo`
-- shorthand в scalar/edge-позициях: `$users.UserSummary`
+- shorthand в scalar/edge-позициях: `$users.UserSummary` (input sugar, см. нормализацию ниже)
 
 Reference node допускается в:
 
@@ -374,9 +390,171 @@ Reference node допускается в:
 - `response.body.properties.*`
 - `errors[*].body.properties.*`
 - `*.items`
-- `*.values` для map-like схем (для узлов, которые поддерживают контейнерное представление значений), где используется тот же контрактный паттерн ссылки
 
-Альтернативно, если требуется уточнить, что ссылка стоит в краткой форме, допустима запись `$ModelName` в узлах с scalar/edge-семантикой (без дополнительных inline-параметров).
+Каноническая форма reference node в YAML-контракте: объект только с полем `$ref`.
+
+Запись `$ModelName` допускается только как input sugar в тех же позициях, где допустим reference node по списку выше, и должна быть детерминированно нормализована в эквивалентный узел `{ "$ref": "<ModelName>" }` до структурной schema-валидации.
+
+После нормализации к reference node применяются те же правила:
+
+- узел содержит только `$ref`;
+- любые inline-поля в reference node запрещены.
+
+### Рекомендуемый порядок проектирования shared models
+
+Для аналитиков и backend-команд рекомендуется оформлять reusable модели по шагам:
+
+1. Найти повторяющиеся inline schema-фрагменты в нескольких operation contracts.
+2. Согласовать canonical shape и namespace будущей shared-модели.
+3. Создать shared model contract в `.apidev/models/<namespace>/<model>.yaml` с `contract_type: shared_model`.
+4. Заменить дублирующие inline-блоки в операциях на `$ref`.
+5. Выполнить валидацию и устранить ошибки ссылок, scope boundary и расположения файлов.
+
+### Невалидно/валидно: переиспользуемая модель
+
+Невалидно (дублирование inline-schema в operation contract):
+
+```yaml
+method: POST
+path: /v1/invoices/search
+auth: bearer
+description: Returns paginated invoices
+request:
+  body:
+    type: object
+    properties:
+      pagination:
+        type: object
+        properties:
+          page:
+            type: integer
+            minimum: 1
+            required: true
+          size:
+            type: integer
+            minimum: 1
+            maximum: 500
+            required: true
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+```
+
+Валидно (`contract_type/location` разделены корректно, reusable-shape вынесен):
+
+`.apidev/models/common/pagination_request.yaml`
+
+```yaml
+contract_type: shared_model
+name: PaginationRequest
+description: Used by list operations
+model:
+  type: object
+  properties:
+    page:
+      type: integer
+      minimum: 1
+      required: true
+    size:
+      type: integer
+      minimum: 1
+      maximum: 500
+      required: true
+```
+
+`.apidev/contracts/billing/list_invoices.yaml`
+
+```yaml
+contract_type: operation
+method: POST
+path: /v1/invoices/search
+auth: bearer
+description: Returns paginated invoices
+request:
+  body:
+    type: object
+    properties:
+      pagination:
+        $ref: common.PaginationRequest
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+```
+
+### Невалидно/валидно: правило `$ref`-узла (только `$ref`, без inline-полей)
+
+Невалидно (смешаны `$ref` и inline-shape в одном узле):
+
+```yaml
+request:
+  body:
+    type: object
+    properties:
+      page_info:
+        $ref: common.PageInfo
+        type: object
+```
+
+Валидно (в узле оставлен только `$ref`):
+
+```yaml
+request:
+  body:
+    type: object
+    properties:
+      page_info:
+        $ref: common.PageInfo
+```
+
+### Невалидно/валидно: границы `contract_type` и расположения файла
+
+Невалидно (shared model в `.apidev/contracts`):
+
+`.apidev/contracts/common/page_info.yaml`
+
+```yaml
+contract_type: shared_model
+name: PageInfo
+description: Pagination metadata
+model:
+  type: object
+  properties:
+    total:
+      type: integer
+      required: true
+```
+
+Валидно (shared model в `.apidev/models`):
+
+`.apidev/models/common/page_info.yaml`
+
+```yaml
+contract_type: shared_model
+name: PageInfo
+description: Pagination metadata
+model:
+  type: object
+  properties:
+    total:
+      type: integer
+      required: true
+```
+
+Рекомендуемая проверка после каждого изменения контракта:
+
+```bash
+apidev validate
+```
+
+Если меняются артефакты OpenSpec change, дополнительно:
+
+```bash
+openspec validate 014-shared-contract-models --strict --no-interactive
+```
 
 ## Operation-local models
 
@@ -501,16 +679,23 @@ Reference node допускается в:
 - `description`
 - `enum`
 - `example`
+- `minimum`
+- `maximum`
 - `$ref`
 
 `$ref` вводит ссылочный узел и является альтернативой inline-shape.
-Если указан `$ref`, inline-поля (`type`, `properties`, `items`, `required`, `description`, `enum`, `example`) в том же узле запрещены.
+`$ref` допустим только в позициях reference node, перечисленных выше в разделе "Reference node допускается в" (узлы `*.properties.*` и `*.items`).
+Для `response.body` и `errors[*].body` на верхнем уровне используется только inline schema-фрагмент.
+Если указан `$ref`, inline-поля (`type`, `properties`, `items`, `required`, `description`, `enum`, `example`, `minimum`, `maximum`) в том же узле запрещены.
+Если `$ref` не указан, узел должен быть inline schema-фрагментом с обязательным полем `type`.
 
 Неизвестные поля запрещены.
 
 ### `type`
 
-- Обязательное поле
+- Условно обязательное поле:
+  - обязательно для inline schema-фрагмента (когда `$ref` отсутствует);
+  - не требуется для reference node (когда задан только `$ref`).
 - Тип: `string`
 - Допустимые значения: `object`, `array`, `string`, `integer`, `number`, `boolean`, `null`
 
@@ -519,6 +704,8 @@ Reference node допускается в:
 - Тип: `object`
 - Допустимо только если `type: object`
 - Значения `properties.<name>` должны быть schema-фрагментами
+- Объекты в контракте используют только заранее определенные поля из `properties`
+- Динамические/непредопределенные ключи не поддерживаются
 
 ### `items`
 
@@ -536,6 +723,18 @@ Reference node допускается в:
 
 - Тип: `array`
 - Если задан, не должен быть пустым
+
+### `minimum`
+
+- Тип: `number`
+- Допустимо только если `type: integer` или `type: number`
+- Если одновременно задано `maximum`, должно выполняться `minimum <= maximum`
+
+### `maximum`
+
+- Тип: `number`
+- Допустимо только если `type: integer` или `type: number`
+- Если одновременно задано `minimum`, должно выполняться `maximum >= minimum`
 
 ### `example`
 

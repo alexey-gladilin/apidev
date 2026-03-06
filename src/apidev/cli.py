@@ -8,6 +8,7 @@ from apidev import __version__
 
 from apidev.commands.diff_cmd import diff_command
 from apidev.commands.generate_cmd import generate_command
+from apidev.commands.graph_cmd import graph_command
 from apidev.commands.init_cmd import init_command
 from apidev.commands.validate_cmd import validate_command
 
@@ -113,6 +114,7 @@ app.command(
     help="Initialize apidev project directory and integration profile.",
 )(init_command)
 app.command("validate", help="Validate contracts and rules")(validate_command)
+app.command("graph", help="Inspect contract dependency graph")(graph_command)
 app.command("diff", help="Preview generated file changes")(diff_command)
 app.command("gen", help="Generate code from contracts")(generate_command)
 app.command("generate", hidden=True)(generate_command)

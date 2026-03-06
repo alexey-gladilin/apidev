@@ -43,6 +43,89 @@ errors: []
     assert len(result.operations) == 1
 
 
+def test_validate_inline_only_contract_does_not_require_shared_models_dir(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "users/list_users.yaml",
+        """
+method: GET
+path: /v1/users
+auth: bearer
+summary: List users
+description: Legacy inline-only contract.
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          type: object
+          properties:
+            id:
+              type: integer
+              required: true
+            name:
+              type: string
+              required: true
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+    assert len(result.operations) == 1
+
+
+def test_validate_inline_only_contract_with_custom_shared_models_dir_stays_compatible(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+version = "1"
+[contracts]
+dir = ".apidev/contracts"
+shared_models_dir = ".apidev/shared-models"
+""".strip(),
+        encoding="utf-8",
+    )
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Inline-only legacy contract with custom config.
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: integer
+        required: true
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      invoice_id:
+        type: integer
+        required: true
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+    assert len(result.operations) == 1
+
+
 def test_validate_reports_schema_errors_for_missing_fields(tmp_path: Path) -> None:
     _write_contract(
         tmp_path,

@@ -1,0 +1,424 @@
+{
+  "change_id": "014-shared-contract-models",
+  "mode": "STRICT",
+  "status": "completed",
+  "epoch_id": 1,
+  "next_action": "none",
+  "last_completed_stage": "orchestration_audit",
+  "completed_tasks": [
+    "2.2",
+    "2.3",
+    "2.1",
+    "3.1",
+    "3.2",
+    "3.3",
+    "3.4",
+    "3.5",
+    "3.6",
+    "4.1",
+    "4.2",
+    "4.3",
+    "4.4",
+    "5.1"
+  ],
+  "blocked_tasks": [],
+  "rejection_counts": {
+    "2.2": 1,
+    "2.3": 3,
+    "3.1": 1
+  },
+  "agent_identity_map": {
+    "spec-analyst": "019cc1e3-e7c0-7262-a3c5-834581364f97",
+    "coder": "019cc258-8dbf-7c90-93e6-7b1dc92c020d",
+    "tester": "019cc258-e798-7101-914e-b98ccd2139e5",
+    "security": "019cc259-a332-7073-a8ac-d584d135359b",
+    "qa": "019cc25a-1b1a-7eb3-a789-0278907db965"
+  },
+  "last_subagent_evidence": [
+    {
+      "stage": "spec_readiness_gate",
+      "agent": "spawn_agent:019cc1e3-e7c0-7262-a3c5-834581364f97",
+      "verdict": "SPEC READY",
+      "timestamp": "2026-03-06T06:44:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc1e9-2c32-75c0-baa6-e4707be87130",
+      "verdict": "SECURITY REJECTED",
+      "task_id": "2.2",
+      "timestamp": "2026-03-06T06:50:55Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc1e9-f421-7830-bf00-4cecbe712579",
+      "verdict": "HANDOFF",
+      "task_id": "2.2",
+      "timestamp": "2026-03-06T06:55:59Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc1eb-bcd4-7753-85ab-a1234701600b",
+      "verdict": "VERIFIED",
+      "task_id": "2.2",
+      "timestamp": "2026-03-06T06:55:59Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc1ec-f64a-7a51-9a85-40349ca330a9",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "2.2",
+      "timestamp": "2026-03-06T06:55:59Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc1ed-c3a7-7862-b541-a37b683a2ab2",
+      "verdict": "APPROVED",
+      "task_id": "2.2",
+      "timestamp": "2026-03-06T06:55:59Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc1ef-b9b5-71b0-8755-355088162ed4",
+      "verdict": "REJECTED",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T06:58:18Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc1f2-9694-7bb2-be54-52855a458f34",
+      "verdict": "SECURITY REJECTED",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T07:01:47Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc1f5-7826-79f2-81fd-a28da84a2717",
+      "verdict": "REJECTED",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T07:05:02Z"
+    },
+    {
+      "stage": "human_review_resolution",
+      "agent": "user-directive",
+      "verdict": "APPROVED_NO_MIGRATION_BEFORE_AFTER",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T07:21:55Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc208-2b3f-7430-8356-28fb6de3b45f",
+      "verdict": "VERIFIED",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T07:27:58Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc20a-19ec-7ae2-a8ba-ca60d661585e",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T07:27:58Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc20b-2192-7c42-946e-b69f3f8a9a27",
+      "verdict": "APPROVED",
+      "task_id": "2.3",
+      "timestamp": "2026-03-06T07:27:58Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc20e-176b-7d31-9873-c7c17b816b6d",
+      "verdict": "HANDOFF",
+      "task_id": "3.1",
+      "timestamp": "2026-03-06T07:35:04Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "compat:tester-task-3-1",
+      "verdict": "REJECTED",
+      "task_id": "3.1",
+      "timestamp": "2026-03-06T07:36:34Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc214-680a-7141-844f-5af66d9be0fd",
+      "verdict": "HANDOFF",
+      "task_id": "3.1",
+      "timestamp": "2026-03-06T07:45:42Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc215-4b34-7872-b580-855c1127db14",
+      "verdict": "VERIFIED",
+      "task_id": "3.1",
+      "timestamp": "2026-03-06T07:45:42Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc21a-9ba1-7ce2-8ab1-31604a23b03e",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "3.1",
+      "timestamp": "2026-03-06T07:45:42Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc21b-2428-75a0-9459-5b99938a91c7",
+      "verdict": "APPROVED",
+      "task_id": "3.1",
+      "timestamp": "2026-03-06T07:45:42Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc21d-43b8-7b00-8110-e9c4a7c6c737",
+      "verdict": "HANDOFF",
+      "task_id": "3.2",
+      "timestamp": "2026-03-06T07:51:19Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc21f-46bf-7ad3-8f14-c21fe4c496ac",
+      "verdict": "VERIFIED",
+      "task_id": "3.2",
+      "timestamp": "2026-03-06T07:51:19Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc220-2cb9-7480-ab49-433150d1991f",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "3.2",
+      "timestamp": "2026-03-06T07:51:19Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc220-9859-72d3-9b76-d60a1128dc66",
+      "verdict": "APPROVED",
+      "task_id": "3.2",
+      "timestamp": "2026-03-06T07:51:19Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc221-c944-7a51-9dc6-da7750914892",
+      "verdict": "HANDOFF",
+      "task_id": "3.3",
+      "timestamp": "2026-03-06T08:00:08Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc226-c6c7-7ae2-bd6d-f73c424f8f46",
+      "verdict": "VERIFIED",
+      "task_id": "3.3",
+      "timestamp": "2026-03-06T08:00:08Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc227-fccc-7222-89a7-19ef512b1cb0",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "3.3",
+      "timestamp": "2026-03-06T08:00:08Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc228-73fd-7062-b2aa-d2853175f3a2",
+      "verdict": "APPROVED",
+      "task_id": "3.3",
+      "timestamp": "2026-03-06T08:00:08Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc22a-03c4-7682-8da6-457f595a1206",
+      "verdict": "HANDOFF",
+      "task_id": "3.4",
+      "timestamp": "2026-03-06T08:06:23Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc22c-8929-7761-a54c-71ef03c4fdd9",
+      "verdict": "VERIFIED",
+      "task_id": "3.4",
+      "timestamp": "2026-03-06T08:06:23Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc22d-a972-7f91-b274-fbda706c3e93",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "3.4",
+      "timestamp": "2026-03-06T08:06:23Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc22e-2bad-7873-86fc-54c01e8aacef",
+      "verdict": "APPROVED",
+      "task_id": "3.4",
+      "timestamp": "2026-03-06T08:06:23Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc22f-a0e5-7190-8f25-bca5269bdde5",
+      "verdict": "HANDOFF",
+      "task_id": "3.5",
+      "timestamp": "2026-03-06T08:12:05Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc231-a814-7dc2-b63d-741b99847cd0",
+      "verdict": "VERIFIED",
+      "task_id": "3.5",
+      "timestamp": "2026-03-06T08:12:05Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc233-0511-7421-98ef-c167334d25af",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "3.5",
+      "timestamp": "2026-03-06T08:12:05Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc233-899b-7a81-867b-b6d3310d31f1",
+      "verdict": "APPROVED",
+      "task_id": "3.5",
+      "timestamp": "2026-03-06T08:12:05Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc234-b1c4-7640-a884-c9f08091806a",
+      "verdict": "HANDOFF",
+      "task_id": "3.6",
+      "timestamp": "2026-03-06T08:29:17Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc236-f015-7d20-89c4-6c1460f127e6",
+      "verdict": "VERIFIED",
+      "task_id": "3.6",
+      "timestamp": "2026-03-06T08:29:17Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc242-ce88-76c0-8fc6-ef1b14536dd9",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "3.6",
+      "timestamp": "2026-03-06T08:29:17Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc243-559e-7e33-91bc-158075edc0fc",
+      "verdict": "APPROVED",
+      "task_id": "3.6",
+      "timestamp": "2026-03-06T08:29:17Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc244-7edc-7062-a07e-1d883fb0d907",
+      "verdict": "HANDOFF",
+      "task_id": "4.1",
+      "timestamp": "2026-03-06T08:34:43Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc246-867f-7ad1-9a0f-ea6a26569e0e",
+      "verdict": "VERIFIED",
+      "task_id": "4.1",
+      "timestamp": "2026-03-06T08:34:43Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc247-ed75-7600-81d7-c0e6ab79b6a4",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "4.1",
+      "timestamp": "2026-03-06T08:34:43Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc248-7045-70b3-87b2-c9b4cf6fac6b",
+      "verdict": "APPROVED",
+      "task_id": "4.1",
+      "timestamp": "2026-03-06T08:34:43Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc249-7694-7ef1-b3cf-b48a5300fe36",
+      "verdict": "HANDOFF",
+      "task_id": "4.2",
+      "timestamp": "2026-03-06T08:40:21Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc24a-c529-7a50-af5a-cb5ee13e98e3",
+      "verdict": "VERIFIED",
+      "task_id": "4.2",
+      "timestamp": "2026-03-06T08:40:21Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc24d-2784-7fb1-ad56-b7e13d4e2ff7",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "4.2",
+      "timestamp": "2026-03-06T08:40:21Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc24d-7bfa-7f23-89e2-7f6845e2a737",
+      "verdict": "APPROVED",
+      "task_id": "4.2",
+      "timestamp": "2026-03-06T08:40:21Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc24e-98a0-7a90-bf64-272b17362247",
+      "verdict": "HANDOFF",
+      "task_id": "4.3",
+      "timestamp": "2026-03-06T08:45:04Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc24f-abcf-7132-95c1-1e189df10d38",
+      "verdict": "VERIFIED",
+      "task_id": "4.3",
+      "timestamp": "2026-03-06T08:45:04Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc251-8f2b-7ac2-a519-75c5c19edda8",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "4.3",
+      "timestamp": "2026-03-06T08:45:04Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc252-00f3-7870-8665-c79cdd9f2832",
+      "verdict": "APPROVED",
+      "task_id": "4.3",
+      "timestamp": "2026-03-06T08:45:04Z"
+    },
+    {
+      "stage": "coder_handoff",
+      "agent": "spawn_agent:019cc252-ee73-7203-ad17-60b3bdbb9f9b",
+      "verdict": "HANDOFF",
+      "task_id": "4.4",
+      "timestamp": "2026-03-06T08:51:15Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "spawn_agent:019cc253-e982-7222-a6da-891b4a989b3c",
+      "verdict": "VERIFIED",
+      "task_id": "4.4",
+      "timestamp": "2026-03-06T08:51:15Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "spawn_agent:019cc257-0feb-7f90-9579-1fdff05add8e",
+      "verdict": "SECURITY VERIFIED",
+      "task_id": "4.4",
+      "timestamp": "2026-03-06T08:51:15Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "spawn_agent:019cc257-7eaf-7db0-8cbf-57c1ae463e2a",
+      "verdict": "APPROVED",
+      "task_id": "4.4",
+      "timestamp": "2026-03-06T08:51:15Z"
+    }
+  ],
+  "updated_at": "2026-03-06T08:54:32Z"
+}

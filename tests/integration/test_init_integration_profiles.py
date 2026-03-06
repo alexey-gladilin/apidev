@@ -38,6 +38,17 @@ def test_init_and_integration_create_scaffold_fastapi_scope(tmp_path: Path) -> N
     assert not _template_path(tmp_path, "generated_openapi_docs.py.j2").exists()
 
 
+def test_init_bootstrap_contracts_validate_with_shared_model_refs(tmp_path: Path) -> None:
+    init_result = runner.invoke(app, ["init", "--project-dir", str(tmp_path)])
+
+    assert init_result.exit_code == 0
+
+    validate_result = runner.invoke(app, ["validate", "--project-dir", str(tmp_path)])
+
+    assert validate_result.exit_code == 0
+    assert "Contracts valid." in validate_result.output
+
+
 def test_init_and_integration_create_scaffold_runtime_none_scope(tmp_path: Path) -> None:
     result = runner.invoke(
         app,
