@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from apidev.core.constants import APIDEV_CONFIG_FILENAME, APIDEV_DIRNAME
 from apidev.core.models.config import ApidevConfig
 
 
@@ -22,10 +23,10 @@ def _resolve(project_dir: Path, raw_path: str) -> Path:
 
 
 def resolve_paths(project_dir: Path, config: ApidevConfig) -> ResolvedPaths:
-    apidev_dir = project_dir / ".apidev"
+    apidev_dir = project_dir / APIDEV_DIRNAME
     return ResolvedPaths(
         apidev_dir=apidev_dir,
-        config_path=apidev_dir / "config.toml",
+        config_path=apidev_dir / APIDEV_CONFIG_FILENAME,
         contracts_dir=_resolve(project_dir, config.contracts.dir),
         shared_models_dir=_resolve(project_dir, config.contracts.shared_models_dir),
         templates_dir=_resolve(project_dir, config.templates.dir),

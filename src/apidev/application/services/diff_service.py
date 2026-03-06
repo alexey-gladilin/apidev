@@ -5,7 +5,7 @@ import json
 import re
 import subprocess
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 
 import yaml
 from apidev.application.dto.resolved_paths import resolve_paths
@@ -17,6 +17,16 @@ from apidev.application.dto.generation_plan import (
     GenerationDiagnostic,
     GenerationPlan,
     PlannedChange,
+)
+from apidev.core.constants import (
+    APIDEV_BASELINE_CACHE_RELATIVE_ROOT,
+    COMPATIBILITY_POLICIES,
+    COMPATIBILITY_POLICIES_DISPLAY,
+    DEFAULT_COMPATIBILITY_POLICY,
+    DEFAULT_SCAFFOLD_WRITE_POLICY,
+    SCAFFOLD_WRITE_POLICIES,
+    SCAFFOLD_WRITE_POLICIES_DISPLAY,
+    ScaffoldWritePolicy,
 )
 from apidev.core.models.baseline_snapshot import BaselineSnapshot
 from apidev.core.models.contract import EndpointContract
@@ -37,7 +47,7 @@ from apidev.core.rules.operation_id import build_operation_id, ensure_unique_ope
 
 class DiffService:
     _MAX_HINT_RECURSION_DEPTH = 64
-    _BASELINE_CACHE_RELATIVE_ROOT = Path(".apidev") / "cache" / "baseline"
+    _BASELINE_CACHE_RELATIVE_ROOT = APIDEV_BASELINE_CACHE_RELATIVE_ROOT
     _MAX_BASELINE_CACHE_SIZE_BYTES = 5_000_000
     _SCAFFOLD_TEMPLATES: tuple[tuple[str, str], ...] = (
         ("handler_registry.py", "integration_handler_registry.py.j2"),
@@ -47,11 +57,6 @@ class DiffService:
     )
     _INVALID_FILTER_PATTERN_CODE = "generation.invalid-endpoint-pattern"
     _EMPTY_FILTER_SET_CODE = "generation.empty-endpoint-selection"
-    _SCAFFOLD_WRITE_POLICIES: tuple[str, ...] = (
-        "create-missing",
-        "skip-existing",
-        "fail-on-conflict",
-    )
     _SCAFFOLD_TEMPLATE_CONTEXT: dict[str, str] = {
         "runtime_router_adapter": "fastapi-apirouter",
     }
@@ -73,7 +78,7 @@ class DiffService:
     def run(
         self,
         project_dir: Path,
-        compatibility_policy: CompatibilityPolicy = "warn",
+        compatibility_policy: CompatibilityPolicy = DEFAULT_COMPATIBILITY_POLICY,
         baseline_ref: str | None = None,
         scaffold: bool | None = None,
         endpoint_filters: EndpointFilters | None = None,
@@ -806,7 +811,7 @@ class DiffService:
         candidate = policy
         for _ in range(self._MAX_HINT_RECURSION_DEPTH):
             if candidate is None:
-                return "warn"
+                return DEFAULT_COMPATIBILITY_POLICY
             if isinstance(candidate, str):
                 break
             default = getattr(candidate, "default", None)
@@ -818,10 +823,11 @@ class DiffService:
             break
 
         normalized = str(candidate).strip().lower()
-        if normalized in {"warn", "strict"}:
+        if normalized in COMPATIBILITY_POLICIES:
             return cast(CompatibilityPolicy, normalized)
         raise ValueError(
-            f"Unknown compatibility policy '{candidate}'. Expected one of: warn, strict."
+            f"Unknown compatibility policy '{candidate}'. Expected one of: "
+            f"{COMPATIBILITY_POLICIES_DISPLAY}."
         )
 
     def _planned_change(self, target: Path, content: str) -> PlannedChange:
@@ -839,15 +845,13 @@ class DiffService:
         project_dir: Path,
         scaffold_root: Path,
         postprocess_mode: PythonPostprocessMode,
-        scaffold_write_policy: Literal[
-            "create-missing", "skip-existing", "fail-on-conflict"
-        ] = "create-missing",
+        scaffold_write_policy: ScaffoldWritePolicy = DEFAULT_SCAFFOLD_WRITE_POLICY,
     ) -> list[PlannedChange]:
-        if scaffold_write_policy not in self._SCAFFOLD_WRITE_POLICIES:
+        if scaffold_write_policy not in SCAFFOLD_WRITE_POLICIES:
             raise ValueError(
                 "Invalid generator.scaffold_write_policy "
                 f"'{scaffold_write_policy}'. Expected one of: "
-                f"{', '.join(self._SCAFFOLD_WRITE_POLICIES)}."
+                f"{SCAFFOLD_WRITE_POLICIES_DISPLAY}."
             )
 
         planned: list[PlannedChange] = []

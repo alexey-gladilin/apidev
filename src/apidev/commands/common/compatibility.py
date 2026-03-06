@@ -5,6 +5,11 @@ from typing import cast
 
 from apidev.application.dto.diagnostics import sort_diagnostics
 from apidev.application.dto.generation_plan import CompatibilityPolicy
+from apidev.core.constants import (
+    COMPATIBILITY_POLICIES,
+    COMPATIBILITY_POLICIES_DISPLAY,
+    DEFAULT_COMPATIBILITY_POLICY,
+)
 
 
 def parse_compatibility_policy(policy: object) -> str | None:
@@ -28,10 +33,11 @@ def parse_compatibility_policy(policy: object) -> str | None:
     if current is None:
         return None
     normalized = str(current).strip().lower()
-    if normalized in {"warn", "strict"}:
+    if normalized in COMPATIBILITY_POLICIES:
         return normalized
     raise typer.BadParameter(
-        f"Invalid compatibility policy '{current}'. Expected one of: warn, strict."
+        f"Invalid compatibility policy '{current}'. Expected one of: "
+        f"{COMPATIBILITY_POLICIES_DISPLAY}."
     )
 
 
@@ -39,17 +45,20 @@ def resolve_compatibility_policy(cli_policy: str | None, config_policy: str) -> 
     current: object = cli_policy if cli_policy is not None else config_policy
     for _ in range(8):
         if current is None:
-            return "warn"
+            return DEFAULT_COMPATIBILITY_POLICY
         if isinstance(current, str):
-            normalized = parse_compatibility_policy(current) or "warn"
-            if normalized in {"warn", "strict"}:
+            normalized = parse_compatibility_policy(current) or DEFAULT_COMPATIBILITY_POLICY
+            if normalized in COMPATIBILITY_POLICIES:
                 return cast(CompatibilityPolicy, normalized)
         if hasattr(current, "default"):
             current = getattr(current, "default")
             continue
         break
     value = str(current).strip().lower()
-    raise ValueError(f"Invalid compatibility policy '{value}'. Expected one of: warn, strict.")
+    raise ValueError(
+        f"Invalid compatibility policy '{value}'. Expected one of: "
+        f"{COMPATIBILITY_POLICIES_DISPLAY}."
+    )
 
 
 def print_compatibility(console: Console, policy: str, compatibility: object) -> None:

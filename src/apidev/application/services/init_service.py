@@ -5,6 +5,7 @@ from typing import Literal
 import tomllib
 
 from apidev.application.dto.resolved_paths import ResolvedPaths, resolve_paths
+from apidev.core.constants import APIDEV_CONFIG_RELATIVE_PATH
 from apidev.core.models.config import ApidevConfig
 from apidev.core.ports.filesystem import FileSystemPort
 
@@ -134,7 +135,7 @@ class InitService:
         integration_mode: Literal["off", "scaffold", "full"] = "scaffold",
     ) -> "InitResult":
         project_root = project_dir.resolve(strict=False)
-        config_path = project_root / ".apidev" / "config.toml"
+        config_path = project_root / APIDEV_CONFIG_RELATIVE_PATH
         existing_config = self._load_existing_config(config_path)
 
         paths = resolve_paths(project_root, existing_config or ApidevConfig())

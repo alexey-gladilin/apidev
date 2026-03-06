@@ -9,6 +9,7 @@ from apidev.application.dto.generation_plan import (
     GenerationDiagnostic,
 )
 from apidev.application.services.diff_service import DiffService
+from apidev.core.constants import DEFAULT_COMPATIBILITY_POLICY
 from apidev.core.models.release_state import validate_baseline_ref
 from apidev.core.ports.config_loader import ConfigLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
@@ -49,7 +50,7 @@ class GenerateService:
         self,
         project_dir: Path,
         check: bool = False,
-        compatibility_policy: CompatibilityPolicy = "warn",
+        compatibility_policy: CompatibilityPolicy = DEFAULT_COMPATIBILITY_POLICY,
         baseline_ref: str | None = None,
         scaffold: bool | None = None,
         endpoint_filters: EndpointFilters | None = None,

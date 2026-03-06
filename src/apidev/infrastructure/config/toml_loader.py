@@ -6,6 +6,7 @@ from typing import Any
 import tomli_w
 from pydantic import ValidationError
 
+from apidev.core.constants import APIDEV_CONFIG_RELATIVE_PATH
 from apidev.core.models.config import ApidevConfig
 from apidev.core.models.release_state import ReleaseState
 from apidev.core.ports.config_loader import ConfigLoaderPort
@@ -25,7 +26,7 @@ class TomlConfigLoader(ConfigLoaderPort):
         self.fs = fs
 
     def load(self, project_dir: Path) -> ApidevConfig:
-        path = project_dir / ".apidev" / "config.toml"
+        path = project_dir / APIDEV_CONFIG_RELATIVE_PATH
         if not self.fs.exists(path):
             return ApidevConfig()
 

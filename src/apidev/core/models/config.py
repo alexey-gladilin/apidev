@@ -1,22 +1,35 @@
 from pathlib import Path
-from typing import Literal, cast
+from typing import cast
 
 from pydantic import BaseModel, field_validator
 
+from apidev.core.constants import (
+    CompatibilityPolicyValue,
+    DEFAULT_COMPATIBILITY_POLICY,
+    DEFAULT_CONTRACTS_DIR,
+    DEFAULT_GENERATED_DIR,
+    DEFAULT_RELEASE_STATE_FILE,
+    DEFAULT_SCAFFOLD_WRITE_POLICY,
+    DEFAULT_SHARED_MODELS_DIR,
+    DEFAULT_TEMPLATES_DIR,
+    SCAFFOLD_WRITE_POLICIES,
+    SCAFFOLD_WRITE_POLICIES_DISPLAY,
+    ScaffoldWritePolicy,
+)
+from apidev.core.ports.python_postprocessor import PythonPostprocessMode
+
 
 class ContractsConfig(BaseModel):
-    dir: str = ".apidev/contracts"
-    shared_models_dir: str = ".apidev/models"
+    dir: str = DEFAULT_CONTRACTS_DIR
+    shared_models_dir: str = DEFAULT_SHARED_MODELS_DIR
 
 
 class GeneratorConfig(BaseModel):
-    generated_dir: str = ".apidev/output/api"
-    postprocess: Literal["auto", "none", "ruff", "black"] = "auto"
+    generated_dir: str = DEFAULT_GENERATED_DIR
+    postprocess: PythonPostprocessMode = "auto"
     scaffold: bool = True
     scaffold_dir: str = "integration"
-    scaffold_write_policy: Literal["create-missing", "skip-existing", "fail-on-conflict"] = (
-        "create-missing"
-    )
+    scaffold_write_policy: ScaffoldWritePolicy = DEFAULT_SCAFFOLD_WRITE_POLICY
 
     @field_validator("generated_dir")
     @classmethod
@@ -40,18 +53,15 @@ class GeneratorConfig(BaseModel):
 
     @field_validator("scaffold_write_policy")
     @classmethod
-    def _validate_scaffold_write_policy(
-        cls, value: str
-    ) -> Literal["create-missing", "skip-existing", "fail-on-conflict"]:
+    def _validate_scaffold_write_policy(cls, value: str) -> ScaffoldWritePolicy:
         candidate = value.strip().lower()
-        allowed = ("create-missing", "skip-existing", "fail-on-conflict")
-        if candidate not in allowed:
-            raise ValueError("must be one of: create-missing, skip-existing, fail-on-conflict")
-        return cast(Literal["create-missing", "skip-existing", "fail-on-conflict"], candidate)
+        if candidate not in SCAFFOLD_WRITE_POLICIES:
+            raise ValueError(f"must be one of: {SCAFFOLD_WRITE_POLICIES_DISPLAY}")
+        return cast(ScaffoldWritePolicy, candidate)
 
 
 class TemplatesConfig(BaseModel):
-    dir: str = ".apidev/templates"
+    dir: str = DEFAULT_TEMPLATES_DIR
 
 
 class OpenAPIConfig(BaseModel):
@@ -59,9 +69,9 @@ class OpenAPIConfig(BaseModel):
 
 
 class EvolutionConfig(BaseModel):
-    compatibility_policy: Literal["warn", "strict"] = "warn"
+    compatibility_policy: CompatibilityPolicyValue = DEFAULT_COMPATIBILITY_POLICY
     grace_period_releases: int = 2
-    release_state_file: str = ".apidev/release-state.json"
+    release_state_file: str = DEFAULT_RELEASE_STATE_FILE
 
     @field_validator("grace_period_releases")
     @classmethod

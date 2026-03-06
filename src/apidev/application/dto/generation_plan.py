@@ -3,9 +3,13 @@ from pathlib import Path
 from typing import Literal
 
 from apidev.application.dto.diagnostics import canonicalize_context
+from apidev.core.constants import (
+    CompatibilityPolicyValue,
+    DEFAULT_COMPATIBILITY_POLICY,
+)
 
 DriftStatus = Literal["drift", "no-drift", "error"]
-CompatibilityPolicy = Literal["warn", "strict"]
+CompatibilityPolicy = CompatibilityPolicyValue
 ChangeType = Literal["ADD", "UPDATE", "REMOVE", "SAME"]
 
 
@@ -130,7 +134,7 @@ class GenerationPlan:
     generated_dir_path: Path
     changes: list[PlannedChange] = field(default_factory=list)
     diagnostics: list[GenerationDiagnostic] = field(default_factory=list)
-    compatibility_policy: CompatibilityPolicy = "warn"
+    compatibility_policy: CompatibilityPolicy = DEFAULT_COMPATIBILITY_POLICY
     compatibility: CompatibilitySummary = field(default_factory=CompatibilitySummary)
     policy_blocked: bool = False
 
@@ -141,7 +145,7 @@ class GenerateResult:
     drift_status: DriftStatus = "no-drift"
     changed_paths: list[Path] = field(default_factory=list)
     diagnostics: list[GenerationDiagnostic] = field(default_factory=list)
-    compatibility_policy: CompatibilityPolicy = "warn"
+    compatibility_policy: CompatibilityPolicy = DEFAULT_COMPATIBILITY_POLICY
     compatibility: CompatibilitySummary = field(default_factory=CompatibilitySummary)
     policy_blocked: bool = False
 
