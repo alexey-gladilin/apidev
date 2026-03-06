@@ -106,7 +106,7 @@ Proceed to PHASE 0 only after pre-flight passes.
    - **FORBIDDEN:**
      - Hardcoded return values
      - Magic numbers without constants
-     - Repeated path/config literals, magic strings, or allowed-value sets without named constants
+     - Repeated path/config literals, magic strings, or allowed-value sets without named constants (see UNIVERSAL QUALITY RULES)
      - `// TODO` or stub functions
      - Obvious/noise comments that restate the code
      - Skipping validation
@@ -114,10 +114,26 @@ Proceed to PHASE 0 only after pre-flight passes.
 
 4. **REFACTOR:**
    - Extract duplicates, rename unclear variables, optimize imports.
-   - If repeated literals are local, extract module-level constants; if reused across modules, use shared constants/path module.
+   - Apply repeated-literal extraction and Single Source of Truth rules from UNIVERSAL QUALITY RULES.
    - Preserve architecture boundaries and avoid introducing cyclic dependencies.
    - Remove stale or redundant comments that add no value.
    - Run tests again to confirm no regression.
+
+## UNIVERSAL QUALITY RULES (Language/Framework Agnostic, Mandatory)
+
+- This section refines PHASE 3/4 quality rules and does not override TDD sequencing requirements.
+- Apply these rules in any repository and any programming language. Do not bind decisions to a specific stack.
+- Treat repeated literals as a design smell, not style preference:
+  - If a literal appears 2+ times in one module, extract a local named constant.
+  - If a literal appears across modules/layers, extract a shared constant/type in the appropriate shared module.
+  - For enumerations/allowed-value sets, always define one canonical constant/type and reuse it everywhere (validation, defaults, CLI, errors).
+- Use Single Source of Truth for:
+  - Paths and filenames
+  - Option names and allowed values
+  - Error/diagnostic codes and repeated diagnostic source labels
+  - Thresholds/limits/timeouts and similar policy values
+- If extraction is intentionally not possible (for example, external protocol constraints), add a short code comment explaining why duplication is unavoidable.
+- Before handoff, perform a duplication sweep and explicitly verify no new repeated literals were introduced without constants.
 
 5. **HANDOFF:** Use protocol below.
 

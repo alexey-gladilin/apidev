@@ -19,7 +19,14 @@ argument-hint: [issue-description]
 1. Проверь доступность запуска сабагентов:
    - Preferred: `Task` tool с ролью сабагента.
    - Fallback: совместимые API `spawn_agent`/`send_input`/`wait`.
-2. Если ни один механизм недоступен, останови workflow немедленно:
+2. Выполни обязательный `probe-run`:
+   - запусти минимальный сабагент-пробу (`codebase-researcher`) с no-op заданием;
+   - дождись результата и зафиксируй техническое evidence (`task id` или `agent/session id`, verdict token, timestamp) в state.
+3. До успешного `probe-run` запрещено:
+   - анализировать кодовую базу;
+   - запускать команды кроме проверки tooling;
+   - редактировать любые файлы.
+4. Если ни один механизм недоступен ИЛИ probe не дал валидного evidence, останови workflow немедленно:
 
 ```
 WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
@@ -27,7 +34,7 @@ WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
 - Action Required: Запустить этот workflow в среде с поддержкой сабагентов.
 ```
 
-3. В этом failure-режиме запрещено продолжать как single-agent.
+5. В этом failure-режиме запрещено продолжать как single-agent.
 
 **Resume Protocol (обязателен на каждом новом запуске)**
 - Сначала прочитай `.cursor/workflows/bugfix/<run-id>/state.json`.
@@ -45,36 +52,37 @@ WORKFLOW INVALID: ORCHESTRATOR ROLE VIOLATION
 ```
 
 **Steps**
-1. Возьми описание проблемы из аргумента команды или из последнего сообщения пользователя.
-2. Создай `run-id` формата `YYYYMMDD-HHMM-issue-slug`.
-3. Подготовь рабочую папку:
+1. Сначала загрузи и прими как обязательный протокол `.cursor/agents/bugfix-orchestrator.md`.
+2. Возьми описание проблемы из аргумента команды или из последнего сообщения пользователя.
+3. Создай `run-id` формата `YYYYMMDD-HHMM-issue-slug`.
+4. Подготовь рабочую папку:
    - `.cursor/workflows/bugfix/<run-id>/`
    - `state.json` (из `.cursor/agents/templates/bugfix-workflow-state.template.json`)
-4. Выполни `rehydrate`:
+5. Выполни `rehydrate`:
    - если `state.json` уже существует, продолжай строго с `next_action`;
    - если `state.json` отсутствует, стартуй с `next_action=run_research`.
-5. Оцени риск и зафиксируй его в state:
+6. Оцени риск и зафиксируй его в state:
    - `low`: локальный фикс без чувствительных зон;
    - `medium`: бизнес-логика/контракт;
    - `high`: security/auth/permissions/secrets/public API/data migration.
-6. Запусти `codebase-researcher` и сохрани результат в `research.md`.
-7. Запусти `coder` на основе issue + research и потребуй HANDOFF.
-8. Запусти gates:
+7. Запусти `codebase-researcher` и сохрани результат в `research.md`.
+8. Запусти `coder` на основе issue + research и потребуй HANDOFF.
+9. Запусти gates:
    - всегда `tester`;
    - затем `security` только для `medium/high`;
    - затем `qa`.
-9. На любом `REJECTION`:
+10. На любом `REJECTION`:
    - увеличь соответствующий счетчик в state;
    - вернись к `coder` с конкретным feedback;
    - если отклонение >3 раз, поставь `status=paused` и останови workflow.
-10. На `APPROVED` выполни final quality commands проекта (`format/lint/test`) и заверши:
+11. На `APPROVED` выполни final quality commands проекта (`format/lint/test`) и заверши:
    - `status=completed`
    - `next_action=none`
    - очисти runtime-артефакты run:
      - удалить `.cursor/workflows/bugfix/<run-id>/state.json`
      - удалить `.cursor/workflows/bugfix/<run-id>/research.md` (если есть)
      - удалить пустую директорию run
-11. Если сессия прервалась/контекст сжался:
+12. Если сессия прервалась/контекст сжался:
    - при следующем запуске обязательно продолжай по `state.json`;
    - не восстанавливай ход работ из памяти диалога.
 
@@ -82,6 +90,7 @@ WORKFLOW INVALID: ORCHESTRATOR ROLE VIOLATION
 - После каждого запуска сабагента сохраняй в state:
   - `agent_identity_map`
   - `last_subagent_evidence` (роль, tool/API, verdict token, timestamp)
+- Валидный evidence обязан включать runtime-идентификатор запуска (`task id` или `agent/session id`).
 - Если для обязательного шага pipeline нет evidence запуска сабагента, завершай ошибкой:
 
 ```

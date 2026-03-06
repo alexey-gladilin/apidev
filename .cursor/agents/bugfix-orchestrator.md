@@ -34,8 +34,15 @@ WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
 Перед любым шагом workflow выполнить проверку доступности:
 1. `Task` tool с ролью сабагента.
 2. Либо `spawn_agent`/`send_input`/`wait`.
+3. Выполнить `probe-run` через `codebase-researcher` с no-op задачей и дождаться завершения.
+4. Сохранить в state техническое evidence probe: `task id` или `agent/session id`, verdict token, timestamp.
 
-Если ни один механизм не доступен, вывести `WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE` и завершить без попытки фикса.
+До успешного probe-run запрещено:
+- анализировать репозиторий;
+- запускать команды, кроме checks на tooling;
+- редактировать файлы.
+
+Если ни один механизм не доступен или probe-run не дал валидного evidence, вывести `WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE` и завершить без попытки фикса.
 
 Роли:
 - `codebase-researcher`
@@ -50,6 +57,7 @@ WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
 При использовании fallback `spawn_agent`/`send_input`:
 - Явно передавать роль в префиксе prompt и ссылку на профиль `.cursor/agents/<role>.md`.
 - Фиксировать в state идентификатор запущенного агента и итоговый verdict.
+- Evidence считается валидным только если есть runtime-id запуска (`task id` или `agent/session id`).
 
 ---
 

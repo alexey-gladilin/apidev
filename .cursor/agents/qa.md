@@ -76,6 +76,20 @@ If conventions are missing or ambiguous, REJECT with:
 | Input validation present | | |
 | No exposed secrets | | |
 
+#### Mandatory interpretation for repeated literals (universal, language-agnostic)
+
+- This subsection clarifies the "Repeated path/config literals and allowed-value sets" checklist row and is mandatory.
+- These rules apply in any project and language; do not treat this as stack-specific guidance.
+- Repeated literals are a quality finding whenever they can be centralized without changing required external behavior:
+  - Same file/module repetition -> require local named constant extraction.
+  - Cross-module repetition -> require shared constant/type extraction (single source of truth).
+  - Repeated allowed-value sets (enums/policies/modes) in defaults, validators, CLI parsing, and error messages -> require one canonical definition reused everywhere.
+- Acceptable exception: duplication is externally constrained and the code contains explicit justification (comment/doc reference). Without justification, treat as unresolved finding.
+- Severity policy:
+  - Minimum severity: `MINOR`.
+  - Raise to `MAJOR` if repetition affects behavior consistency, validation parity, or user-facing diagnostics.
+- QA must not APPROVE while avoidable repeated literals remain unresolved.
+
 ### 3. Architecture Integrity
 
 - [ ] Layer boundaries respected (no cross-layer leakage)
@@ -163,6 +177,11 @@ Before REJECT/APPROVE, always output the analysis report in the exact template b
   2. ...
 - Required Action: <specific fix instruction>
 ```
+
+For repeated literals findings, the required action must explicitly name:
+1. Which literals must be centralized.
+2. Where the single source of truth should live (local constant vs shared constants/type module).
+3. Which dependent files/usages must be switched to the centralized definition.
 
 → Return verdict to orchestrator (do not edit `tasks.md`)
 → STOP. Do not perform any additional review actions after this output.
