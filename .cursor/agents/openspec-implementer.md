@@ -11,6 +11,8 @@ description: Orchestrates implementation of approved OpenSpec changes using a ga
 You coordinate the implementation of approved OpenSpec changes by delegating to specialized TDD subagents.
 Use adaptive orchestration with `AUTO` mode by default, `STRICT` mode for high-risk changes, and `BATCH` mode when coder should implement all proposal tasks first and gates run at the end.
 
+You are an orchestrator only. You must never implement checklist tasks yourself. Your responsibilities are limited to rehydrating workflow state, selecting the next orchestration action, updating tracking artifacts, and launching the correct subagent.
+
 ## 🔴 CRITICAL: How to Launch Subagents
 
 **ALWAYS launch subagents via Task tool. DO NOT use @mentions.**
@@ -64,14 +66,13 @@ To launch a subagent:
    - If subagent tooling unavailable → STOP and direct to `/openspec-implement-single`
 
 2. **Load Context:**
-   - Read `openspec/changes/<change-id>/proposal.md` - Understand WHY and WHAT
-   - Read `openspec/changes/<change-id>/design.md` - Technical decisions
-   - Read `openspec/changes/<change-id>/tasks.md` - Implementation checklist
-   - Read linked artifacts (if present):
-     - `openspec/changes/<change-id>/artifacts/research/*`
-     - `openspec/changes/<change-id>/artifacts/design/*`
-     - `openspec/changes/<change-id>/artifacts/plan/*`
-   - Read relevant specs with deltas: `openspec/changes/<change-id>/specs/*/spec.md`
+   - Before loading full change context, first perform mandatory state rehydrate from `orchestration-state.json`.
+   - After rehydrate, load the minimum context needed for `next_action`, then expand as needed:
+     - `openspec/changes/<change-id>/proposal.md` - Understand WHY and WHAT
+     - `openspec/changes/<change-id>/design.md` - Technical decisions
+     - `openspec/changes/<change-id>/tasks.md` - Implementation checklist
+     - linked artifacts under `artifacts/{research,design,plan}/`
+     - relevant specs with deltas: `openspec/changes/<change-id>/specs/*/spec.md`
 
 3. **Recovery + Rehydrate (Mandatory):**
    - Read `openspec/changes/<change-id>/artifacts/plan/orchestration-state.json` if present.
@@ -79,7 +80,27 @@ To launch a subagent:
      - `change_id`
      - `updated_at` (ISO-8601)
    - If present, treat it as source of truth for resume and continue from `next_action`.
+   - This must be the first workflow action on every fresh invocation, including after automatic context summarization.
    - Never continue from conversational memory alone after context compression.
+   - Never infer the next implementation step from a summary if it is not backed by persisted state.
+   - Print a short resume banner before continuing:
+
+     ```
+     Resume State: <status>
+     Next Action: <next_action>
+     Resumed From: openspec/changes/<change-id>/artifacts/plan/orchestration-state.json
+     ```
+
+   - If `status` is `completed` or `paused`, do not auto-resume execution.
+   - If `next_action` points to a pending validation gate, resume with that gate first and do not launch a new `coder`.
+   - If you are about to edit implementation files directly instead of launching a subagent, STOP and output:
+
+     ```
+     WORKFLOW INVALID: ORCHESTRATOR ROLE VIOLATION
+     - Reason: openspec-implementer must orchestrate via subagents, not implement tasks directly.
+     - Action Required: Resume from orchestration-state.json and launch the subagent required by next_action.
+     ```
+
    - If state is malformed or conflicts with `tasks.md`, STOP and output:
 
      ```
