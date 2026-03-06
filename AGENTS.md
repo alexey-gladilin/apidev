@@ -32,3 +32,5 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Project documentation must be written in Russian.
 - Code comments, docstrings, identifiers, test names, CLI flags, and other code artifacts must be written in English.
 - When updating architecture or team-process documentation, keep `docs/architecture/team-conventions.md` and `docs/architecture/architecture-rules.md` aligned if the change affects repository-wide conventions.
+- Agent code quality rule: avoid duplicated literals (`path` fragments, magic strings, allowed-value sets). If repetition is local, extract a module-level constant; if repetition spans modules, use a shared constants/path module.
+- QA/review agent rule: explicitly flag repeated literals and missing constant extraction as a quality finding (severity: at least `Minor`).

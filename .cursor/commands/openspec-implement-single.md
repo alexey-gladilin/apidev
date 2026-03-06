@@ -25,6 +25,7 @@ description: Implement an approved OpenSpec change in single-agent mode (without
    - `openspec/changes/<change-id>/artifacts/design/*` (if present)
    - `openspec/changes/<change-id>/artifacts/plan/*` (if present)
 3. Run pre-flight readiness checks (project conventions + test infrastructure). If missing, stop.
+   - Include literal deduplication convention in coding gate: repeated path/config literals, magic strings, and allowed-value sets must be extracted into named constants (module-level or shared by reuse scope).
 4. Run internal spec readiness gate and continue only on `SPEC READY`.
 5. Select mode:
    - `AUTO` (default, wave-based)
@@ -34,7 +35,7 @@ description: Implement an approved OpenSpec change in single-agent mode (without
 7. For each completed unit (task or wave), run internal verification gates in this exact order:
    - Tester gate: execute checks using `.cursor/agents/tester.md` checklist and output `VERIFIED` or `REJECTION`.
    - Security gate: execute checks using `.cursor/agents/security.md` checklist and output `SECURITY VERIFIED` or `REJECTION`.
-   - QA gate: execute checks using `.cursor/agents/qa.md` checklist and output `APPROVED` or `REJECTION`.
+   - QA gate: execute checks using `.cursor/agents/qa.md` checklist (including duplicated-literal constant extraction check) and output `APPROVED` or `REJECTION`.
    - In single-agent mode, treat these as explicit internal stages with separate evidence blocks; do not skip a stage.
 8. Update `tasks.md` only after required gates pass.
 9. On repeated rejection:

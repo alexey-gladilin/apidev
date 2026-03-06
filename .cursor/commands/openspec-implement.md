@@ -127,9 +127,10 @@ On every new invocation of `/openspec-implement`, especially after automatic con
      - `openspec/changes/<change-id>/artifacts/plan/*`
    - Read relevant spec deltas: `openspec/changes/<change-id>/specs/*/spec.md`
 7. Run pre-flight readiness check:
-   - Verify project coding conventions are documented (`AGENTS.md`, `openspec/AGENTS.md`, `README`, `docs`, contribution guides)
-   - Verify test infrastructure is configured and runnable (framework + command documented in project config/docs)
-   - If missing, STOP with:
+- Verify project coding conventions are documented (`AGENTS.md`, `openspec/AGENTS.md`, `README`, `docs`, contribution guides)
+- Verify test infrastructure is configured and runnable (framework + command documented in project config/docs)
+- Enforce project literal deduplication convention: repeated path/config literals, magic strings, and allowed-value sets must be extracted into named constants (local or shared by reuse scope)
+- If missing, STOP with:
 
      ```
      WORKFLOW STOPPED: PRE-FLIGHT FAILED

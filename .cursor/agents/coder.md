@@ -106,6 +106,7 @@ Proceed to PHASE 0 only after pre-flight passes.
    - **FORBIDDEN:**
      - Hardcoded return values
      - Magic numbers without constants
+     - Repeated path/config literals, magic strings, or allowed-value sets without named constants
      - `// TODO` or stub functions
      - Obvious/noise comments that restate the code
      - Skipping validation
@@ -113,6 +114,7 @@ Proceed to PHASE 0 only after pre-flight passes.
 
 4. **REFACTOR:**
    - Extract duplicates, rename unclear variables, optimize imports.
+   - If repeated literals are local, extract module-level constants; if reused across modules, use shared constants/path module.
    - Preserve architecture boundaries and avoid introducing cyclic dependencies.
    - Remove stale or redundant comments that add no value.
    - Run tests again to confirm no regression.

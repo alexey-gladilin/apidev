@@ -66,6 +66,7 @@ If conventions are missing or ambiguous, REJECT with:
 |-------|-----------|-------|
 | No hardcoded values | | |
 | No magic numbers | | |
+| Repeated path/config literals and allowed-value sets are extracted to named constants | | |
 | No stub functions | | |
 | No `// TODO` in production code | | |
 | No obvious/noise comments | | |

@@ -64,6 +64,7 @@
 ### `coder`
 
 - реализует назначенный scope
+- не дублирует path/config literals, magic strings и allowed values без необходимости; повторяющиеся значения выносит в именованные константы
 - не обновляет `tasks.md`
 
 ### `tester`
@@ -78,6 +79,7 @@
 ### `qa`
 
 - выполняет финальный quality/spec/architecture gate
+- проверяет, что повторяющиеся literals вынесены в константы, и фиксирует нарушение как quality finding (минимум уровня `Minor`)
 
 ### Research/design/planning helpers
 
