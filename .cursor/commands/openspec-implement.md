@@ -15,6 +15,9 @@ description: Start TDD implementation of an approved OpenSpec change using speci
 - **CRITICAL: Launch subagents using Task tool. DO NOT write @mentions in text - use actual Task tool calls.**
 - Tracks progress in tasks.md with automatic status updates
 - Only orchestrator updates `tasks.md` statuses; subagents return verdicts/evidence only
+- Uses persistent orchestration state at `openspec/changes/<change-id>/artifacts/plan/orchestration-state.json`
+- If state file is missing, initialize it from `.cursor/agents/templates/orchestration-state.template.json` before any subagent launch
+- After every orchestration stage, persist `next_action`, `updated_at`, subagent evidence, and task/blocker counters to the state file
 - Handles rejections (3 rejections → `[BLOCKED - NEEDS HUMAN REVIEW]`)
 - Runs quality gates (format/lint/test) at finalization
 - **MANDATORY:** If subagent tooling is unavailable, STOP workflow and do not implement manually in this command.
@@ -78,7 +81,25 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - `openspec/changes/<change-id>/artifacts/design/*`
      - `openspec/changes/<change-id>/artifacts/plan/*`
    - Read relevant spec deltas: `openspec/changes/<change-id>/specs/*/spec.md`
-5. Run pre-flight readiness check:
+5. Initialize or recover orchestration state (mandatory before any subagent launch):
+   - State path: `openspec/changes/<change-id>/artifacts/plan/orchestration-state.json`
+   - Template path: `.cursor/agents/templates/orchestration-state.template.json`
+   - If state file exists:
+     - read it and continue strictly from `next_action`
+     - treat it as the source of truth for `mode`, `completed_tasks`, `blocked_tasks`, `rejection_counts`, `agent_identity_map`, and `last_subagent_evidence`
+   - If state file does not exist:
+     - create it from `.cursor/agents/templates/orchestration-state.template.json`
+     - set `change_id=<change-id>`
+     - set `updated_at=<ISO-8601>`
+     - keep `next_action=run_spec_readiness_gate` unless a prerequisite failure stops the workflow earlier
+   - If state is malformed or conflicts with `tasks.md`, STOP with:
+
+     ```
+     WORKFLOW STOPPED: RECOVERY STATE INVALID
+     - Action Required: repair orchestration-state.json and tasks.md consistency.
+     ```
+
+6. Run pre-flight readiness check:
    - Verify project coding conventions are documented (`AGENTS.md`, `openspec/AGENTS.md`, `README`, `docs`, contribution guides)
    - Verify test infrastructure is configured and runnable (framework + command documented in project config/docs)
    - If missing, STOP with:
@@ -89,11 +110,12 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - Action Required: Document conventions and configure runnable test infrastructure.
      ```
 
-6. Initialize tracking and output current state:
+7. Initialize tracking and output current state:
 
    ```
    - Artifacts linked: <yes/no>
    - Missing artifact references: <list or none>
+   - Orchestration State: openspec/changes/<change-id>/artifacts/plan/orchestration-state.json
    ## OPENSPEC IMPLEMENTATION: <change-id>
    - Proposal: <one line summary>
    - Total Tasks: <count>
@@ -101,7 +123,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Blocked Tasks: <count of [BLOCKED - NEEDS HUMAN REVIEW] items>
    ```
 
-7. Resolve current-truth sources for readiness consistency check (mandatory):
+8. Resolve current-truth sources for readiness consistency check (mandatory):
    - Preferred source: canonical specs under `openspec/specs/*`.
    - Fallback source (when preferred is empty): capability specs from completed changes under `openspec/changes/*/specs/*/spec.md` relevant to the current change dependencies.
    - If `openspec/specs/*` is empty, this MUST be treated as a transitional repository state, not an automatic blocker.
@@ -117,7 +139,7 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      Relevant capabilities resolved: <list>
      ```
 
-8. Run mandatory spec readiness gate before coding:
+9. Run mandatory spec readiness gate before coding:
    - Call Task tool with:
      - `subagent_type`: `"spec-analyst"`
      - `description`: `"Validate OpenSpec readiness"`
@@ -130,8 +152,13 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - If `SPEC REJECTED` → STOP workflow before coding
    - If `SPEC READY` → proceed
    - Log subagent execution evidence in output (agent/tool used + verdict token).
+   - Persist to orchestration state:
+     - `last_completed_stage=spec_readiness_gate`
+     - `next_action=select_execution_mode`
+     - append verdict to `last_subagent_evidence`
+     - update `agent_identity_map` when runtime agent handle is known
 
-9. Determine execution mode (mandatory):
+10. Determine execution mode (mandatory):
    - Default mode: `AUTO`
    - Use `STRICT` if any high-risk trigger is present:
      - security/auth/crypto/secrets/permissions changes
@@ -145,8 +172,9 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      Execution Mode: <AUTO|STRICT|BATCH>
      Reason: <risk heuristic or default>
      ```
+   - Persist selected mode in orchestration state and set `next_action=execute_tasks`
 
-10. Execute implementation loop based on selected mode:
+11. Execute implementation loop based on selected mode:
 
    **AUTO mode (default, checkpoint-based)**
    - Group pending tasks into logical waves using section/task prefixes from `tasks.md` (for example `1.*`, `2.*`, `3.*`).
@@ -163,6 +191,13 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
        - high-risk wave: `tester -> security -> qa`
      - Record gate evidence in output (`VERIFIED` / `SECURITY VERIFIED` / `APPROVED` or `REJECTION`).
      - Mark all wave tasks as `[x]` only after required wave gate(s) return success.
+     - After each wave, persist to orchestration state:
+       - `completed_tasks`
+       - `blocked_tasks`
+       - `rejection_counts`
+       - `last_completed_stage`
+       - `next_action` for the next wave or final gate
+       - `last_subagent_evidence`
    - Always run a **final full gate** after last wave:
      - `tester -> security -> qa`
 
@@ -183,8 +218,9 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
    - Update task statuses:
      - If final gate passes, mark completed batch tasks as `[x]`.
      - If final gate fails, mark affected tasks as rejected/blocked per escalation rules and route fixes via `STRICT` mode until resolved.
+   - Persist orchestration state after coder handoff and after the final gate.
 
-11. **STRICT single-task execution details (used only in STRICT mode):**
+12. **STRICT single-task execution details (used only in STRICT mode):**
 
    For each pending task in tasks.md:
    - Find first `[ ]` task (skip `[BLOCKED - NEEDS HUMAN REVIEW]`, `[x]`)
@@ -232,8 +268,15 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - If APPROVED → Mark as `[x]`
      - If REJECTED → Increment rejection count
      - If 3 rejections → Mark as `[BLOCKED - NEEDS HUMAN REVIEW]`
+   - After each task attempt, persist to orchestration state:
+     - `completed_tasks`
+     - `blocked_tasks`
+     - `rejection_counts`
+     - `last_completed_stage`
+     - `next_action`
+     - `last_subagent_evidence`
    - Continue with next task
-12. After all tasks complete or blocked:
+13. After all tasks complete or blocked:
    - Detect project quality gates from project docs/config (`AGENTS.md`, `README`, CI workflow, Makefile/package manager/python config`)
    - Resolve concrete commands for execution:
      - if `Makefile` has `format`, `lint`, `test` targets, use `make format`, `make lint`, `make test`
@@ -247,9 +290,10 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      ```
 
    - If any fail → Report issues and mark relevant tasks as `[BLOCKED - NEEDS HUMAN REVIEW]`
-13. Generate completion summary (see format below)
+   - Persist final gate results to orchestration state with `next_action=generate_completion_summary`
+14. Generate completion summary (see format below)
 
-14. Mandatory orchestration audit (before final answer):
+15. Mandatory orchestration audit (before final answer):
    - Confirm at least one invocation for each required stage:
      - readiness: `spec-analyst`
      - implementation: `coder`
@@ -261,6 +305,11 @@ See `.cursor/agents/openspec-implementer.md` for detailed examples.
      - Missing stage(s): <list>
      - Action Required: Re-run /openspec-implement with proper subagent execution.
      ```
+   - If the audit passes, persist:
+     - `status=completed` when no pending/blocking work remains, otherwise `status=active`
+     - `last_completed_stage=orchestration_audit`
+     - `next_action=none` for completed runs
+     - refreshed `updated_at`
 
 **Completion Summary Format**
 
