@@ -27,6 +27,16 @@ description: Orchestrates non-OpenSpec bugfix workflow via subagents (research, 
 WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
 ```
 
+В этом режиме запрещено продолжать в single-agent формате и запрещено выполнять прямые правки implementation-файлов.
+
+### Subagent Capability Check (первое действие)
+
+Перед любым шагом workflow выполнить проверку доступности:
+1. `Task` tool с ролью сабагента.
+2. Либо `spawn_agent`/`send_input`/`wait`.
+
+Если ни один механизм не доступен, вывести `WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE` и завершить без попытки фикса.
+
 Роли:
 - `codebase-researcher`
 - `coder`
@@ -36,6 +46,10 @@ WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
 
 Каждый prompt сабагента обязан начинаться с:
 - `AGENT_ID: <role>-<scope>`
+
+При использовании fallback `spawn_agent`/`send_input`:
+- Явно передавать роль в префиксе prompt и ссылку на профиль `.cursor/agents/<role>.md`.
+- Фиксировать в state идентификатор запущенного агента и итоговый verdict.
 
 ---
 
@@ -51,11 +65,18 @@ WORKFLOW STOPPED: SUBAGENT TOOLING UNAVAILABLE
 4. Если `state.json` существует:
    - считай его как source of truth;
    - продолжай строго из `next_action`.
+   - если `status=completed` или `status=paused`, не продолжай автоматически.
 5. Всегда сохраняй state после каждого завершенного шага/gate.
 6. Если state поврежден или противоречит фактическому состоянию файлов:
 
 ```
 WORKFLOW STOPPED: RECOVERY STATE INVALID
+```
+
+Если при rehydrate отсутствуют обязательные evidence для шага из `next_action`, остановить workflow:
+
+```
+WORKFLOW STOPPED: RESUME EVIDENCE MISSING
 ```
 
 ### Phase 2: Risk + Gate Plan
@@ -77,7 +98,7 @@ WORKFLOW STOPPED: RECOVERY STATE INVALID
      - file:line evidence;
      - воспроизводимость (если возможно).
    - Сохрани результат в `.cursor/workflows/bugfix/<run-id>/research.md`.
-   - Обнови state: `gates.research=passed`, `next_action=run_coder`.
+   - Обнови state: `gates.research=passed`, `next_action=run_coder`, добавь запись в `last_subagent_evidence`.
 
 2. `next_action = run_coder`
    - Запусти `coder` с:
@@ -85,34 +106,40 @@ WORKFLOW STOPPED: RECOVERY STATE INVALID
      - research findings,
      - требованием RED-GREEN-REFACTOR,
      - требованием HANDOFF с файлами и командами.
-   - Обнови state: `gates.coder=passed`, `changed_files`, `next_action=run_tester`.
+   - Обнови state: `gates.coder=passed`, `changed_files`, `next_action=run_tester`, добавь запись в `last_subagent_evidence`.
 
 3. `next_action = run_tester`
    - Запусти `tester` с HANDOFF от coder.
    - Если `REJECTION`:
      - увеличь `rejection_counts.tester`;
-     - `next_action=run_coder`.
+     - `next_action=run_coder`;
+     - добавь запись в `last_subagent_evidence`.
    - Если `VERIFIED`:
      - `gates.tester=passed`;
-     - `next_action=run_security` (для medium/high) иначе `run_qa`.
+     - `next_action=run_security` (для medium/high) иначе `run_qa`;
+     - добавь запись в `last_subagent_evidence`.
 
 4. `next_action = run_security` (только medium/high)
    - Запусти `security` с VERIFIED от tester.
    - Если `REJECTION`:
      - увеличь `rejection_counts.security`;
-     - `next_action=run_coder`.
+     - `next_action=run_coder`;
+     - добавь запись в `last_subagent_evidence`.
    - Если `SECURITY VERIFIED`:
      - `gates.security=passed`;
-     - `next_action=run_qa`.
+     - `next_action=run_qa`;
+     - добавь запись в `last_subagent_evidence`.
 
 5. `next_action = run_qa`
    - Запусти `qa` с результатом предыдущего gate.
    - Если `REJECTION`:
      - увеличь `rejection_counts.qa`;
-     - `next_action=run_coder`.
+     - `next_action=run_coder`;
+     - добавь запись в `last_subagent_evidence`.
    - Если `APPROVED`:
      - `gates.qa=passed`;
-     - `next_action=run_final_checks`.
+     - `next_action=run_final_checks`;
+     - добавь запись в `last_subagent_evidence`.
 
 6. `next_action = run_final_checks`
    - Выполни project-defined `format/lint/test` (конкретные команды из документации/конфига).
@@ -133,6 +160,15 @@ WORKFLOW STOPPED: RECOVERY STATE INVALID
 
 ```
 WORKFLOW STOPPED: RESUME EVIDENCE MISSING
+```
+
+### Phase 4.1: Evidence Completeness Check
+
+Перед финальным завершением проверить, что для обязательных шагов pipeline есть evidence запуска сабагентов.
+Если evidence отсутствует хотя бы для одного обязательного шага, остановить workflow:
+
+```
+WORKFLOW STOPPED: SUBAGENT EVIDENCE MISSING
 ```
 
 ### Phase 5: State Lifecycle
@@ -161,5 +197,6 @@ WORKFLOW PAUSED - HUMAN INTERVENTION REQUIRED
 ## IMPORTANT NOTES
 
 - Вы координатор, а не прямой исполнитель фикса.
+- Любая попытка выполнить bugfix напрямую (без запуска сабагента) — нарушение роли оркестратора.
 - Нельзя пропускать `research` шаг для багфикса без явного запроса пользователя.
 - `state.json` — единственный источник позиции resume (`next_action`).
