@@ -51,9 +51,9 @@ def test_init_creates_ref_based_sample_contract_and_shared_models(tmp_path: Path
 
     service.run(tmp_path)
 
-    search_contract = (
-        tmp_path / ".apidev" / "contracts" / "users" / "search.yaml"
-    ).read_text(encoding="utf-8")
+    search_contract = (tmp_path / ".apidev" / "contracts" / "users" / "search.yaml").read_text(
+        encoding="utf-8"
+    )
     pagination_model = (
         tmp_path / ".apidev" / "models" / "common" / "pagination_request.yaml"
     ).read_text(encoding="utf-8")
@@ -80,6 +80,17 @@ def test_init_creates_managed_templates(tmp_path: Path) -> None:
     for template_path in _managed_template_paths(tmp_path):
         assert template_path.exists()
         assert template_path.read_text(encoding="utf-8").strip()
+
+
+def test_init_creates_scaffold_dir_from_config(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+
+    service.run(tmp_path, integration_mode="scaffold")
+
+    assert (tmp_path / ".apidev" / "output" / "integration").exists()
 
 
 def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) -> None:
@@ -119,12 +130,16 @@ def test_init_repair_overwrites_invalid_config_toml(tmp_path: Path) -> None:
     )
     service.run(tmp_path)
     config_path = tmp_path / ".apidev" / "config.toml"
-    config_path.write_text("version = \n", encoding="utf-8")
+    config_path.write_text("[generator]\nscaffold = \n", encoding="utf-8")
 
     result = service.run(tmp_path, mode="repair")
 
     assert result.status == "repaired"
-    assert 'version = "1"' in config_path.read_text(encoding="utf-8")
+    rewritten = config_path.read_text(encoding="utf-8")
+    assert "[paths]" in rewritten
+    assert "[inputs]" in rewritten
+    assert "[generator]" in rewritten
+    assert "version" not in rewritten
 
 
 def test_init_force_overwrites_managed_files(tmp_path: Path) -> None:
@@ -150,13 +165,13 @@ def test_init_create_accepts_valid_custom_config(tmp_path: Path) -> None:
     service.run(tmp_path)
     (tmp_path / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-[contracts]
-dir = "spec/contracts"
+[paths]
+templates_dir = ".apidev/templates"
+[inputs]
+contracts_dir = "spec/contracts"
+shared_models_dir = "spec/models"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = ".apidev/templates"
 """.strip() + "\n",
         encoding="utf-8",
     )
@@ -174,14 +189,12 @@ def test_init_repair_restores_missing_contract_in_custom_contracts_dir(tmp_path:
     )
     service.run(tmp_path)
     (tmp_path / ".apidev" / "config.toml").write_text(
-        """
-version = "1"
-[contracts]
-dir = "spec/contracts"
+        """[inputs]
+contracts_dir = "spec/contracts"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip() + "\n",
         encoding="utf-8",
     )
@@ -205,22 +218,22 @@ def test_init_repair_restores_missing_shared_model_in_custom_dir(tmp_path: Path)
     )
     service.run(tmp_path)
     (tmp_path / ".apidev" / "config.toml").write_text(
-        """
-version = "1"
-[contracts]
-dir = "spec/contracts"
+        """[inputs]
+contracts_dir = "spec/contracts"
 shared_models_dir = "spec/models"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip() + "\n",
         encoding="utf-8",
     )
 
     custom_model = tmp_path / "spec" / "models" / "common" / "pagination_request.yaml"
     custom_model.parent.mkdir(parents=True, exist_ok=True)
-    custom_model.write_text("contract_type: shared_model\nname: PaginationRequest\n", encoding="utf-8")
+    custom_model.write_text(
+        "contract_type: shared_model\nname: PaginationRequest\n", encoding="utf-8"
+    )
     custom_model.unlink()
 
     result = service.run(tmp_path, mode="repair")
@@ -266,14 +279,12 @@ def test_init_repair_rejects_out_of_project_managed_dirs(
     )
     service.run(tmp_path)
     (tmp_path / ".apidev" / "config.toml").write_text(
-        f"""
-version = "1"
-[contracts]
-dir = "{contracts_dir}"
+        f"""[inputs]
+contracts_dir = "{contracts_dir}"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = "{templates_dir}"
+[paths]
+templates_dir = "{templates_dir}"
 """.strip() + "\n",
         encoding="utf-8",
     )
@@ -302,14 +313,12 @@ def test_init_force_rejects_out_of_project_managed_dirs(
     )
     service.run(tmp_path)
     (tmp_path / ".apidev" / "config.toml").write_text(
-        f"""
-version = "1"
-[contracts]
-dir = "{contracts_dir}"
+        f"""[inputs]
+contracts_dir = "{contracts_dir}"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = "{templates_dir}"
+[paths]
+templates_dir = "{templates_dir}"
 """.strip() + "\n",
         encoding="utf-8",
     )

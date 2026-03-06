@@ -26,16 +26,14 @@ def _write_project_config(project_dir: Path) -> None:
     (project_dir / ".apidev").mkdir(parents=True, exist_ok=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
 
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 
 [evolution]
 release_state_file = ".apidev/release-state.json"

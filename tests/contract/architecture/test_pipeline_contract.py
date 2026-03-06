@@ -17,16 +17,14 @@ def _write_minimal_project(tmp_path: Path) -> None:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
 
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip(),
         encoding="utf-8",
     )

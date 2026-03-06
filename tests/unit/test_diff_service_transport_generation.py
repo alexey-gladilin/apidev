@@ -16,16 +16,14 @@ def _write_project_config(project_dir: Path) -> None:
     (project_dir / ".apidev" / "contracts").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
 
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip(),
         encoding="utf-8",
     )
@@ -120,7 +118,7 @@ errors: []
         "zeta/models/get_status_response.py",
         "zeta/models/get_status_error.py",
     ]
-    scaffold_paths = _planned_paths_within_root(plan, tmp_path / "integration")
+    scaffold_paths = _planned_paths_within_root(plan, tmp_path / ".apidev" / "integration")
     assert scaffold_paths == [
         "handler_registry.py",
         "router_factory.py",

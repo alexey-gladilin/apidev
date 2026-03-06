@@ -37,7 +37,7 @@
 
 ## Размещение файлов
 
-- Базовая директория контрактов: `.apidev/contracts` (или кастомная `contracts.dir` в `.apidev/config.toml`).
+- Базовая директория контрактов: `.apidev/contracts` (или кастомная `inputs.contracts_dir` в `.apidev/config.toml`).
 - Рекомендуемая структура: `<domain>/<operation>.yaml`.
 - Поддерживаемое расширение: `.yaml`.
 - `operation_id` вычисляется из относительного пути и должен быть уникален.
@@ -134,6 +134,56 @@ scaffold_write_policy = "create-missing"
   - `skip-existing`: существующие scaffold-файлы не изменяются, отсутствующие создаются.
   - `fail-on-conflict`: если целевой scaffold-файл уже существует, генерация завершается с ошибкой.
 - Недопустимое значение `generator.scaffold_write_policy` приводит к ошибке валидации конфигурации.
+
+### Каноническая структура `.apidev/config.toml`
+
+Поддерживается только канонический секционный формат:
+
+```toml
+[paths]
+templates_dir = ".apidev/templates"
+
+[inputs]
+contracts_dir = ".apidev/contracts"
+shared_models_dir = ".apidev/models"
+
+[generator]
+generated_dir = ".apidev/output/api"
+postprocess = "auto"
+scaffold = true
+scaffold_dir = ".apidev/integration"
+scaffold_write_policy = "create-missing"
+
+[evolution]
+release_state_file = ".apidev/release-state.json"
+compatibility_policy = "warn"
+grace_period_releases = 2
+
+[openapi]
+include_extensions = true
+```
+
+Контракт fail-fast для структуры config:
+
+- неизвестные секции блокируют выполнение команд `validate`, `diff`, `gen`, `init`;
+- неизвестные ключи в известных секциях также блокируют выполнение команд;
+- диагностическое сообщение детерминированно содержит `key_path=<секция>` или `key_path=<секция>.<ключ>`;
+- поле `version` не поддерживается и считается невалидным ключом.
+
+Нормативный набор ключей:
+
+- `paths.templates_dir`
+- `inputs.contracts_dir`
+- `inputs.shared_models_dir`
+- `generator.generated_dir`
+- `generator.postprocess`
+- `generator.scaffold`
+- `generator.scaffold_dir`
+- `generator.scaffold_write_policy`
+- `evolution.release_state_file`
+- `evolution.compatibility_policy`
+- `evolution.grace_period_releases`
+- `openapi.include_extensions`
 
 ### Profile-based bootstrap (`apidev init`) без миграционного контура
 

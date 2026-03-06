@@ -20,19 +20,18 @@ def _write_project(
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         f"""
-version = "1"
+[paths]
+templates_dir = ".apidev/templates"
 
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
+shared_models_dir = ".apidev/models"
 
 [generator]
 generated_dir = "{generated_dir}"
 scaffold = {str(scaffold).lower()}
 scaffold_dir = "{scaffold_dir}"
 scaffold_write_policy = "{scaffold_write_policy}"
-
-[templates]
-dir = ".apidev/templates"
 """.strip() + "\n",
         encoding="utf-8",
     )

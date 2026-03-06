@@ -1,17 +1,38 @@
 {
   "change_id": "014-config-refactor",
-  "mode": "UNSET",
-  "status": "active",
+  "mode": "STRICT",
+  "status": "completed",
   "epoch_id": 1,
-  "next_action": "select_execution_mode",
-  "last_completed_stage": "spec_readiness_gate",
-  "completed_tasks": [],
+  "next_action": "workflow_complete",
+  "last_completed_stage": "qa_gate",
+  "completed_tasks": [
+    "1.1",
+    "1.2",
+    "1.3",
+    "1.5",
+    "1.7",
+    "1.8",
+    "1.9",
+    "1.10",
+    "1.4",
+    "1.6"
+  ],
   "blocked_tasks": [],
   "rejection_counts": {
-    "spec_readiness_gate": 1
+    "spec_readiness_gate": 1,
+    "1.1": 3,
+    "1.4": 3,
+    "1.5": 1,
+    "1.6": 3,
+    "1.7": 2
   },
   "agent_identity_map": {
-    "spec-analyst": "019cc378-623a-79c3-a5ec-d2e17fbe2cca"
+    "spec-analyst": "019cc378-623a-79c3-a5ec-d2e17fbe2cca",
+    "tester": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+    "coder": "019cc4df-c6cc-78a2-9497-570ff69a934b",
+    "security": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+    "qa": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+    "capability-probe": "019cc4df-4fe4-7d10-bd5d-ae87f0ed316d"
   },
   "last_subagent_evidence": [
     {
@@ -25,7 +46,355 @@
       "agent": "019cc382-28dc-77a1-9f22-e8e7fc38fe73",
       "verdict": "SPEC READY",
       "timestamp": "2026-03-06T14:17:40Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc389-c124-7570-a49a-1812d6e92477",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-06T15:06:30Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc38b-6f65-7592-9ee1-85c66a232377",
+      "verdict": "HANDOFF",
+      "timestamp": "2026-03-06T15:10:30Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc38d-4384-79b1-a89d-d5ad2c2a61e3",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-06T15:14:00Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc38e-faa6-7560-ab57-8cef42bef6ae",
+      "verdict": "HANDOFF",
+      "timestamp": "2026-03-06T15:17:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc390-7f93-75f2-bb15-dbcfd9474e24",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-06T15:20:30Z"
+    },
+    {
+      "stage": "human_override_phase_01",
+      "agent": "orchestrator",
+      "verdict": "APPROVED_BY_USER_RESTART",
+      "timestamp": "2026-03-06T16:05:00Z"
+    },
+    {
+      "stage": "coder_task",
+      "agent": "019cc46d-1eb5-7312-bf63-ad325a200f29",
+      "verdict": "HANDOFF_TASK_1_4",
+      "timestamp": "2026-03-06T16:12:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc471-2ba4-7472-b8a8-6fa80d8d2ca0",
+      "verdict": "REJECT_TASK_1_4",
+      "timestamp": "2026-03-06T16:18:00Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc472-745a-71f2-9eb5-1c537dc232e3",
+      "verdict": "HANDOFF_TASK_1_4_RETRY_1",
+      "timestamp": "2026-03-06T16:23:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc475-26ba-77e2-920c-ec5490efe713",
+      "verdict": "VERIFIED_TASK_1_4",
+      "timestamp": "2026-03-06T16:26:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc476-4a9f-79f1-9463-9978ecd946dd",
+      "verdict": "SECURITY_VERIFIED_TASK_1_4",
+      "timestamp": "2026-03-06T16:29:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc477-1a7e-7621-bc91-41ed09ea9cc4",
+      "verdict": "REJECT_TASK_1_4",
+      "timestamp": "2026-03-06T16:32:00Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc478-be05-73b0-a3fa-bba27c52b17b",
+      "verdict": "HANDOFF_TASK_1_4_RETRY_2",
+      "timestamp": "2026-03-06T16:37:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc47e-9217-7fb2-a223-3698bb59fcc6",
+      "verdict": "VERIFIED_TASK_1_4_RETRY_2",
+      "timestamp": "2026-03-06T16:44:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc480-634d-7041-9d9f-d31252c0ee12",
+      "verdict": "SECURITY_VERIFIED_TASK_1_4_RETRY_2",
+      "timestamp": "2026-03-06T16:47:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc481-55d1-7730-b188-56c8366638d1",
+      "verdict": "REJECT_TASK_1_4_MINOR_LITERAL_DUPLICATION",
+      "timestamp": "2026-03-06T16:50:00Z"
+    },
+    {
+      "stage": "coder_task",
+      "agent": "019cc4b8-f435-75c0-b6df-192c9db9f9b5",
+      "verdict": "HANDOFF_TASK_1_5",
+      "timestamp": "2026-03-06T17:00:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4bb-cb57-7d60-937c-6abfb0101a25",
+      "verdict": "VERIFIED_TASK_1_5",
+      "timestamp": "2026-03-06T17:04:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4bd-d955-77b1-a25d-1155944ada02",
+      "verdict": "SECURITY_VERIFIED_TASK_1_5",
+      "timestamp": "2026-03-06T17:08:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4be-bf29-72c2-a89c-8537e3d5db4d",
+      "verdict": "REJECT_TASK_1_5_MINOR_DUPLICATE_KEYS_SET",
+      "timestamp": "2026-03-06T17:11:00Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc4c0-20c3-7653-8de7-d55189ecfe7f",
+      "verdict": "HANDOFF_TASK_1_5_RETRY_1",
+      "timestamp": "2026-03-06T17:16:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4c3-07c7-7fb2-b756-514475b2dedf",
+      "verdict": "VERIFIED_TASK_1_5_RETRY_1",
+      "timestamp": "2026-03-06T17:20:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4c5-a8de-7930-848b-63d28c0709f7",
+      "verdict": "APPROVED_TASK_1_5",
+      "timestamp": "2026-03-06T17:23:00Z"
+    },
+    {
+      "stage": "coder_task",
+      "agent": "019cc4ca-d38b-7020-8b47-9ec9eb473ae2",
+      "verdict": "HANDOFF_TASK_1_6",
+      "timestamp": "2026-03-06T20:16:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4cd-22ab-7900-ae78-21b866afa2a2",
+      "verdict": "VERIFIED_TASK_1_6",
+      "timestamp": "2026-03-06T20:19:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4cf-d43f-7661-a741-26809ec0a755",
+      "verdict": "SECURITY_VERIFIED_TASK_1_6",
+      "timestamp": "2026-03-06T20:21:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4d0-d212-7303-adc4-8d2247b4ef2e",
+      "verdict": "REJECT_TASK_1_6_MAJOR_LITERAL_DUPLICATION",
+      "timestamp": "2026-03-06T20:23:00Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc4d2-64eb-7ff3-b7b4-2b5b3b54c961",
+      "verdict": "HANDOFF_TASK_1_6_RETRY_1",
+      "timestamp": "2026-03-06T20:30:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4d4-ba11-7810-ae32-aefdf7cd6475",
+      "verdict": "REJECT_TASK_1_6_INCOMPLETE_HANDOFF",
+      "timestamp": "2026-03-06T20:33:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4d4-ba11-7810-ae32-aefdf7cd6475",
+      "verdict": "VERIFIED_TASK_1_6_RETRY_1",
+      "timestamp": "2026-03-06T20:36:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4d7-6771-74e3-99fd-7b108d0a8114",
+      "verdict": "SECURITY_VERIFIED_TASK_1_6_RETRY_1",
+      "timestamp": "2026-03-06T20:39:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4d8-7729-7f80-a03e-6fe44687d659",
+      "verdict": "REJECT_TASK_1_6_MINOR_DUPLICATE_TEST_PATH_LITERALS",
+      "timestamp": "2026-03-06T20:42:00Z"
+    },
+    {
+      "stage": "capability_gate_probe",
+      "agent": "019cc4df-4fe4-7d10-bd5d-ae87f0ed316d",
+      "verdict": "SUBAGENT_TOOLING_OK",
+      "timestamp": "2026-03-06T20:38:27Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "REJECT_TASK_1_7",
+      "timestamp": "2026-03-06T20:43:40Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc4df-c6cc-78a2-9497-570ff69a934b",
+      "verdict": "HANDOFF_TASK_1_7_RETRY_1",
+      "timestamp": "2026-03-06T20:46:51Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "VERIFIED_TASK_1_7_RETRY_1",
+      "timestamp": "2026-03-06T20:46:51Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+      "verdict": "SECURITY_VERIFIED_TASK_1_7_RETRY_1",
+      "timestamp": "2026-03-06T20:46:51Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+      "verdict": "REJECT_TASK_1_7",
+      "timestamp": "2026-03-06T20:46:51Z"
+    },
+    {
+      "stage": "coder_retry",
+      "agent": "019cc4df-c6cc-78a2-9497-570ff69a934b",
+      "verdict": "HANDOFF_TASK_1_7_RETRY_2",
+      "timestamp": "2026-03-06T20:50:23Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "VERIFIED_TASK_1_7_RETRY_2",
+      "timestamp": "2026-03-06T20:50:23Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+      "verdict": "SECURITY_VERIFIED_TASK_1_7_RETRY_2",
+      "timestamp": "2026-03-06T20:50:23Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+      "verdict": "APPROVED_TASK_1_7",
+      "timestamp": "2026-03-06T20:50:23Z"
+    },
+    {
+      "stage": "coder_task",
+      "agent": "019cc4ea-a87e-75b3-8f3c-f5be1b10f9bf",
+      "verdict": "HANDOFF_TASK_1_8",
+      "timestamp": "2026-03-06T20:56:00Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "VERIFIED_TASK_1_8",
+      "timestamp": "2026-03-06T20:56:00Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+      "verdict": "SECURITY_VERIFIED_TASK_1_8",
+      "timestamp": "2026-03-06T20:56:00Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+      "verdict": "APPROVED_TASK_1_8",
+      "timestamp": "2026-03-06T20:56:00Z"
+    },
+    {
+      "stage": "coder_task",
+      "agent": "019cc4df-c6cc-78a2-9497-570ff69a934b",
+      "verdict": "HANDOFF_TASK_1_9",
+      "timestamp": "2026-03-06T20:59:49Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "VERIFIED_TASK_1_9",
+      "timestamp": "2026-03-06T20:59:49Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+      "verdict": "SECURITY_VERIFIED_TASK_1_9",
+      "timestamp": "2026-03-06T20:59:49Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+      "verdict": "APPROVED_TASK_1_9",
+      "timestamp": "2026-03-06T20:59:49Z"
+    },
+    {
+      "stage": "coder_task",
+      "agent": "019cc4df-c6cc-78a2-9497-570ff69a934b",
+      "verdict": "HANDOFF_TASK_1_10",
+      "timestamp": "2026-03-06T21:02:07Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "VERIFIED_TASK_1_10",
+      "timestamp": "2026-03-06T21:02:07Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+      "verdict": "SECURITY_VERIFIED_TASK_1_10",
+      "timestamp": "2026-03-06T21:02:07Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+      "verdict": "APPROVED_TASK_1_10",
+      "timestamp": "2026-03-06T21:02:07Z"
+    },
+    {
+      "stage": "human_override_unblock",
+      "agent": "orchestrator",
+      "verdict": "APPROVED_BY_USER_RETRY_1_4_1_6",
+      "timestamp": "2026-03-06T21:14:12Z"
+    },
+    {
+      "stage": "tester_gate",
+      "agent": "019cc4e2-1ba4-7131-bcf2-bb1657495e1a",
+      "verdict": "VERIFIED_TASKS_1_4_1_6_RETRY",
+      "timestamp": "2026-03-06T21:14:12Z"
+    },
+    {
+      "stage": "security_gate",
+      "agent": "019cc4e5-9e03-7432-a039-eebb9a40ebef",
+      "verdict": "SECURITY_VERIFIED_TASKS_1_4_1_6_RETRY",
+      "timestamp": "2026-03-06T21:14:12Z"
+    },
+    {
+      "stage": "qa_gate",
+      "agent": "019cc4e6-0d45-75a1-b241-957403b80f7d",
+      "verdict": "APPROVED_TASKS_1_4_1_6",
+      "timestamp": "2026-03-06T21:14:12Z"
     }
   ],
-  "updated_at": "2026-03-06T14:17:40Z"
+  "updated_at": "2026-03-06T21:14:12Z"
 }

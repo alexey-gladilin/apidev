@@ -15,16 +15,14 @@ def test_generate_uses_contracts_templates_and_generated_paths_from_config(
     (tmp_path / ".apidev").mkdir()
     (tmp_path / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-
-[contracts]
-dir = "spec/contracts"
+[inputs]
+contracts_dir = "spec/contracts"
 
 [generator]
 generated_dir = "build/generated"
 
-[templates]
-dir = "spec/templates"
+[paths]
+templates_dir = "spec/templates"
 """.strip(),
         encoding="utf-8",
     )

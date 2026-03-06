@@ -1,10 +1,12 @@
 from pathlib import Path
 from typing import cast
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from apidev.core.constants import (
     CompatibilityPolicyValue,
+    VALIDATION_MSG_ABSOLUTE_PATHS_NOT_ALLOWED,
+    VALIDATION_MSG_NON_EMPTY_PATH,
     DEFAULT_COMPATIBILITY_POLICY,
     DEFAULT_CONTRACTS_DIR,
     DEFAULT_GENERATED_DIR,
@@ -19,13 +21,34 @@ from apidev.core.constants import (
 )
 from apidev.core.ports.python_postprocessor import PythonPostprocessMode
 
+_EXTRA_FORBID = ConfigDict(extra="forbid")
+
 
 class ContractsConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
     dir: str = DEFAULT_CONTRACTS_DIR
     shared_models_dir: str = DEFAULT_SHARED_MODELS_DIR
 
 
+class InputsConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
+    contracts_dir: str = DEFAULT_CONTRACTS_DIR
+    shared_models_dir: str = DEFAULT_SHARED_MODELS_DIR
+
+    @field_validator("contracts_dir", "shared_models_dir")
+    @classmethod
+    def _validate_non_empty_path(cls, value: str) -> str:
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError(VALIDATION_MSG_NON_EMPTY_PATH)
+        return value
+
+
 class GeneratorConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
     generated_dir: str = DEFAULT_GENERATED_DIR
     postprocess: PythonPostprocessMode = "auto"
     scaffold: bool = True
@@ -37,9 +60,9 @@ class GeneratorConfig(BaseModel):
     def _validate_generated_dir(cls, value: str) -> str:
         candidate = value.strip()
         if not candidate:
-            raise ValueError("must be a non-empty path")
+            raise ValueError(VALIDATION_MSG_NON_EMPTY_PATH)
         if Path(candidate).is_absolute():
-            raise ValueError("absolute paths are not allowed")
+            raise ValueError(VALIDATION_MSG_ABSOLUTE_PATHS_NOT_ALLOWED)
         return value
 
     @field_validator("scaffold_dir")
@@ -47,9 +70,9 @@ class GeneratorConfig(BaseModel):
     def _validate_scaffold_dir(cls, value: str) -> str:
         candidate = value.strip()
         if not candidate:
-            raise ValueError("must be a non-empty path")
+            raise ValueError(VALIDATION_MSG_NON_EMPTY_PATH)
         if Path(candidate).is_absolute():
-            raise ValueError("absolute paths are not allowed")
+            raise ValueError(VALIDATION_MSG_ABSOLUTE_PATHS_NOT_ALLOWED)
         return value
 
     @field_validator("scaffold_write_policy")
@@ -62,14 +85,20 @@ class GeneratorConfig(BaseModel):
 
 
 class TemplatesConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
     dir: str = DEFAULT_TEMPLATES_DIR
 
 
 class OpenAPIConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
     include_extensions: bool = True
 
 
 class EvolutionConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
     compatibility_policy: CompatibilityPolicyValue = DEFAULT_COMPATIBILITY_POLICY
     grace_period_releases: int = 2
     release_state_file: str = DEFAULT_RELEASE_STATE_FILE
@@ -85,14 +114,40 @@ class EvolutionConfig(BaseModel):
     @classmethod
     def _validate_release_state_file(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("must be a non-empty path")
+            raise ValueError(VALIDATION_MSG_NON_EMPTY_PATH)
+        return value
+
+
+class PathsConfig(BaseModel):
+    model_config = _EXTRA_FORBID
+
+    templates_dir: str = DEFAULT_TEMPLATES_DIR
+
+    @field_validator("templates_dir")
+    @classmethod
+    def _validate_non_empty_templates_dir(cls, value: str) -> str:
+        candidate = value.strip()
+        if not candidate:
+            raise ValueError(VALIDATION_MSG_NON_EMPTY_PATH)
         return value
 
 
 class ApidevConfig(BaseModel):
-    version: str = "1"
-    contracts: ContractsConfig = ContractsConfig()
+    model_config = _EXTRA_FORBID
+
+    paths: PathsConfig = PathsConfig()
+    inputs: InputsConfig = InputsConfig()
     generator: GeneratorConfig = GeneratorConfig()
-    templates: TemplatesConfig = TemplatesConfig()
-    openapi: OpenAPIConfig = OpenAPIConfig()
     evolution: EvolutionConfig = EvolutionConfig()
+    openapi: OpenAPIConfig = OpenAPIConfig()
+
+    @property
+    def contracts(self) -> ContractsConfig:
+        return ContractsConfig(
+            dir=self.inputs.contracts_dir,
+            shared_models_dir=self.inputs.shared_models_dir,
+        )
+
+    @property
+    def templates(self) -> TemplatesConfig:
+        return TemplatesConfig(dir=self.paths.templates_dir)

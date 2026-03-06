@@ -67,7 +67,6 @@ _patch_typer_completion_shell_detection()
 
 
 app = Typer(
-    help="apidev contract-driven API generator",
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 

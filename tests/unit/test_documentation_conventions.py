@@ -44,6 +44,22 @@ GENERATE_ALIAS_ALLOWED = {
 DOC_PATH_PATTERN = re.compile(
     r"(?:^|[`( ])((?:docs|openspec)/[A-Za-z0-9_./-]+\.md|CONTRIBUTING\.md)(?:[` )]|$)"
 )
+CONTRACT_FORMAT_DOC_PATH = REPO_ROOT / "docs" / "reference" / "contract-format.md"
+CANONICAL_CONFIG_KEYS = (
+    "paths.templates_dir",
+    "inputs.contracts_dir",
+    "inputs.shared_models_dir",
+    "generator.generated_dir",
+    "generator.postprocess",
+    "generator.scaffold",
+    "generator.scaffold_dir",
+    "generator.scaffold_write_policy",
+    "evolution.release_state_file",
+    "evolution.compatibility_policy",
+    "evolution.grace_period_releases",
+    "openapi.include_extensions",
+)
+LEGACY_CONFIG_KEYS = ("contracts.dir", "templates.dir", "paths.release_state_file")
 
 
 def _repo_rel(path: Path) -> str:
@@ -92,3 +108,11 @@ def test_all_referenced_markdown_docs_exist() -> None:
                 missing_refs.append(f"{_repo_rel(path)} -> {ref}")
 
     assert missing_refs == []
+
+
+def test_contract_format_doc_uses_canonical_config_keys_only() -> None:
+    text = CONTRACT_FORMAT_DOC_PATH.read_text(encoding="utf-8")
+    for key in CANONICAL_CONFIG_KEYS:
+        assert key in text
+    for legacy_key in LEGACY_CONFIG_KEYS:
+        assert legacy_key not in text

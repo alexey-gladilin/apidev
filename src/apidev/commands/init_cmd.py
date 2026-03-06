@@ -4,6 +4,7 @@ import tomllib
 
 import typer
 import tomli_w
+from pydantic import ValidationError
 
 from apidev.core.constants import (
     DEFAULT_INIT_INTEGRATION_MODE,
@@ -19,6 +20,7 @@ from apidev.core.constants import (
     InitIntegrationMode,
     InitRuntimeProfile,
 )
+from apidev.core.models.config import ApidevConfig
 from apidev.core.path_boundary import resolve_relative_path_within_root
 
 InitMode = Literal["create", "repair", "force"]
@@ -82,12 +84,35 @@ def _validate_integration_dir(project_root: Path, integration_dir: object) -> No
 
 
 def _profile_default_config_text(base_text: str, integration_dir: str) -> str:
-    data = tomllib.loads(base_text)
-    generator_section = data.setdefault("generator", {})
-    if not isinstance(generator_section, dict):
-        raise typer.BadParameter("Invalid default config shape for [generator] section.")
-    generator_section["scaffold_dir"] = integration_dir
-    return tomli_w.dumps(data)
+    fallback_payload = {"generator": {"scaffold_dir": integration_dir}}
+
+    try:
+        data = tomllib.loads(base_text)
+    except tomllib.TOMLDecodeError:
+        data = {}
+
+    if not isinstance(data, dict):
+        data = {}
+
+    if not data:
+        config = ApidevConfig.model_validate(fallback_payload)
+        return tomli_w.dumps(config.model_dump())
+
+    generator_section = data.get("generator")
+    if isinstance(generator_section, dict):
+        profiled_config = {
+            **data,
+            "generator": {**generator_section, "scaffold_dir": integration_dir},
+        }
+    else:
+        profiled_config = fallback_payload
+
+    try:
+        config = ApidevConfig.model_validate(profiled_config)
+    except ValidationError:
+        config = ApidevConfig.model_validate(fallback_payload)
+
+    return tomli_w.dumps(config.model_dump())
 
 
 def init_command(

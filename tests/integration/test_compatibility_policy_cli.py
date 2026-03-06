@@ -22,16 +22,14 @@ def _write_project_config(project_dir: Path) -> None:
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
 
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip(),
         encoding="utf-8",
     )
@@ -92,16 +90,14 @@ def _write_project_config_with_evolution(
     (project_dir / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (project_dir / ".apidev" / "config.toml").write_text(
         f"""
-version = "1"
-
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
 
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 
 [evolution]
 {compatibility_policy_line}grace_period_releases = {grace_period_releases}

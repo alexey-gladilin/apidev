@@ -84,10 +84,8 @@ def test_validate_inline_only_contract_with_custom_shared_models_dir_stays_compa
 ) -> None:
     (tmp_path / ".apidev").mkdir(parents=True, exist_ok=True)
     (tmp_path / ".apidev" / "config.toml").write_text(
-        """
-version = "1"
-[contracts]
-dir = ".apidev/contracts"
+        """[inputs]
+contracts_dir = ".apidev/contracts"
 shared_models_dir = ".apidev/shared-models"
 """.strip(),
         encoding="utf-8",

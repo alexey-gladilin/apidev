@@ -163,6 +163,10 @@ class InitService:
                 self.fs.mkdir(directory, parents=True)
                 changed += 1
 
+        if integration_mode != "off" and not self.fs.exists(paths.scaffold_dir_path):
+            self.fs.mkdir(paths.scaffold_dir_path, parents=True)
+            changed += 1
+
         managed_templates = self._load_managed_templates(
             runtime=runtime,
             integration_mode=integration_mode,
@@ -237,6 +241,7 @@ class InitService:
             paths.contracts_dir,
             paths.shared_models_dir,
             paths.templates_dir,
+            paths.scaffold_dir_path,
         )
         for managed_path in managed_paths:
             self._ensure_path_in_project(project_root=project_root, candidate=managed_path)

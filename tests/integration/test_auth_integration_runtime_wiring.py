@@ -19,16 +19,14 @@ def _generate_bearer_contract_project(tmp_path: Path) -> Path:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(
         """
-version = "1"
-
-[contracts]
-dir = ".apidev/contracts"
+[inputs]
+contracts_dir = ".apidev/contracts"
 
 [generator]
 generated_dir = ".apidev/output/api"
 
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip(),
         encoding="utf-8",
     )
@@ -66,7 +64,7 @@ def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_m
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -141,7 +139,7 @@ def test_auth_integration_generated_route_keeps_token_decode_manual(tmp_path: Pa
     assert "jwt" not in route_source.lower()
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -189,7 +187,7 @@ def test_auth_integration_generated_route_keeps_token_decode_manual(tmp_path: Pa
 def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -258,7 +256,7 @@ def test_auth_integration_payload_cannot_override_trusted_current_user(tmp_path:
 
 def test_integration_router_factory_builds_router_from_operation_map(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -286,7 +284,7 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -336,7 +334,7 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
 
 def test_integration_router_factory_rejects_non_string_method_metadata(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -365,7 +363,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -397,7 +395,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
 
 def test_integration_router_factory_normalizes_optional_metadata_fields(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -426,7 +424,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -483,7 +481,7 @@ def test_integration_router_factory_rejects_null_empty_and_blank_required_metada
     metadata_value: object,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -512,7 +510,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -547,7 +545,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
 
 def test_integration_router_factory_uses_domain_metadata_for_swagger_tag(tmp_path: Path) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -576,7 +574,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -620,7 +618,7 @@ def test_integration_router_factory_rejects_manual_tags_in_operation_metadata(
     tmp_path: Path,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -649,7 +647,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -687,7 +685,7 @@ def test_router_operation_map_auto_register_new_endpoint_without_router_edit(
     tmp_path: Path,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -724,7 +722,7 @@ async def route(payload: dict[str, object], handler: Any) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)
@@ -789,7 +787,7 @@ def test_router_operation_map_auto_register_reloads_route_callable_from_metadata
     tmp_path: Path,
 ) -> None:
     generated_dir_path = _generate_bearer_contract_project(tmp_path)
-    integration_root = tmp_path / "integration"
+    integration_root = tmp_path / ".apidev" / "integration"
     integration_root.mkdir(parents=True, exist_ok=True)
     (integration_root / "handler_registry.py").write_text(
         """
@@ -815,7 +813,7 @@ def resolve_auth_dependency(_auth_mode: str) -> Any:
     )
 
     inserted = str(generated_dir_path)
-    project_root_inserted = str(tmp_path)
+    project_root_inserted = str(tmp_path / ".apidev")
     loaded_modules: list[str] = []
     sys.path.insert(0, inserted)
     sys.path.insert(1, project_root_inserted)

@@ -1,8 +1,10 @@
 from pathlib import Path
+import tomllib
 
 from typer.testing import CliRunner
 
 from apidev.cli import app
+from apidev.testing.constants import CANONICAL_TOP_LEVEL_CONFIG_KEYS
 
 runner = CliRunner()
 
@@ -190,14 +192,12 @@ def test_init_and_integration_repair_rejects_outside_contracts_dir(tmp_path: Pat
     assert first.exit_code == 0
 
     (tmp_path / ".apidev" / "config.toml").write_text(
-        """
-version = "1"
-[contracts]
-dir = "../contracts-outside"
+        """[inputs]
+contracts_dir = "../contracts-outside"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = ".apidev/templates"
+[paths]
+templates_dir = ".apidev/templates"
 """.strip() + "\n",
         encoding="utf-8",
     )
@@ -222,14 +222,12 @@ def test_init_and_integration_force_rejects_absolute_templates_dir(tmp_path: Pat
 
     absolute_templates_dir = (tmp_path.parent / "templates-outside-absolute").resolve()
     (tmp_path / ".apidev" / "config.toml").write_text(
-        f"""
-version = "1"
-[contracts]
-dir = ".apidev/contracts"
+        f"""[inputs]
+contracts_dir = ".apidev/contracts"
 [generator]
 generated_dir = ".apidev/output/api"
-[templates]
-dir = "{absolute_templates_dir}"
+[paths]
+templates_dir = "{absolute_templates_dir}"
 """.strip() + "\n",
         encoding="utf-8",
     )
@@ -246,3 +244,41 @@ dir = "{absolute_templates_dir}"
 
     assert force_result.exit_code != 0
     assert "validation.PATH_BOUNDARY_VIOLATION" in force_result.output
+
+
+def test_init_materializes_only_canonical_config_format(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    legacy_default_config = """
+version = 1
+templates_dir = ".apidev/templates"
+contracts_dir = ".apidev/contracts"
+generated_dir = ".apidev/output/api"
+""".strip()
+
+    monkeypatch.setattr(
+        "apidev.infrastructure.config.toml_loader.default_config_text",
+        lambda: legacy_default_config,
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "init",
+            "--project-dir",
+            str(tmp_path),
+            "--integration-dir",
+            "platform/integration",
+        ],
+    )
+
+    assert result.exit_code == 0
+
+    config_data = tomllib.loads((tmp_path / ".apidev" / "config.toml").read_text(encoding="utf-8"))
+    assert set(config_data.keys()) == CANONICAL_TOP_LEVEL_CONFIG_KEYS
+    assert "version" not in config_data
+    assert "templates_dir" not in config_data
+    assert "contracts_dir" not in config_data
+    assert "generated_dir" not in config_data
+    assert config_data["generator"]["scaffold_dir"] == "platform/integration"
