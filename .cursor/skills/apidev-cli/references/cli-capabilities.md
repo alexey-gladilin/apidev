@@ -1,11 +1,11 @@
-# Возможности apidev CLI (снимок на 2026-03-05)
+# Возможности apidev CLI (снимок на 2026-03-07)
 
 Источник: локальные `--help`/`--version` команды в этом репозитории.
 
 ## Метаданные снимка
 
-- `snapshot_version`: `0.1.24`
-- `captured_at`: `2026-03-05`
+- `snapshot_version`: `0.2.2`
+- `captured_at`: `2026-03-07`
 
 ## Как поддерживать актуальность
 
@@ -17,6 +17,7 @@
   - `apidev --help`
   - `apidev init --help`
   - `apidev validate --help`
+  - `apidev graph --help`
   - `apidev diff --help`
   - `apidev gen --help`
   - `apidev version --help`
@@ -37,6 +38,7 @@
 
 - `init` — инициализировать директорию проекта apidev.
 - `validate` — валидировать контракты и правила.
+- `graph` — исследовать граф зависимостей контрактов.
 - `diff` — показать предпросмотр изменений генерируемых файлов.
 - `gen` — сгенерировать код из контрактов.
 - `version` — вывести версию приложения.
@@ -60,7 +62,7 @@
 - `--force`
 - `--runtime [fastapi|none]` (по умолчанию `fastapi`)
 - `--integration-mode [off|scaffold|full]` (по умолчанию `scaffold`)
-- `--integration-dir TEXT` (по умолчанию `integration`)
+- `--integration-dir TEXT` (по умолчанию `.apidev/output/integration`)
 
 ## `validate`
 
@@ -70,6 +72,15 @@
 
 - `--project-dir PATH` (по умолчанию `.`)
 - `--json`
+
+## `graph`
+
+Команда: `apidev graph --help`
+
+Флаги:
+
+- `--project-dir PATH` (по умолчанию `.`)
+- `--format [text|json|mermaid]` (по умолчанию `text`)
 
 ## `diff`
 
@@ -108,5 +119,6 @@
 - `init --repair` и `init --force` взаимоисключающие.
 - `init --runtime none` нельзя комбинировать с `--integration-mode full`.
 - `--integration-dir` должен быть относительным путём внутри `project_dir`.
+- Для анализа графа зависимостей предпочтителен `graph --format json`; `graph --format mermaid` подходит для визуализации.
 - Для JSON-ориентированного анализа в LLM предпочтителен запуск с `--json`.
 - Для операций записи в файлы (`gen`, `init --force`) использовать подтверждение пользователя.

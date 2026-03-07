@@ -44,9 +44,10 @@ Smoke-набор discovery (фиксированный порядок):
 2. `apidev --help`
 3. `apidev init --help`
 4. `apidev validate --help`
-5. `apidev diff --help`
-6. `apidev gen --help`
-7. `apidev version --help`
+5. `apidev graph --help`
+6. `apidev diff --help`
+7. `apidev gen --help`
+8. `apidev version --help`
 
 Если `apidev` не найден, повторить тот же набор через `uv run apidev ...`.
 
@@ -61,6 +62,7 @@ Version-gated актуализация:
 ## Матрица режимов выполнения
 
 - `validate`, `diff`, `gen --check` — read-only операции, можно запускать без подтверждения.
+- `graph` — read-only операция анализа зависимостей, можно запускать без подтверждения.
 - `gen` — write-операция, запускать только после явного подтверждения пользователя.
 - `init` — потенциально write-операция; для `init --force` всегда запрашивать подтверждение.
 - `init --repair` — условно безопасная write-операция (исправляет только init-managed файлы), запускать без подтверждения только если пользователь явно запросил восстановление.
@@ -77,6 +79,7 @@ Version-gated актуализация:
 Дополнительно:
 
 - Всегда предпочитать `--json`, если флаг поддерживается.
+- Для анализа графа зависимостей предпочитать `graph --format json`; для визуализации допустим `graph --format mermaid`.
 - Для потенциально рискованных операций (например, `init --force`, запись через `gen`) запрашивать подтверждение.
 - При ошибке команды не маскировать проблему: показывать причину и ближайший следующий шаг.
 - Для `init` учитывать профильные флаги: `--runtime`, `--integration-mode`, `--integration-dir`.
@@ -85,6 +88,7 @@ Version-gated актуализация:
 
 - `exit code 0` — успех, переходить к следующему шагу пайплайна.
 - `exit code != 0` на `validate` или `diff` — останавливать пайплайн, показывать диагностику и не переходить к `gen`.
+- `exit code != 0` на `graph` — сообщать об ошибке анализа графа и не делать выводы о зависимостях без явных данных CLI.
 - `exit code != 0` на `gen --check` — останавливать пайплайн и предлагать исправить причины до write-операции.
 - `exit code != 0` на `gen`/`init` — считать write-операцию неуспешной, явно сообщать о частичном/неопределенном состоянии и предлагать безопасный следующий шаг (`validate`/`diff`).
 
@@ -100,9 +104,13 @@ Version-gated актуализация:
    - какие изменения предлагаются;
    - что требуется подтвердить.
 
+Если запрос связан не с запуском CLI, а с анализом SSOT YAML-контрактов, сравнением описания API с текущими контрактами или перечислением расхождений, при необходимости открыть `references/contract-format.md` и использовать его как локальную выжимку из нормативного `docs/reference/contract-format.md`.
+
 Типовые сопоставления:
 
 - «найди расхождения» -> `validate --json` + `diff --json`
+- «покажи зависимости контрактов / граф моделей» -> `graph --format json`
+- «построй диаграмму зависимостей» -> `graph --format mermaid`
 - «сгенерируй API код» -> `validate --json` + `diff --json` + `gen --check` (+ `gen` после подтверждения)
 - «убери API ...» -> целевой `gen` с `--exclude-endpoint` (после `diff` и подтверждения)
 - «инициализируй проект» -> `init` (или `init --repair` для восстановления, `init --force` только после подтверждения)
@@ -110,12 +118,30 @@ Version-gated актуализация:
 
 Профили `init` (готовые пресеты):
 
-- FastAPI scaffold: `init --runtime fastapi --integration-mode scaffold --integration-dir integration`
-- Без интеграции: `init --runtime none --integration-mode off --integration-dir integration`
+- FastAPI scaffold: `init --runtime fastapi --integration-mode scaffold --integration-dir .apidev/output/integration`
+- Без интеграции: `init --runtime none --integration-mode off --integration-dir .apidev/output/integration`
+
+## Работа с SSOT-контрактами в чате
+
+Этот скилл можно использовать не только для запуска `apidev`, но и как локальный справочник по формату SSOT YAML-контрактов.
+
+Когда пользователь просит:
+
+- разобрать структуру operation contract или shared model contract;
+- сравнить человеко-читаемое описание API с текущими YAML-контрактами;
+- перечислить расхождения и указать, что надо поправить в SSOT;
+- обновить только часть контракта или выделить reusable-модель;
+
+следует при необходимости открыть `references/contract-format.md` и опираться на него для:
+
+- проверки структуры и обязательных полей;
+- проверки размещения файлов и границ `contract_type`;
+- проверки `$ref`, `shared_model`, `local_models`;
+- подготовки списка конкретных изменений в SSOT или замечаний к исходному описанию.
 
 ## Ограничения и эскалация
 
-- Не выполнять команды вне whitelist: `init`, `validate`, `diff`, `gen`, `version`.
+- Не выполнять команды вне whitelist: `init`, `validate`, `graph`, `diff`, `gen`, `version`.
 - Если пользователь просит неизвестную команду, объяснять ограничение и предлагать ближайший поддерживаемый путь.
 - При конфликтующих флагах (например, `--scaffold` и `--no-scaffold`) останавливать запуск и просить уточнение.
 - Дополнительно валидировать известные конфликтные комбинации:
@@ -131,4 +157,5 @@ Version-gated актуализация:
 ## Навигация
 
 - Карта CLI: `references/cli-capabilities.md`
+- Формат контрактов SSOT YAML: `references/contract-format.md`
 - Шаблоны ответов: `references/response-template.md`
