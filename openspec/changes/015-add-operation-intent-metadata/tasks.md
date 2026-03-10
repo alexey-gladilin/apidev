@@ -25,11 +25,11 @@
 - [x] 3.3 Зафиксировать downstream-facing contract так, чтобы consumer tools могли различать semantic read/write и cached/imperative usage без локальных эвристик. DoD: examples и tests показывают usable metadata contract.
 
 ## 4. Верификация
-- [ ] 4.1 Добавить unit/contract tests на explicit valid combinations `read+cached`, `read+imperative`, `read+both`, `write+imperative`, `write+none`. DoD: tests подтверждают allowed matrix.
-- [ ] 4.2 Добавить negative tests на invalid combinations, invalid enum values и missing required metadata. DoD: diagnostics machine-readable и deterministic для `validate`, включая JSON envelope, обязательные fields diagnostics item и stable ordering/summary semantics.
-- [ ] 4.3 Добавить integration tests на generated operation map/OpenAPI vendor extensions, generated/manual integration contract и migration failures для legacy contracts. DoD: repo-level generation tests подтверждают explicit metadata contract, deterministic rejection legacy mode и wiring через registry/OpenAPI runtime integration.
-- [ ] 4.4 Добавить preflight tests для `diff|gen --check|gen` на validation failure при отсутствии `intent`/`access_pattern`. DoD: команды блокируются validate-first pipeline, возвращают deterministic failure-signal и сохраняют documented JSON/exit semantics.
-- [ ] 4.5 Прогнать обязательные quality gates `uv run pytest` и `openspec validate 015-add-operation-intent-metadata --strict --no-interactive`. DoD: оба gate проходят.
+- [x] 4.1 Добавить unit/contract tests на explicit valid combinations `read+cached`, `read+imperative`, `read+both`, `write+imperative`, `write+none`. DoD: tests подтверждают allowed matrix.
+- [x] 4.2 Добавить negative tests на invalid combinations, invalid enum values и missing required metadata. DoD: diagnostics machine-readable и deterministic для `validate`, включая JSON envelope, обязательные fields diagnostics item и stable ordering/summary semantics.
+- [x] 4.3 Добавить integration tests на generated operation map/OpenAPI vendor extensions, generated/manual integration contract и migration failures для legacy contracts. DoD: repo-level generation tests подтверждают explicit metadata contract, deterministic rejection legacy mode и wiring через registry/OpenAPI runtime integration.
+- [x] 4.4 Добавить preflight tests для `diff|gen --check|gen` на validation failure при отсутствии `intent`/`access_pattern`. DoD: команды блокируются validate-first pipeline, возвращают deterministic failure-signal и сохраняют documented JSON/exit semantics.
+- [x] 4.5 Прогнать обязательные quality gates `uv run pytest` и `openspec validate 015-add-operation-intent-metadata --strict --no-interactive`. DoD: оба gate проходят.
 
 ## 5. Handoff
-- [ ] 5.1 Подготовить implementation handoff с migration notes для downstream consumers (`uidev` и другие). DoD: handoff перечисляет field contract, migration expectations и residual risks.
+- [x] 5.1 Подготовить implementation handoff с migration notes для downstream consumers (`uidev` и другие). DoD: handoff перечисляет field contract, migration expectations и residual risks.

@@ -67,6 +67,36 @@ errors: []
     return contract_path
 
 
+def _write_contract_without_metadata(project_dir: Path, api_path: str) -> Path:
+    placeholders = sorted(set(PATH_PLACEHOLDER_PATTERN.findall(api_path)))
+    request_block = ""
+    if placeholders:
+        properties = "\n".join(
+            f"      {name}:\n        type: string\n        required: true" for name in placeholders
+        )
+        request_block = (
+            "request:\n" "  path:\n" "    type: object\n" "    properties:\n" f"{properties}\n"
+        )
+
+    contract_path = project_dir / ".apidev" / "contracts" / "billing" / "get_invoice.yaml"
+    contract_path.write_text(
+        f"""
+method: GET
+path: {api_path}
+auth: bearer
+summary: Get invoice
+description: Missing operation metadata
+{request_block}\
+response:
+  status: 200
+  body: {{type: object}}
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+    return contract_path
+
+
 def _run_generate(project_dir: Path) -> None:
     fs = LocalFileSystem()
     service = GenerateService(
@@ -217,6 +247,39 @@ def test_diff_cli_compatibility_policy_overrides_config_value(tmp_path: Path) ->
     assert result.exit_code == 0
     assert "Compatibility policy: warn" in result.output
     assert "Compatibility policy gate failed" not in result.output
+
+
+def test_cli_preflight_rejects_missing_operation_metadata_with_real_invalid_contract(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract_without_metadata(tmp_path, "/v1/invoices/{invoice_id}")
+
+    for command_args, mode in (
+        (["diff"], "preview"),
+        (["gen"], "apply"),
+        (["gen", "--check"], "check"),
+    ):
+        result = runner.invoke(
+            app,
+            [*command_args, "--project-dir", str(tmp_path), "--json"],
+        )
+
+        assert result.exit_code == 1
+        payload = json.loads(result.output)
+        assert payload["command"] == command_args[0]
+        assert payload["mode"] == mode
+        assert payload["drift_status"] == "error"
+        assert payload["summary"]["status"] == "failed"
+        assert [item["code"] for item in payload["diagnostics"]] == [
+            "validation.schema-missing-field",
+            "validation.schema-missing-field",
+        ]
+        assert [item["location"] for item in payload["diagnostics"]] == [
+            "billing/get_invoice.yaml:access_pattern",
+            "billing/get_invoice.yaml:intent",
+        ]
+        assert payload["compatibility"]["diagnostics"] == []
 
 
 def test_gen_check_uses_config_compatibility_policy_when_cli_omitted(tmp_path: Path) -> None:

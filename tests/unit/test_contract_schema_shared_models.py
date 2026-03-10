@@ -37,6 +37,8 @@ def test_validate_accepts_ref_nodes_and_items_ref_shorthand() -> None:
         "method": "POST",
         "path": "/v1/users/search",
         "auth": "bearer",
+        "intent": "read",
+        "access_pattern": "imperative",
         "description": "Search users.",
         "request": {
             "body": {
@@ -70,6 +72,8 @@ def test_validate_rejects_ref_node_with_inline_shape_fields() -> None:
         "method": "GET",
         "path": "/v1/users",
         "auth": "bearer",
+        "intent": "read",
+        "access_pattern": "cached",
         "description": "List users.",
         "response": {
             "status": 200,
@@ -95,6 +99,8 @@ def test_validate_rejects_ref_node_with_null_ref_value() -> None:
         "method": "GET",
         "path": "/v1/users",
         "auth": "bearer",
+        "intent": "read",
+        "access_pattern": "cached",
         "description": "List users.",
         "response": {
             "status": 200,

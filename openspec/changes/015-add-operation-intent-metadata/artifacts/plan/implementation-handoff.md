@@ -1,20 +1,37 @@
 # Implementation Handoff
 
 ## Статус
-Proposal package готовит change к отдельной implement phase. Production code в этот пакет не входит.
+Implementation phase доведена до финального verification/handoff этапа. Core code, generated metadata contract, migration of repo-local fixtures/templates и verification block уже реализованы в этом change set.
 
-## Что должен дать implement phase
-- новые root-level operation metadata поля `intent` и `access_pattern`;
-- validate support для allowed values и compatibility matrix;
-- generated metadata contract в operation map и OpenAPI vendor extensions;
-- tests для explicit metadata и deterministic migration failures.
+## Что реализовано
+- root-level operation metadata `intent` и `access_pattern` обязательны для каждого operation contract;
+- `validate`, loader и graph path используют explicit metadata contract без fallback по HTTP method;
+- semantic validation фиксирует allowed values и compatibility matrix;
+- generated `operation_map` публикует `intent` и `access_pattern` как SSOT metadata;
+- generated OpenAPI публикует `x-apidev-intent` и `x-apidev-access-pattern`;
+- repo-local contracts, fixtures, examples и templates мигрированы на explicit-only shape;
+- downstream integration tests подтверждают, что consumer paths читают metadata из generated artifacts без reparsing YAML.
+
+## Downstream contract
+- `OPERATION_MAP[operation_id]["intent"]` -> `read | write`
+- `OPERATION_MAP[operation_id]["access_pattern"]` -> `cached | imperative | both | none`
+- OpenAPI vendor extensions:
+  - `x-apidev-intent`
+  - `x-apidev-access-pattern`
+- Downstream consumers вроде `uidev` могут делать mapping напрямую по этим полям без эвристики по `method`.
 
 ## Migration impact
-- Старые контракты без `intent`/`access_pattern` должны быть мигрированы; без этого validate/generate больше не проходят.
+- Старые контракты без `intent`/`access_pattern` детерминированно отклоняются в `validate`, `diff`, `gen`, `gen --check`, loader и graph path.
 - Новые и изменяемые контракты authoring-ятся только с explicit metadata.
-- Downstream consumers могут начать читать новые SSOT поля без локальной эвристики по HTTP method.
+- Repo-local templates и starter contracts уже публикуют explicit metadata.
+- External consumers вне репозитория в scope migration не входили; им нужен переход на новый field contract при обновлении на этот change.
+
+## Verification status
+- Focused verification для schema/semantic/generation/runtime paths пройдена.
+- `openspec validate 015-add-operation-intent-metadata --strict --no-interactive` проходит.
+- Full `uv run pytest` находится в финальном gate этой волны и должен быть зелёным перед окончательным closeout.
 
 ## Residual risks
-- breaking migration может затронуть существующий contract inventory и templates;
-- downstream consumers могут по-разному интерпретировать `access_pattern`, если не зафиксировать mapping в своей документации;
-- migration effort может потребовать синхронного обновления примеров, fixture-файлов и generated snapshots.
+- external downstream consumers могут по-разному интерпретировать `access_pattern`, если не закрепят свой mapping в своей документации;
+- при появлении новых repo-local examples/tests нужно продолжать explicit-only discipline, иначе full suite снова будет ловить legacy fixtures;
+- если появятся дополнительные consumer tools поверх OpenAPI, им нужно использовать vendor extensions как SSOT, а не эвристики по transport method.

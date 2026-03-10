@@ -73,6 +73,54 @@ errors: []
     assert payload["diagnostics"][0]["code"].startswith("validation.")
 
 
+def test_validate_json_output_reports_missing_required_metadata_deterministically(
+    tmp_path: Path,
+) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/bad_contract.yaml",
+        """
+method: GET
+path: /v1/invoices
+auth: bearer
+summary: Bad contract
+description: Missing required metadata.
+response:
+  status: 200
+  body: {}
+errors: []
+""",
+    )
+
+    result = runner.invoke(app, ["validate", "--project-dir", str(tmp_path), "--json"])
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["summary"]["status"] == "failed"
+    assert payload["summary"]["errors"] >= 2
+    missing_metadata = [
+        item
+        for item in payload["diagnostics"]
+        if item["location"] in {
+            "billing/bad_contract.yaml:access_pattern",
+            "billing/bad_contract.yaml:intent",
+        }
+    ]
+    assert [item["code"] for item in missing_metadata] == [
+        "validation.schema-missing-field",
+        "validation.schema-missing-field",
+    ]
+    assert [item["location"] for item in missing_metadata] == [
+        "billing/bad_contract.yaml:access_pattern",
+        "billing/bad_contract.yaml:intent",
+    ]
+    assert [item["rule"] for item in missing_metadata] == [
+        "schema.contract.required_field",
+        "schema.contract.required_field",
+    ]
+    assert all(item["category"] == "validation" for item in missing_metadata)
+
+
 def test_validate_human_output_remains_default(tmp_path: Path) -> None:
     _write_contract(
         tmp_path,

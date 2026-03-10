@@ -19,6 +19,8 @@ def _valid_contract_payload() -> dict[str, object]:
         "auth": "bearer",
         "summary": "Get invoice",
         "description": "Get invoice",
+        "intent": "read",
+        "access_pattern": "cached",
         "response": {"status": 200, "body": {"type": "object"}},
         "errors": [],
     }

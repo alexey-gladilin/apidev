@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from apidev.application.services.validate_service import ValidateService
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
@@ -43,6 +45,49 @@ errors: []
 
     assert not result.diagnostics
     assert len(result.operations) == 1
+
+
+@pytest.mark.parametrize(
+    ("method", "intent", "access_pattern"),
+    [
+        ("GET", "read", "cached"),
+        ("POST", "read", "imperative"),
+        ("POST", "read", "both"),
+        ("POST", "write", "imperative"),
+        ("POST", "write", "none"),
+    ],
+)
+def test_validate_accepts_allowed_operation_metadata_matrix(
+    tmp_path: Path,
+    method: str,
+    intent: str,
+    access_pattern: str,
+) -> None:
+    _write_contract(
+        tmp_path,
+        "billing/operation.yaml",
+        f"""
+method: {method}
+path: /v1/metadata-check
+auth: bearer
+summary: Metadata check
+description: Validate allowed metadata combination.
+intent: {intent}
+access_pattern: {access_pattern}
+response:
+  status: 200
+  body: {{type: object}}
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    assert not result.has_errors
+    assert result.diagnostics == []
+    assert len(result.operations) == 1
+    assert result.operations[0].contract.intent == intent
+    assert result.operations[0].contract.access_pattern == access_pattern
 
 
 def test_validate_inline_only_contract_does_not_require_shared_models_dir(tmp_path: Path) -> None:
