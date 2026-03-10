@@ -1030,6 +1030,8 @@ class DiffService:
             "method": operation.contract.method,
             "path": operation.contract.path,
             "auth": operation.contract.auth,
+            "intent": operation.contract.intent,
+            "access_pattern": operation.contract.access_pattern,
             "description": operation.contract.description,
             "response_status": operation.contract.response_status,
             "deprecation_status": deprecation["status"],

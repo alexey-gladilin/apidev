@@ -143,6 +143,8 @@ def build_openapi_paths() -> dict[str, dict[str, dict[str, object]]]:
             "responses": _build_responses(entry),
 {% if include_extensions %}
             "x-apidev-auth": str(entry.get("auth", "public")),
+            "x-apidev-intent": str(entry.get("intent", "")),
+            "x-apidev-access-pattern": str(entry.get("access_pattern", "")),
             "x-apidev-deprecation": {
                 "status": str(entry.get("deprecation_status", "active")),
                 "deprecated_since_release": entry.get("deprecated_since_release"),

@@ -20,9 +20,9 @@
 - [x] 2.4 Мигрировать in-repo contracts, fixtures/examples и templates на explicit `intent`/`access_pattern`. DoD: `.apidev/contracts/system/health.yaml`, `.apidev/contracts/users/search.yaml` и repo-local authoring fixtures больше не зависят от legacy shape.
 
 ## 3. Generated metadata и downstream contract
-- [ ] 3.1 Расширить operation registry / generated metadata новыми полями `intent` и `access_pattern`. DoD: operation map и related generated metadata публикуют SSOT значения детерминированно.
-- [ ] 3.2 Добавить OpenAPI vendor extensions для новых metadata. DoD: generated OpenAPI содержит `x-apidev-intent` и `x-apidev-access-pattern`.
-- [ ] 3.3 Зафиксировать downstream-facing contract так, чтобы consumer tools могли различать semantic read/write и cached/imperative usage без локальных эвристик. DoD: examples и tests показывают usable metadata contract.
+- [x] 3.1 Расширить operation registry / generated metadata новыми полями `intent` и `access_pattern`. DoD: operation map и related generated metadata публикуют SSOT значения детерминированно.
+- [x] 3.2 Добавить OpenAPI vendor extensions для новых metadata. DoD: generated OpenAPI содержит `x-apidev-intent` и `x-apidev-access-pattern`.
+- [x] 3.3 Зафиксировать downstream-facing contract так, чтобы consumer tools могли различать semantic read/write и cached/imperative usage без локальных эвристик. DoD: examples и tests показывают usable metadata contract.
 
 ## 4. Верификация
 - [ ] 4.1 Добавить unit/contract tests на explicit valid combinations `read+cached`, `read+imperative`, `read+both`, `write+imperative`, `write+none`. DoD: tests подтверждают allowed matrix.

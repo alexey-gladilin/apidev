@@ -310,6 +310,10 @@ def resolve_auth_dependency(auth_mode: str) -> Any:
             f"{INTEGRATION_PACKAGE_NAME}.router_factory"
         )
         loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
+        operation_map = cast(dict[str, Any], getattr(router_factory_module, "OPERATION_MAP"))
+        operation_entry = cast(dict[str, object], operation_map["billing_get_invoice"])
+        assert operation_entry["intent"] == "read"
+        assert operation_entry["access_pattern"] == "cached"
         handler_registry_module = importlib.import_module(
             f"{INTEGRATION_PACKAGE_NAME}.handler_registry"
         )

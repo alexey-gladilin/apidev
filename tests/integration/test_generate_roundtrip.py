@@ -416,6 +416,8 @@ errors: []
             }
         },
         "x-apidev-auth": "bearer",
+        "x-apidev-intent": "write",
+        "x-apidev-access-pattern": "imperative",
         "x-apidev-deprecation": {
             "status": "active",
             "deprecated_since_release": None,
@@ -472,6 +474,8 @@ errors: []
             }
         },
         "x-apidev-auth": "public",
+        "x-apidev-intent": "read",
+        "x-apidev-access-pattern": "cached",
         "x-apidev-deprecation": {
             "status": "active",
             "deprecated_since_release": None,
@@ -545,6 +549,8 @@ errors: []
         loaded_modules.append("operation_map")
         operation_map = cast(dict[str, Any], operation_map_module.OPERATION_MAP)
         entry = cast(dict[str, Any], operation_map["billing_get_invoice"])
+        assert entry["intent"] == "read"
+        assert entry["access_pattern"] == "cached"
 
         router_module_name = str(entry["router_module"])
         importlib.import_module(router_module_name)
@@ -1288,6 +1294,8 @@ errors: []
     operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
     openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
     assert '"x-apidev-auth"' in openapi_docs_source
+    assert '"x-apidev-intent"' in openapi_docs_source
+    assert '"x-apidev-access-pattern"' in openapi_docs_source
     assert '"x-apidev-deprecation"' in openapi_docs_source
     assert '"x-apidev-errors"' in openapi_docs_source
 
@@ -1303,6 +1311,8 @@ errors: []
 
     get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
     assert get_operation["x-apidev-auth"] == "bearer"
+    assert get_operation["x-apidev-intent"] == "read"
+    assert get_operation["x-apidev-access-pattern"] == "cached"
     assert get_operation["x-apidev-deprecation"] == {
         "status": "active",
         "deprecated_since_release": None,
@@ -1387,6 +1397,8 @@ errors:
 
     get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
     assert "x-apidev-auth" not in get_operation
+    assert "x-apidev-intent" not in get_operation
+    assert "x-apidev-access-pattern" not in get_operation
     assert "x-apidev-deprecation" not in get_operation
     assert "x-apidev-errors" not in get_operation
     assert get_operation["operationId"] == "billing_get_invoice"
@@ -1450,6 +1462,9 @@ errors: []
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
     operation_map_value = operation_map_namespace["OPERATION_MAP"]
+    post_entry = cast(dict[str, object], operation_map_value["billing_create_invoice"])
+    assert post_entry["intent"] == "write"
+    assert post_entry["access_pattern"] == "imperative"
 
     openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
     openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}

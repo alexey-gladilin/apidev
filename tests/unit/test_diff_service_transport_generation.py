@@ -140,6 +140,8 @@ errors: []
     assert '"response_status": 201' in operation_map.content
     assert '"contract_fingerprint": "' in operation_map.content
     assert '"auth": "bearer"' in operation_map.content
+    assert '"intent": "write"' in operation_map.content
+    assert '"access_pattern": "imperative"' in operation_map.content
     assert '"router_module": "alpha.routes.create_item"' in operation_map.content
     assert (
         '"request": "alpha.models.create_item_request.AlphaCreateItemRequest"'
@@ -781,6 +783,46 @@ errors: []
     entry = operation_map_value["billing_get_invoice"]
 
     assert entry["domain"] == "billing"
+
+
+def test_operation_map_publishes_operation_semantics_metadata(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: both
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, namespace)
+    operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
+    entry = operation_map_value["billing_get_invoice"]
+
+    assert entry["intent"] == "read"
+    assert entry["access_pattern"] == "both"
 
 
 def test_operation_map_publishes_consistent_request_metadata_contract(tmp_path: Path) -> None:
