@@ -30,6 +30,8 @@ templates_dir = ".apidev/templates"
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
 request:
@@ -133,6 +135,8 @@ templates_dir = ".apidev/templates"
 method: GET
 path: '/x"+__import__("os").system("echo_INJECTED")+"'
 auth: public
+intent: read
+access_pattern: cached
 summary: Unsafe
 description: Unsafe
 response:
@@ -170,6 +174,8 @@ templates_dir = ".apidev/templates"
 method: GET
 path: /v1/status
 auth: public
+intent: read
+access_pattern: cached
 summary: Get status
 description: Returns status
 response:
@@ -231,6 +237,8 @@ templates_dir = ".apidev/templates"
 method: GET
 path: /v1/items
 auth: public
+intent: read
+access_pattern: cached
 summary: Unsafe operation id
 description: Unsafe operation id
 response:

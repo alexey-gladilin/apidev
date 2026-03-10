@@ -8,7 +8,7 @@ import typer
 from apidev.commands.runtime import load_runtime
 from apidev.core.models.operation import Operation
 from apidev.core.rules.contract_schema import validate_contract_schema
-from apidev.core.rules.contract_semantic import build_dependency_graph
+from apidev.core.rules.contract_semantic import build_dependency_graph, validate_semantic_rules
 from apidev.core.rules.operation_id import build_operation_id
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 
@@ -58,6 +58,44 @@ def _render_mermaid_graph(payload: dict[str, list[dict[str, str]]]) -> str:
     return "\n".join(lines)
 
 
+def _load_validated_operations(
+    *,
+    operation_documents: list,
+    shared_model_documents: list,
+) -> list[Operation]:
+    operations: list[Operation] = []
+    schema_errors = False
+    for document in operation_documents:
+        contract, diagnostics = validate_contract_schema(document)
+        if diagnostics:
+            schema_errors = True
+        if contract is None:
+            continue
+        operations.append(
+            Operation(
+                operation_id=build_operation_id(document.contract_relpath.as_posix()),
+                contract=contract,
+                contract_relpath=document.contract_relpath,
+            )
+        )
+
+    for document in shared_model_documents:
+        _, diagnostics = validate_contract_schema(document)
+        if diagnostics:
+            schema_errors = True
+
+    semantic_diagnostics = validate_semantic_rules(
+        operations,
+        operation_documents=operation_documents,
+        shared_model_documents=shared_model_documents,
+    )
+    if schema_errors or semantic_diagnostics:
+        typer.echo("Validation failed. Run `apidev validate` for details.")
+        raise SystemExit(1)
+
+    return operations
+
+
 def graph_command(
     project_dir: Path = Path("."),
     output_format: Literal["text", "json", "mermaid"] = typer.Option(
@@ -70,19 +108,10 @@ def graph_command(
     loader = YamlContractLoader()
     operation_documents = loader.load_documents(paths.contracts_dir)
     shared_model_documents = loader.load_documents(paths.shared_models_dir)
-
-    operations: list[Operation] = []
-    for document in operation_documents:
-        contract, _ = validate_contract_schema(document)
-        if contract is None:
-            continue
-        operations.append(
-            Operation(
-                operation_id=build_operation_id(document.contract_relpath.as_posix()),
-                contract=contract,
-                contract_relpath=document.contract_relpath,
-            )
-        )
+    operations = _load_validated_operations(
+        operation_documents=operation_documents,
+        shared_model_documents=shared_model_documents,
+    )
 
     payload = build_dependency_graph(
         operations=operations,

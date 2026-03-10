@@ -47,7 +47,7 @@ def _create_diff_service() -> DiffService:
     )
 
 
-def test_registry_defaults_public_auth_when_auth_field_missing(tmp_path: Path) -> None:
+def test_registry_rejects_contract_when_auth_field_missing(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,
@@ -55,8 +55,16 @@ def test_registry_defaults_public_auth_when_auth_field_missing(tmp_path: Path) -
         """
 method: GET
 path: /v1/invoices/{invoice_id}
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -65,22 +73,11 @@ errors: []
 """,
     )
 
-    plan = _create_diff_service().run(tmp_path)
-    operation_map = next(
-        change for change in plan.changes if change.path.name == "operation_map.py"
-    )
-
-    namespace: dict[str, object] = {}
-    exec(operation_map.content, {}, namespace)
-    operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
-    entry = operation_map_value["billing_get_invoice"]
-
-    assert entry["auth"] == "public"
-    assert entry["router_module"] == "billing.routes.get_invoice"
-    models = cast(dict[str, str], entry["models"])
-    assert models["request"] == "billing.models.get_invoice_request.BillingGetInvoiceRequest"
-    assert models["response"] == "billing.models.get_invoice_response.BillingGetInvoiceResponse"
-    assert models["error"] == "billing.models.get_invoice_error.BillingGetInvoiceError"
+    with pytest.raises(
+        ValueError,
+        match=r"Invalid contract at billing/get_invoice\.yaml: Missing required field 'auth'\.",
+    ):
+        _create_diff_service().run(tmp_path)
 
 
 def test_diff_service_handles_empty_contract_directory(tmp_path: Path) -> None:
@@ -103,6 +100,8 @@ def test_registry_path_segments_work_for_short_domain_and_operation_names(tmp_pa
 method: GET
 path: /v1/x
 auth: bearer
+intent: read
+access_pattern: cached
 summary: X
 description: X
 response:
@@ -138,6 +137,8 @@ def test_diff_service_raises_on_duplicate_operation_ids(tmp_path: Path) -> None:
 method: GET
 path: /v1/invoices/a
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get A
 description: Get A
 response:
@@ -154,6 +155,8 @@ errors: []
 method: GET
 path: /v1/invoices/b
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get B
 description: Get B
 response:

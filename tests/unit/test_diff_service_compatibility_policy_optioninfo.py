@@ -35,6 +35,8 @@ def _write_contract(project_dir: Path, relpath: str) -> None:
 method: GET
 path: /v1/ping
 auth: public
+intent: read
+access_pattern: cached
 summary: Ping
 description: Ping endpoint
 response:

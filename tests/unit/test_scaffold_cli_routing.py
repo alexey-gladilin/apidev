@@ -29,6 +29,8 @@ templates_dir = ".apidev/templates"
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
 request:

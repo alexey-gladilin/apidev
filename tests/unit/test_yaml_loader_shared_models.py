@@ -14,6 +14,14 @@ method: GET
 path: /v1/users/{user_id}
 auth: bearer
 description: Get user.
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      user_id:
+        type: string
 response:
   status: 200
   body:

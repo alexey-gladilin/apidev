@@ -24,6 +24,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Create invoice
 description: Create invoice
+intent: write
+access_pattern: imperative
 request:
   path:
     type: object
@@ -67,6 +69,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Create invoice
 description: Create invoice
+intent: write
+access_pattern: imperative
 request:
   headers:
     type: object
@@ -101,6 +105,8 @@ path: /v1/status
 auth: public
 summary: Get status
 description: Get status
+intent: read
+access_pattern: cached
 response:
   status: 200
   body: {type: object}

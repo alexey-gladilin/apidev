@@ -89,7 +89,7 @@ def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) ->
     )
     service.run(tmp_path)
     (tmp_path / ".apidev" / "contracts" / "system" / "health.yaml").write_text(
-        "method: POST\npath: /broken\n",
+        "method: POST\npath: /broken\nintent: write\naccess_pattern: imperative\n",
         encoding="utf-8",
     )
 
@@ -138,7 +138,10 @@ def test_init_force_overwrites_managed_files(tmp_path: Path) -> None:
     )
     service.run(tmp_path)
     contract_path = tmp_path / ".apidev" / "contracts" / "system" / "health.yaml"
-    contract_path.write_text("method: DELETE\npath: /override\n", encoding="utf-8")
+    contract_path.write_text(
+        "method: DELETE\npath: /override\nintent: write\naccess_pattern: imperative\n",
+        encoding="utf-8",
+    )
 
     result = service.run(tmp_path, mode="force")
 
@@ -190,7 +193,10 @@ templates_dir = ".apidev/templates"
 
     custom_contract = tmp_path / "spec" / "contracts" / "system" / "health.yaml"
     custom_contract.parent.mkdir(parents=True, exist_ok=True)
-    custom_contract.write_text("method: GET\npath: /v1/health\n", encoding="utf-8")
+    custom_contract.write_text(
+        "method: GET\npath: /v1/health\nauth: public\nintent: read\naccess_pattern: cached\n",
+        encoding="utf-8",
+    )
     custom_contract.unlink()
 
     result = service.run(tmp_path, mode="repair")

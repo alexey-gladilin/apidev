@@ -20,6 +20,8 @@ def _valid_contract_payload() -> dict[str, object]:
         "auth": "bearer",
         "summary": "Search users",
         "description": "Search users by filters.",
+        "intent": "read",
+        "access_pattern": "imperative",
         "response": {"status": 200, "body": {"type": "object"}},
         "errors": [],
     }
@@ -38,7 +40,7 @@ def test_contract_schema_accepts_and_preserves_operation_metadata_fields() -> No
     assert contract.access_pattern == "imperative"
 
 
-def test_yaml_loader_does_not_apply_implicit_defaults_for_operation_metadata(
+def test_yaml_loader_rejects_missing_operation_metadata_without_defaulting(
     tmp_path: Path,
 ) -> None:
     contracts_root = tmp_path / ".apidev" / "contracts"
@@ -60,11 +62,16 @@ errors: []
         encoding="utf-8",
     )
 
-    operations = YamlContractLoader().load(contracts_root)
-
-    assert len(operations) == 1
-    assert operations[0].contract.intent is None
-    assert operations[0].contract.access_pattern is None
+    try:
+        YamlContractLoader().load(contracts_root)
+    except ValueError as exc:
+        assert str(exc) == (
+            "Invalid contract at users/search.yaml: "
+            "Missing required field 'intent'.; "
+            "Missing required field 'access_pattern'."
+        )
+    else:
+        raise AssertionError("Expected YamlContractLoader to reject missing metadata.")
 
 
 def test_yaml_loader_preserves_explicit_operation_metadata_fields(tmp_path: Path) -> None:
@@ -94,3 +101,64 @@ errors: []
     assert len(operations) == 1
     assert operations[0].contract.intent == "read"
     assert operations[0].contract.access_pattern == "imperative"
+
+
+def test_yaml_loader_rejects_non_string_operation_metadata(tmp_path: Path) -> None:
+    contracts_root = tmp_path / ".apidev" / "contracts"
+    contracts_root.mkdir(parents=True, exist_ok=True)
+    contract_path = contracts_root / "users" / "search.yaml"
+    contract_path.parent.mkdir(parents=True, exist_ok=True)
+    contract_path.write_text(
+        """
+method: POST
+path: /v1/users/search
+auth: bearer
+description: Search users by filters.
+intent: 1
+access_pattern:
+  - imperative
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    try:
+        YamlContractLoader().load(contracts_root)
+    except ValueError as exc:
+        assert (
+            str(exc) == "Invalid contract at users/search.yaml: "
+            "Field 'intent' must be of type str, got int.; "
+            "Field 'access_pattern' must be of type str, got list."
+        )
+    else:
+        raise AssertionError("Expected YamlContractLoader to reject non-string metadata.")
+
+
+def test_yaml_loader_rejects_schema_invalid_contract_without_defaulting(tmp_path: Path) -> None:
+    contracts_root = tmp_path / ".apidev" / "contracts"
+    contracts_root.mkdir(parents=True, exist_ok=True)
+    contract_path = contracts_root / "users" / "search.yaml"
+    contract_path.parent.mkdir(parents=True, exist_ok=True)
+    contract_path.write_text(
+        """
+description: Search users by filters.
+intent: read
+access_pattern: imperative
+""".strip(),
+        encoding="utf-8",
+    )
+
+    try:
+        YamlContractLoader().load(contracts_root)
+    except ValueError as exc:
+        assert str(exc) == (
+            "Invalid contract at users/search.yaml: Missing required field 'method'.; "
+            "Missing required field 'path'.; Missing required field 'auth'.; "
+            "Missing required field 'response'.; Missing required field 'errors'."
+        )
+    else:
+        raise AssertionError("Expected YamlContractLoader to reject schema-invalid contract.")

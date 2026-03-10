@@ -56,6 +56,8 @@ def test_task_1_2_happy_path_public_auth_registry_refs(tmp_path: Path) -> None:
 method: GET
 path: /v1/items
 auth: public
+intent: read
+access_pattern: cached
 summary: List items
 description: List catalog items
 response:
@@ -85,7 +87,7 @@ errors: []
     assert entry["models"]["error"] == "catalog.models.list_items_error.CatalogListItemsError"
 
 
-def test_task_1_2_defaults_auth_when_missing(tmp_path: Path) -> None:
+def test_task_1_2_rejects_missing_auth_in_canonical_contract(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,
@@ -95,6 +97,12 @@ method: GET
 path: /v1/invoices/{invoice_id}
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -103,16 +111,11 @@ errors: []
 """,
     )
 
-    plan = _create_diff_service().run(tmp_path)
-    operation_map = next(
-        change for change in plan.changes if change.path.name == "operation_map.py"
-    )
-    namespace: dict[str, object] = {}
-    exec(operation_map.content, {}, namespace)
-    operation_map_value = cast(dict[str, Any], namespace["OPERATION_MAP"])
-    entry = operation_map_value["billing_get_invoice"]
-
-    assert entry["auth"] == "public"
+    with pytest.raises(
+        ValueError,
+        match=r"Invalid contract at billing/get_invoice\.yaml: Missing required field 'auth'\.",
+    ):
+        _create_diff_service().run(tmp_path)
 
 
 def test_task_1_2_empty_contracts_directory_still_generates_registry(tmp_path: Path) -> None:
@@ -134,6 +137,8 @@ def test_task_1_2_boundary_short_domain_and_operation_segments(tmp_path: Path) -
 method: GET
 path: /v1/x
 auth: bearer
+intent: read
+access_pattern: cached
 summary: X
 description: X
 response:

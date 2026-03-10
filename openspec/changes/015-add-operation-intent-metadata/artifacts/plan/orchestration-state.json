@@ -3,15 +3,22 @@
   "mode": "STRICT",
   "status": "active",
   "epoch_id": 1,
-  "next_action": "execute_tasks",
+  "next_action": "execute_task_3.1",
   "last_completed_stage": "spec_readiness_gate",
   "completed_tasks": [
     "1.1",
-    "1.2"
+    "1.2",
+    "2.1",
+    "2.2",
+    "2.3",
+    "2.4"
   ],
   "blocked_tasks": [],
   "rejection_counts": {
-    "2.1": 1
+    "2.1": 4,
+    "2.2": 3,
+    "2.3": 1,
+    "2.4": 3
   },
   "agent_identity_map": {
     "spec_analyst": "019cd73a-8ce2-7910-a196-bd17e483a20a"
@@ -51,7 +58,196 @@
       "agent_id": "019cd756-377e-7222-bbc2-e4a5abbc78ce",
       "verdict": "REJECT",
       "timestamp": "2026-03-10T10:45:37Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "tester",
+      "agent_id": "019cd760-9dbc-7d03-bc22-096f4147fc4d",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T10:55:16Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "qa",
+      "agent_id": "019cd76a-02e1-72f0-ab80-fe9607795544",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T11:05:04Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "qa",
+      "agent_id": "019cd785-3b31-76d2-b3be-f1eb33531469",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T11:35:31Z"
+    },
+    {
+      "stage": "task_2.2",
+      "agent_role": "security",
+      "agent_id": "019cd78d-e445-73d1-ba97-b48383bf1706",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T11:44:27Z"
+    },
+    {
+      "stage": "task_2.2",
+      "agent_role": "tester",
+      "agent_id": "019cd793-4784-70e0-8c22-d0278a3ac880",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T11:49:17Z"
+    },
+    {
+      "stage": "task_2.2",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T12:00:02Z"
+    },
+    {
+      "stage": "task_2.3",
+      "agent_role": "tester",
+      "agent_id": "019cd7a5-2670-72f1-ad51-52404c9367f8",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T12:26:00Z"
+    },
+    {
+      "stage": "task_2.3",
+      "agent_role": "security",
+      "agent_id": "019cd798-da2c-7541-8d3b-c6dfc1977995",
+      "verdict": "SECURITY VERIFIED",
+      "timestamp": "2026-03-10T12:25:00Z"
+    },
+    {
+      "stage": "task_2.3",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "APPROVED",
+      "timestamp": "2026-03-10T12:21:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "tester",
+      "agent_id": "019cd7a5-2670-72f1-ad51-52404c9367f8",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T12:34:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "security",
+      "agent_id": "019cd798-da2c-7541-8d3b-c6dfc1977995",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T12:37:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T12:38:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "tester",
+      "agent_id": "019cd763-6393-71c2-8d29-d42e3ebfe420",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T12:48:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "security",
+      "agent_id": "019cd797-b8bf-73b3-bc64-be37e33cb503",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T12:50:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T12:47:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "security",
+      "agent_id": "019cd797-b8bf-73b3-bc64-be37e33cb503",
+      "verdict": "SECURITY VERIFIED",
+      "timestamp": "2026-03-10T12:58:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "tester",
+      "agent_id": "019cd763-6393-71c2-8d29-d42e3ebfe420",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T12:59:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T13:00:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "security",
+      "agent_id": "019cd797-b8bf-73b3-bc64-be37e33cb503",
+      "verdict": "SECURITY VERIFIED",
+      "timestamp": "2026-03-10T12:58:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "tester",
+      "agent_id": "019cd763-6393-71c2-8d29-d42e3ebfe420",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T13:08:00Z"
+    },
+    {
+      "stage": "task_2.4",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "APPROVED",
+      "timestamp": "2026-03-10T13:07:00Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "security",
+      "agent_id": "019cd797-b8bf-73b3-bc64-be37e33cb503",
+      "verdict": "SECURITY VERIFIED",
+      "timestamp": "2026-03-10T13:14:00Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "APPROVED",
+      "timestamp": "2026-03-10T13:15:00Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "tester",
+      "agent_id": "019cd763-6393-71c2-8d29-d42e3ebfe420",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T13:15:00Z"
+    },
+    {
+      "stage": "task_2.2",
+      "agent_role": "security",
+      "agent_id": "019cd797-b8bf-73b3-bc64-be37e33cb503",
+      "verdict": "SECURITY VERIFIED",
+      "timestamp": "2026-03-10T13:16:00Z"
+    },
+    {
+      "stage": "task_2.2",
+      "agent_role": "tester",
+      "agent_id": "019cd763-6393-71c2-8d29-d42e3ebfe420",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T13:17:00Z"
+    },
+    {
+      "stage": "task_2.2",
+      "agent_role": "qa",
+      "agent_id": "019cd79b-39cd-7922-b1a6-0a6c9c445d2b",
+      "verdict": "APPROVED",
+      "timestamp": "2026-03-10T13:18:00Z"
     }
   ],
-  "updated_at": "2026-03-10T10:45:37Z"
+  "updated_at": "2026-03-10T13:18:00Z"
 }

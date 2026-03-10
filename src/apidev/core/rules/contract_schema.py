@@ -8,14 +8,13 @@ from pydantic import ValidationError
 
 from apidev.core.models.contract import (
     ACCESS_PATTERN_FIELD,
-    ACCESS_PATTERN_VALUES,
+    collect_operation_metadata_empty_value_errors,
     EndpointContract,
-    OPERATION_ACCESS_PATTERN_COMPATIBILITY,
     OPERATION_METADATA_FIELDS,
     OPERATION_INTENT_FIELD,
-    OPERATION_INTENT_VALUES,
     RefSchemaNodeModel,
     SharedModelContractModel,
+    normalize_operation_metadata_value,
 )
 from apidev.core.models.contract_document import ContractDocument
 from apidev.core.models.diagnostic import ValidationDiagnostic
@@ -125,9 +124,11 @@ def validate_contract_schema(
         "description",
         "response",
         "errors",
+        OPERATION_INTENT_FIELD,
+        ACCESS_PATTERN_FIELD,
     )
     for field_name in required_fields:
-        if field_name not in data:
+        if field_name not in data or data[field_name] is None:
             diagnostics.append(
                 ValidationDiagnostic(
                     code=SCHEMA_MISSING_FIELD,
@@ -470,8 +471,8 @@ def validate_contract_schema(
             response_status=int(response_status),
             response_body=dict(response_body),
             errors=normalized_errors,
-            intent=_normalize_optional_metadata_value(intent),
-            access_pattern=_normalize_optional_metadata_value(access_pattern),
+            intent=normalize_operation_metadata_value(intent),
+            access_pattern=normalize_operation_metadata_value(access_pattern),
             request_path=dict(request_path_schema) if isinstance(request_path_schema, dict) else {},
             request_query=(
                 dict(request_query_schema) if isinstance(request_query_schema, dict) else {}
@@ -505,92 +506,18 @@ def _require_type(
 def _validate_operation_metadata(
     relpath: str, intent: Any, access_pattern: Any
 ) -> list[ValidationDiagnostic]:
-    diagnostics: list[ValidationDiagnostic] = []
-    normalized_intent = _normalize_optional_metadata_value(intent)
-    normalized_access_pattern = _normalize_optional_metadata_value(access_pattern)
-
-    if isinstance(intent, str):
-        diagnostics.extend(
-            _validate_metadata_value(
-                relpath=relpath,
-                field_name=OPERATION_INTENT_FIELD,
-                normalized_value=normalized_intent,
-                allowed_values=OPERATION_INTENT_VALUES,
-            )
-        )
-
-    if isinstance(access_pattern, str):
-        diagnostics.extend(
-            _validate_metadata_value(
-                relpath=relpath,
-                field_name=ACCESS_PATTERN_FIELD,
-                normalized_value=normalized_access_pattern,
-                allowed_values=ACCESS_PATTERN_VALUES,
-            )
-        )
-
-    if (
-        normalized_intent in OPERATION_INTENT_VALUES
-        and normalized_access_pattern in ACCESS_PATTERN_VALUES
-        and normalized_access_pattern
-        not in OPERATION_ACCESS_PATTERN_COMPATIBILITY[normalized_intent]
-    ):
-        allowed_values = ", ".join(
-            sorted(OPERATION_ACCESS_PATTERN_COMPATIBILITY[normalized_intent])
-        )
-        diagnostics.append(
-            ValidationDiagnostic(
-                code=SCHEMA_INVALID_VALUE,
-                severity="error",
-                message=(
-                    "Field 'access_pattern' is incompatible with "
-                    f"intent '{normalized_intent}'. Allowed values: {allowed_values}."
-                ),
-                location=f"{relpath}:{ACCESS_PATTERN_FIELD}",
-                rule=RULE_FIELD_VALUE,
-            )
-        )
-
-    return diagnostics
-
-
-def _normalize_optional_metadata_value(value: Any) -> str | None:
-    if not isinstance(value, str):
-        return None
-    return value.strip().lower()
-
-
-def _validate_metadata_value(
-    *,
-    relpath: str,
-    field_name: str,
-    normalized_value: str | None,
-    allowed_values: frozenset[str],
-) -> list[ValidationDiagnostic]:
-    if normalized_value is None:
-        return []
-    if not normalized_value:
-        return [
-            ValidationDiagnostic(
-                code=SCHEMA_INVALID_VALUE,
-                severity="error",
-                message=f"Field '{field_name}' must be non-empty when provided.",
-                location=f"{relpath}:{field_name}",
-                rule=RULE_FIELD_VALUE,
-            )
-        ]
-    if normalized_value in allowed_values:
-        return []
     return [
         ValidationDiagnostic(
             code=SCHEMA_INVALID_VALUE,
             severity="error",
-            message=(
-                f"Field '{field_name}' must be one of: {', '.join(sorted(allowed_values))}."
-            ),
+            message=message,
             location=f"{relpath}:{field_name}",
             rule=RULE_FIELD_VALUE,
         )
+        for field_name, message in collect_operation_metadata_empty_value_errors(
+            intent=intent,
+            access_pattern=access_pattern,
+        ).items()
     ]
 
 

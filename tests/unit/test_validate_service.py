@@ -30,6 +30,8 @@ path: /v1/invoices
 auth: bearer
 summary: Create invoice
 description: Create invoice
+intent: write
+access_pattern: imperative
 response:
   status: 201
   body: {type: object}
@@ -53,6 +55,8 @@ path: /v1/users
 auth: bearer
 summary: List users
 description: Legacy inline-only contract.
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -99,6 +103,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Inline-only legacy contract with custom config.
+intent: read
+access_pattern: cached
 request:
   path:
     type: object
@@ -159,6 +165,8 @@ path: /v1/items
 auth: bearer
 summary: Get item
 description: Get item
+intent: read
+access_pattern: cached
 response:
   status: 200
   body: {type: object}
@@ -189,6 +197,8 @@ path: /v1/items
 auth: bearer
 summary: Get item
 description: Get item
+intent: read
+access_pattern: cached
 response:
   status: 200
   body: {type: object}
@@ -241,6 +251,76 @@ errors: []
 
     ordered_locations = [diagnostic.location for diagnostic in result.diagnostics]
     assert ordered_locations == sorted(ordered_locations)
+
+
+def test_validate_reports_semantic_invalid_operation_metadata_values(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "users/search.yaml",
+        """
+method: POST
+path: /v1/users/search
+auth: bearer
+summary: Search users
+description: Search users by filters.
+intent: mutate
+access_pattern: streaming
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    metadata_diagnostics = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.location in {"users/search.yaml:intent", "users/search.yaml:access_pattern"}
+    ]
+    assert [diagnostic.rule for diagnostic in metadata_diagnostics] == [
+        "semantic.operation_metadata.allowed_value",
+        "semantic.operation_metadata.allowed_value",
+    ]
+    assert [diagnostic.location for diagnostic in metadata_diagnostics] == [
+        "users/search.yaml:access_pattern",
+        "users/search.yaml:intent",
+    ]
+
+
+def test_validate_reports_semantic_invalid_operation_metadata_combination(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "users/search.yaml",
+        """
+method: POST
+path: /v1/users/search
+auth: bearer
+summary: Search users
+description: Search users by filters.
+intent: write
+access_pattern: cached
+response:
+  status: 200
+  body: {type: object}
+errors: []
+""",
+    )
+
+    result = _run_validate(tmp_path)
+
+    metadata_diagnostics = [
+        diagnostic
+        for diagnostic in result.diagnostics
+        if diagnostic.location.startswith("users/search.yaml:")
+    ]
+    assert [diagnostic.rule for diagnostic in metadata_diagnostics] == [
+        "semantic.operation_metadata.compatibility"
+    ]
+    assert [diagnostic.location for diagnostic in metadata_diagnostics] == [
+        "users/search.yaml:access_pattern"
+    ]
 
 
 def test_validate_reports_nested_schema_type_errors(tmp_path: Path) -> None:
@@ -389,6 +469,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -428,6 +510,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -460,6 +544,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -496,6 +582,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -521,6 +609,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -550,6 +640,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -627,6 +719,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -671,6 +765,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -710,6 +806,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -830,6 +928,8 @@ path: /v1/items/{item_id}
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 request:
   path:
     type: object
@@ -871,6 +971,8 @@ path: /v1/items/{item_id}
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 request:
   path:
     type: object

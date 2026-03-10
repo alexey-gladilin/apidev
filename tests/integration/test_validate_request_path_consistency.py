@@ -24,6 +24,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
 response:
   status: 200
   body: {type: object}
@@ -48,6 +50,8 @@ path: /v1/invoices/{invoice_id}/{line_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
 request:
   path:
     type: object

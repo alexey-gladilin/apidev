@@ -3,6 +3,10 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
+from apidev.core.models.contract import (
+    collect_operation_metadata_allowed_value_errors,
+    collect_operation_metadata_compatibility_errors,
+)
 from apidev.core.models.contract_document import ContractDocument
 from apidev.core.models.diagnostic import ValidationDiagnostic
 from apidev.core.models.operation import Operation
@@ -16,6 +20,8 @@ SEMANTIC_AMBIGUOUS_MODEL_REFERENCE = "SEMANTIC_AMBIGUOUS_MODEL_REFERENCE"
 SEMANTIC_SCOPE_LEAK = "SEMANTIC_SCOPE_LEAK"
 SEMANTIC_DUPLICATE_SHARED_MODEL_NAME = "SEMANTIC_DUPLICATE_SHARED_MODEL_NAME"
 SEMANTIC_CONTRACT_REFERENCE_CYCLE = "validation.CONTRACT_REFERENCE_CYCLE"
+SEMANTIC_INVALID_OPERATION_METADATA_VALUE = "SEMANTIC_INVALID_OPERATION_METADATA_VALUE"
+SEMANTIC_INCOMPATIBLE_OPERATION_METADATA = "SEMANTIC_INCOMPATIBLE_OPERATION_METADATA"
 RULE_OPERATION_ID_UNIQUE = "semantic.operation_id.unique"
 RULE_OPERATION_ID_FORMAT = "semantic.operation_id.format"
 RULE_ENDPOINT_SIGNATURE_UNIQUE = "semantic.endpoint_signature.unique"
@@ -24,6 +30,8 @@ RULE_MODEL_REF_RESOLUTION = "semantic.model_ref.resolution"
 RULE_SCOPE_BOUNDARY = "semantic.model_ref.scope"
 RULE_SHARED_MODEL_UNIQUE = "semantic.shared_model.unique"
 RULE_MODEL_GRAPH_ACYCLIC = "semantic.model_graph.acyclic"
+RULE_OPERATION_METADATA_ALLOWED_VALUE = "semantic.operation_metadata.allowed_value"
+RULE_OPERATION_METADATA_COMPATIBILITY = "semantic.operation_metadata.compatibility"
 OPERATION_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
 
 
@@ -283,6 +291,7 @@ def validate_semantic_rules(
 
     diagnostics: list[ValidationDiagnostic] = []
     for operation in operations:
+        diagnostics.extend(validate_operation_metadata_semantics(operation))
         if OPERATION_ID_PATTERN.fullmatch(operation.operation_id):
             continue
         diagnostics.append(
@@ -340,6 +349,44 @@ def validate_semantic_rules(
             )
         )
 
+    return diagnostics
+
+
+def validate_operation_metadata_semantics(
+    operation: Operation,
+) -> list[ValidationDiagnostic]:
+    diagnostics: list[ValidationDiagnostic] = []
+    relpath = operation.contract_relpath.as_posix()
+    intent = operation.contract.intent
+    access_pattern = operation.contract.access_pattern
+
+    for field_name, message in collect_operation_metadata_allowed_value_errors(
+        intent=intent,
+        access_pattern=access_pattern,
+    ).items():
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SEMANTIC_INVALID_OPERATION_METADATA_VALUE,
+                severity="error",
+                message=message,
+                location=f"{relpath}:{field_name}",
+                rule=RULE_OPERATION_METADATA_ALLOWED_VALUE,
+            )
+        )
+
+    for field_name, message in collect_operation_metadata_compatibility_errors(
+        intent=intent,
+        access_pattern=access_pattern,
+    ).items():
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SEMANTIC_INCOMPATIBLE_OPERATION_METADATA,
+                severity="error",
+                message=message,
+                location=f"{relpath}:{field_name}",
+                rule=RULE_OPERATION_METADATA_COMPATIBILITY,
+            )
+        )
     return diagnostics
 
 

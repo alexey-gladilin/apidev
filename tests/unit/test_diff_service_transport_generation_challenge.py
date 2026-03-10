@@ -57,7 +57,7 @@ def test_transport_generation_empty_contract_set_keeps_core_outputs(tmp_path: Pa
     assert planned_paths == ["operation_map.py", "openapi_docs.py"]
 
 
-def test_transport_generation_handles_null_summary_and_description(tmp_path: Path) -> None:
+def test_transport_generation_handles_null_summary_with_required_description(tmp_path: Path) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,
@@ -66,8 +66,16 @@ def test_transport_generation_handles_null_summary_and_description(tmp_path: Pat
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: null
-description: null
+description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -86,7 +94,8 @@ errors: []
     operation_map = next(
         change for change in plan.changes if change.path.name == "operation_map.py"
     )
-    assert '"description": "None"' in operation_map.content
+    assert '"summary":' not in operation_map.content
+    assert '"description": "Get invoice details"' in operation_map.content
 
 
 def test_transport_generation_rejects_nested_relpath_for_single_level_layout(
@@ -100,8 +109,16 @@ def test_transport_generation_rejects_nested_relpath_for_single_level_layout(
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:

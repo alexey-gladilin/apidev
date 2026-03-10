@@ -30,6 +30,8 @@ path: /v1/invoices
 auth: bearer
 summary: Create invoice
 description: Create invoice
+intent: write
+access_pattern: imperative
 response:
   status: 201
   body: {type: object}

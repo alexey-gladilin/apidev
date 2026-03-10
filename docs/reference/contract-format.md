@@ -594,6 +594,8 @@ Reference node допускается в:
 method: POST
 path: /v1/invoices/search
 auth: bearer
+intent: read
+access_pattern: imperative
 description: Returns paginated invoices
 request:
   body:
@@ -647,6 +649,8 @@ contract_type: operation
 method: POST
 path: /v1/invoices/search
 auth: bearer
+intent: read
+access_pattern: imperative
 description: Returns paginated invoices
 request:
   body:
@@ -962,6 +966,8 @@ Root-level блок `examples` в контракте не поддерживае
 method: POST
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: write
+access_pattern: imperative
 description: Update invoice details
 request:
   path:

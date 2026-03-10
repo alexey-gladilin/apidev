@@ -36,6 +36,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -81,6 +89,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -153,6 +169,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
 request:
   path:
     type: object
@@ -230,6 +248,8 @@ path: /v1/status
 auth: public
 summary: Get status
 description: Returns status
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -304,6 +324,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Update invoice
 description: Update invoice details
+intent: write
+access_pattern: imperative
 request:
   path:
     type: object
@@ -338,6 +360,8 @@ path: /v1/status
 auth: public
 summary: Get status
 description: Returns status
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -479,6 +503,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -557,6 +589,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -588,6 +628,14 @@ path: /v1/invoices/{invoice_id}/details
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -624,6 +672,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -655,6 +711,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Updated description for swagger
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -692,6 +756,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -750,6 +822,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -808,6 +888,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -899,6 +987,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -935,6 +1031,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -978,6 +1082,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -993,6 +1105,14 @@ path: /v1/users/{user_id}
 auth: bearer
 summary: Get user
 description: Get user details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      user_id:
+        type: string
 response:
   status: 200
   body: {type: object}
@@ -1050,6 +1170,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -1127,6 +1255,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -1201,6 +1337,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -1274,6 +1418,8 @@ path: /v1/invoices
 auth: bearer
 summary: Create invoice
 description: Create invoice details
+intent: write
+access_pattern: imperative
 response:
   status: 201
   body:
@@ -1351,6 +1497,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -1429,6 +1583,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:

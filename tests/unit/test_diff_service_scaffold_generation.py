@@ -40,8 +40,16 @@ scaffold_write_policy = "{scaffold_write_policy}"
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body: {type: object}

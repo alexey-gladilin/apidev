@@ -54,6 +54,8 @@ path: {api_path}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
 {request_block}\
 response:
   status: 200

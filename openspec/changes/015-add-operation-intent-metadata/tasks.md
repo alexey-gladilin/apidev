@@ -14,10 +14,10 @@
 - [x] 1.2 Синхронизировать `docs/reference/contract-format.md`, `docs/reference/cli-contract.md` и authoring examples с новым SSOT metadata contract. DoD: docs показывают explicit `GET`-read, `POST`-read, `POST`-write и invalid-combination сценарии, а spec delta совпадают со структурой canonical specs.
 
 ## 2. Валидация и ingest
-- [REJECTED x1] 2.1 Обновить contract models / YAML loader для поддержки новых root-level operation fields. DoD: parse stage принимает explicit metadata и не подставляет implicit defaults.
-- [ ] 2.2 Добавить semantic validation для allowed values и forbidden combinations `intent/access_pattern`. DoD: validate возвращает stable diagnostics для invalid combinations.
-- [ ] 2.3 Добавить validation на отсутствие обязательных `intent` и `access_pattern`. DoD: legacy contracts без новых полей детерминированно отклоняются с machine-readable diagnostics.
-- [ ] 2.4 Мигрировать in-repo contracts, fixtures/examples и templates на explicit `intent`/`access_pattern`. DoD: `.apidev/contracts/system/health.yaml`, `.apidev/contracts/users/search.yaml` и repo-local authoring fixtures больше не зависят от legacy shape.
+- [x] 2.1 Обновить contract models / YAML loader для поддержки новых root-level operation fields. DoD: parse stage принимает explicit metadata и не подставляет implicit defaults.
+- [x] 2.2 Добавить semantic validation для allowed values и forbidden combinations `intent/access_pattern`. DoD: validate возвращает stable diagnostics для invalid combinations.
+- [x] 2.3 Добавить validation на отсутствие обязательных `intent` и `access_pattern`. DoD: legacy contracts без новых полей детерминированно отклоняются с machine-readable diagnostics.
+- [x] 2.4 Мигрировать in-repo contracts, fixtures/examples и templates на explicit `intent`/`access_pattern`. DoD: `.apidev/contracts/system/health.yaml`, `.apidev/contracts/users/search.yaml` и repo-local authoring fixtures больше не зависят от legacy shape.
 
 ## 3. Generated metadata и downstream contract
 - [ ] 3.1 Расширить operation registry / generated metadata новыми полями `intent` и `access_pattern`. DoD: operation map и related generated metadata публикуют SSOT значения детерминированно.

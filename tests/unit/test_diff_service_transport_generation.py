@@ -66,6 +66,8 @@ path: /v1/status
 auth: public
 summary: Get status
 description: Returns status
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -86,6 +88,8 @@ path: /v1/items
 auth: bearer
 summary: Create item
 description: Creates item
+intent: write
+access_pattern: imperative
 response:
   status: 201
   body:
@@ -181,6 +185,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -209,6 +221,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
 request:
   path:
     type: object
@@ -266,6 +280,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -304,6 +326,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -327,6 +357,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice A
 description: Get invoice A
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -343,6 +381,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice B
 description: Get invoice B
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -368,6 +414,8 @@ path: /v1/fallback
 auth: bearer
 summary: Fallback names
 description: Fallback names
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -405,6 +453,8 @@ path: /v1/fallback-a
 auth: bearer
 summary: Fallback A
 description: Fallback A
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -421,6 +471,8 @@ path: /v1/fallback-b
 auth: bearer
 summary: Fallback B
 description: Fallback B
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -448,6 +500,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -511,6 +571,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -548,6 +616,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -589,6 +665,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -625,7 +709,9 @@ errors:
     ]
 
 
-def test_operation_map_escapes_malicious_path_literal(tmp_path: Path) -> None:
+def test_diff_service_rejects_malicious_path_literal_for_codegen_safety(
+    tmp_path: Path,
+) -> None:
     _write_project_config(tmp_path)
     malicious_path = '/x"+__import__("os").system("echo_INJECTED")+"'
     _write_contract(
@@ -637,6 +723,8 @@ path: '{malicious_path}'
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -645,16 +733,15 @@ errors: []
 """,
     )
 
-    plan = _create_diff_service().run(tmp_path)
-    operation_map = next(
-        change for change in plan.changes if change.path.name == "operation_map.py"
-    )
-
-    namespace: dict[str, object] = {}
-    exec(operation_map.content, {}, namespace)
-    operation_map_value = namespace["OPERATION_MAP"]
-    assert isinstance(operation_map_value, dict)
-    assert operation_map_value["billing_get_invoice"]["path"] == malicious_path
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"Invalid contract at billing/get_invoice\.yaml: "
+            r"Field 'path' contains unsupported characters for code generation safety\.; "
+            r"Field 'path' must contain only URL-safe characters and parameter braces\."
+        ),
+    ):
+        _create_diff_service().run(tmp_path)
 
 
 def test_operation_map_includes_domain_for_runtime_and_openapi_projection(tmp_path: Path) -> None:
@@ -668,6 +755,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -699,6 +794,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
 request:
   path:
     type: object
@@ -731,6 +828,8 @@ path: /v1/status
 auth: public
 summary: Get status
 description: Returns status
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -792,6 +891,14 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Get invoice
 description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -844,6 +951,8 @@ path: /v1/invoices/{invoice_id}
 auth: bearer
 summary: Update invoice
 description: Update invoice details
+intent: write
+access_pattern: imperative
 request:
   path:
     type: object
@@ -879,6 +988,8 @@ path: /v1/status
 auth: public
 summary: Get status
 description: Returns status
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:

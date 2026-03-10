@@ -43,6 +43,8 @@ model:
 method: GET
 path: /v1/users
 auth: bearer
+intent: read
+access_pattern: cached
 summary: List users
 description: Returns users list.
 response:
@@ -62,6 +64,8 @@ errors: []
 method: GET
 path: /v1/users/search
 auth: bearer
+intent: read
+access_pattern: imperative
 summary: Search users
 description: Returns users search result.
 response:
@@ -171,3 +175,61 @@ def test_graph_json_shape_and_mermaid_edge_export_are_explicit(tmp_path: Path) -
         'operation_users_list_users -->|"common.PageInfo"| shared_model_common_PageInfo'
         in mermaid_result.output
     )
+
+
+def test_graph_rejects_invalid_metadata_values(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "users/list_users.yaml",
+        """
+method: GET
+path: /v1/users
+auth: bearer
+intent: mutate
+access_pattern: streaming
+summary: List users
+description: Returns users list.
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    result = runner.invoke(
+        app,
+        ["graph", "--project-dir", str(tmp_path), "--format", "json"],
+    )
+
+    assert result.exit_code == 1
+    assert "Validation failed. Run `apidev validate` for details." in result.output
+
+
+def test_graph_rejects_invalid_metadata_combination(tmp_path: Path) -> None:
+    _write_contract(
+        tmp_path,
+        "users/update_user.yaml",
+        """
+method: POST
+path: /v1/users/update
+auth: bearer
+intent: write
+access_pattern: cached
+summary: Update user
+description: Updates a user.
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    result = runner.invoke(
+        app,
+        ["graph", "--project-dir", str(tmp_path), "--format", "text"],
+    )
+
+    assert result.exit_code == 1
+    assert "Validation failed. Run `apidev validate` for details." in result.output

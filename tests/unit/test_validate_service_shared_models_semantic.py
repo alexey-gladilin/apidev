@@ -33,6 +33,8 @@ path: /v1/items
 auth: public
 summary: S
 description: D
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -160,6 +162,8 @@ path: /v1/users
 auth: bearer
 summary: create
 description: create
+intent: write
+access_pattern: imperative
 local_models:
   Address:
     type: object
@@ -309,6 +313,8 @@ path: /v1/billing/search
 auth: public
 summary: search items
 description: search items
+intent: read
+access_pattern: cached
 response:
   status: 200
   body:
@@ -360,6 +366,8 @@ path: /v1/users/list
 auth: public
 summary: list users
 description: list users
+intent: write
+access_pattern: imperative
 request:
   body:
     type: object
@@ -413,6 +421,8 @@ path: /v1/catalog/search
 auth: public
 summary: search items
 description: search items
+intent: read
+access_pattern: cached
 request:
   query:
     type: object

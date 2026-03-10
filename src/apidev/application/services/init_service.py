@@ -20,6 +20,8 @@ from apidev.core.ports.filesystem import FileSystemPort
 DEFAULT_HEALTH_CONTRACT = """method: GET
 path: /v1/health
 auth: public
+intent: read
+access_pattern: cached
 description: Returns health status.
 response:
   status: 200
@@ -46,6 +48,8 @@ errors:
 DEFAULT_USERS_SEARCH_CONTRACT = """method: POST
 path: /v1/users/search
 auth: bearer
+intent: read
+access_pattern: imperative
 description: Searches users with shared request and response models.
 request:
   body:

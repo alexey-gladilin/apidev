@@ -38,8 +38,16 @@ def _write_contract(project_dir: Path) -> None:
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: 200
   body:
@@ -114,8 +122,16 @@ def test_diff_service_marks_invalid_baseline_status_type_in_strict_mode(
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: nope
   body:
@@ -153,8 +169,16 @@ def test_diff_service_marks_invalid_baseline_status_type_in_warn_mode(
 method: GET
 path: /v1/invoices/{invoice_id}
 auth: bearer
+intent: read
+access_pattern: cached
 summary: Get invoice
 description: Get invoice details
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
 response:
   status: nope
   body:
