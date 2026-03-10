@@ -276,6 +276,8 @@ Precedence для режимов и операций записи:
 method: GET
 path: /v1/health
 auth: public
+intent: read
+access_pattern: cached
 description: Returns health status.
 response:
   status: 200
@@ -298,6 +300,114 @@ errors:
           type: string
           required: true
 ```
+
+## SSOT metadata операции: `intent` и `access_pattern`
+
+APIDev использует root-level поля `intent` и `access_pattern` как single source of truth для семантики операции и рекомендуемого client-access паттерна.
+HTTP method сам по себе не определяет semantic read/write: `POST` может оставаться чтением, если контракт явно задает `intent: read`.
+
+Допустимые значения:
+
+- `intent`: `read | write`
+- `access_pattern`: `cached | imperative | both | none`
+
+Compatibility matrix:
+
+- `intent=read` допускает `cached`, `imperative`, `both`, `none`
+- `intent=write` допускает только `imperative` и `none`
+- `intent=write` вместе с `access_pattern=cached` запрещено
+- `intent=write` вместе с `access_pattern=both` запрещено
+
+Эти поля обязательны для каждого operation contract.
+
+### Канонические authoring examples
+
+`GET-read` example:
+
+```yaml
+method: GET
+path: /v1/health
+auth: public
+intent: read
+access_pattern: cached
+description: Returns health status.
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      status:
+        type: string
+        required: true
+errors: []
+```
+
+`POST-read` example:
+
+```yaml
+method: POST
+path: /v1/users/search
+auth: bearer
+intent: read
+access_pattern: imperative
+description: Searches users with complex filters in request body.
+request:
+  body:
+    $ref: common.PaginationRequest
+response:
+  status: 200
+  body:
+    $ref: users.SearchUsersResponse
+errors: []
+```
+
+`POST-write` example:
+
+```yaml
+method: POST
+path: /v1/users
+auth: bearer
+intent: write
+access_pattern: imperative
+description: Creates a user.
+request:
+  body:
+    type: object
+    properties:
+      email:
+        type: string
+        required: true
+response:
+  status: 201
+  body:
+    type: object
+    properties:
+      user_id:
+        type: string
+        required: true
+errors: []
+```
+
+`invalid-combination` example:
+
+```yaml
+method: POST
+path: /v1/users/bulk-import
+auth: bearer
+intent: write
+access_pattern: cached
+description: Starts bulk import job.
+request:
+  body:
+    type: object
+response:
+  status: 202
+  body:
+    type: object
+errors: []
+```
+
+Ожидаемый результат для `invalid-combination`: `apidev validate` отклоняет контракт, потому что cache-oriented access не совместим с `write` intent.
 
 ## Формат shared model contract
 
@@ -357,6 +467,8 @@ model:
 - `method`
 - `path`
 - `auth`
+- `intent`
+- `access_pattern`
 - `description`
 - `response`
 - `errors`
@@ -391,6 +503,20 @@ model:
 - Обязательное
 - Допустимые значения: `public`, `bearer`
 - Значение нормализуется в lowercase
+
+### `intent`
+
+- Тип: `string`
+- Обязательное
+- Допустимые значения: `read`, `write`
+- Определяет semantic intent операции независимо от transport method
+
+### `access_pattern`
+
+- Тип: `string`
+- Обязательное
+- Допустимые значения: `cached`, `imperative`, `both`, `none`
+- Определяет рекомендуемый downstream access pattern без локальных эвристик по HTTP method
 
 ### `description`
 

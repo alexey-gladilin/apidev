@@ -7,7 +7,13 @@ from typing import Any
 from pydantic import ValidationError
 
 from apidev.core.models.contract import (
+    ACCESS_PATTERN_FIELD,
+    ACCESS_PATTERN_VALUES,
     EndpointContract,
+    OPERATION_ACCESS_PATTERN_COMPATIBILITY,
+    OPERATION_METADATA_FIELDS,
+    OPERATION_INTENT_FIELD,
+    OPERATION_INTENT_VALUES,
     RefSchemaNodeModel,
     SharedModelContractModel,
 )
@@ -45,7 +51,7 @@ ROOT_ALLOWED_FIELDS = {
     "request",
     "response",
     "errors",
-}
+}.union(OPERATION_METADATA_FIELDS)
 SHARED_ROOT_ALLOWED_FIELDS = {"contract_type", "name", "description", "model"}
 REQUEST_ALLOWED_FIELDS = {"path", "query", "body"}
 RESPONSE_ALLOWED_FIELDS = {"status", "body"}
@@ -142,12 +148,16 @@ def validate_contract_schema(
     request = data.get("request")
     errors = data.get("errors")
     local_models = data.get("local_models")
+    intent = data.get(OPERATION_INTENT_FIELD)
+    access_pattern = data.get(ACCESS_PATTERN_FIELD)
 
     diagnostics.extend(_require_type(relpath, "method", method, str))
     diagnostics.extend(_require_type(relpath, "path", path, str))
     diagnostics.extend(_require_type(relpath, "auth", auth, str))
     diagnostics.extend(_require_type(relpath, "summary", summary, str))
     diagnostics.extend(_require_type(relpath, "description", description, str))
+    diagnostics.extend(_require_type(relpath, OPERATION_INTENT_FIELD, intent, str))
+    diagnostics.extend(_require_type(relpath, ACCESS_PATTERN_FIELD, access_pattern, str))
     diagnostics.extend(_require_type(relpath, "request", request, dict))
     diagnostics.extend(_require_type(relpath, "response", response, dict))
     diagnostics.extend(_require_type(relpath, "errors", errors, list))
@@ -255,6 +265,8 @@ def validate_contract_schema(
                 rule=RULE_FIELD_VALUE,
             )
         )
+
+    diagnostics.extend(_validate_operation_metadata(relpath, intent, access_pattern))
 
     request_has_unknown_fields = False
     request_path_fragment: Any = None
@@ -458,6 +470,8 @@ def validate_contract_schema(
             response_status=int(response_status),
             response_body=dict(response_body),
             errors=normalized_errors,
+            intent=_normalize_optional_metadata_value(intent),
+            access_pattern=_normalize_optional_metadata_value(access_pattern),
             request_path=dict(request_path_schema) if isinstance(request_path_schema, dict) else {},
             request_query=(
                 dict(request_query_schema) if isinstance(request_query_schema, dict) else {}
@@ -484,6 +498,98 @@ def _require_type(
             ),
             location=f"{relpath}:{field_name}",
             rule=RULE_FIELD_TYPE,
+        )
+    ]
+
+
+def _validate_operation_metadata(
+    relpath: str, intent: Any, access_pattern: Any
+) -> list[ValidationDiagnostic]:
+    diagnostics: list[ValidationDiagnostic] = []
+    normalized_intent = _normalize_optional_metadata_value(intent)
+    normalized_access_pattern = _normalize_optional_metadata_value(access_pattern)
+
+    if isinstance(intent, str):
+        diagnostics.extend(
+            _validate_metadata_value(
+                relpath=relpath,
+                field_name=OPERATION_INTENT_FIELD,
+                normalized_value=normalized_intent,
+                allowed_values=OPERATION_INTENT_VALUES,
+            )
+        )
+
+    if isinstance(access_pattern, str):
+        diagnostics.extend(
+            _validate_metadata_value(
+                relpath=relpath,
+                field_name=ACCESS_PATTERN_FIELD,
+                normalized_value=normalized_access_pattern,
+                allowed_values=ACCESS_PATTERN_VALUES,
+            )
+        )
+
+    if (
+        normalized_intent in OPERATION_INTENT_VALUES
+        and normalized_access_pattern in ACCESS_PATTERN_VALUES
+        and normalized_access_pattern
+        not in OPERATION_ACCESS_PATTERN_COMPATIBILITY[normalized_intent]
+    ):
+        allowed_values = ", ".join(
+            sorted(OPERATION_ACCESS_PATTERN_COMPATIBILITY[normalized_intent])
+        )
+        diagnostics.append(
+            ValidationDiagnostic(
+                code=SCHEMA_INVALID_VALUE,
+                severity="error",
+                message=(
+                    "Field 'access_pattern' is incompatible with "
+                    f"intent '{normalized_intent}'. Allowed values: {allowed_values}."
+                ),
+                location=f"{relpath}:{ACCESS_PATTERN_FIELD}",
+                rule=RULE_FIELD_VALUE,
+            )
+        )
+
+    return diagnostics
+
+
+def _normalize_optional_metadata_value(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    return value.strip().lower()
+
+
+def _validate_metadata_value(
+    *,
+    relpath: str,
+    field_name: str,
+    normalized_value: str | None,
+    allowed_values: frozenset[str],
+) -> list[ValidationDiagnostic]:
+    if normalized_value is None:
+        return []
+    if not normalized_value:
+        return [
+            ValidationDiagnostic(
+                code=SCHEMA_INVALID_VALUE,
+                severity="error",
+                message=f"Field '{field_name}' must be non-empty when provided.",
+                location=f"{relpath}:{field_name}",
+                rule=RULE_FIELD_VALUE,
+            )
+        ]
+    if normalized_value in allowed_values:
+        return []
+    return [
+        ValidationDiagnostic(
+            code=SCHEMA_INVALID_VALUE,
+            severity="error",
+            message=(
+                f"Field '{field_name}' must be one of: {', '.join(sorted(allowed_values))}."
+            ),
+            location=f"{relpath}:{field_name}",
+            rule=RULE_FIELD_VALUE,
         )
     ]
 

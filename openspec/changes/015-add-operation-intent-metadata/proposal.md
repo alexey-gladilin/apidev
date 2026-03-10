@@ -29,6 +29,7 @@
   - `transport-generation`
   - `contract-validation-hardening`
   - `contract-examples`
+  - `diff-gen-safety`
 - Affected docs:
   - `docs/reference/contract-format.md`
   - `docs/reference/cli-contract.md`
@@ -37,6 +38,7 @@
   - contract models / YAML loader / validation
   - generated operation map / OpenAPI metadata
   - integration and contract test matrix
+  - `.apidev/contracts/*` и связанные repo-local fixtures/examples
 
 ## Ожидаемый результат
 Автор контракта сможет явно описать:
@@ -47,7 +49,8 @@
 - `POST`-search больше не обязан автоматически трактоваться как mutation;
 - `GET`-read может оставаться cached default;
 - imperative read сценарии становятся first-class metadata, а не ad-hoc эвристикой.
-- contract inventory должен быть мигрирован на explicit metadata до прохождения validate/generate pipeline.
+- in-repo contract inventory должен быть мигрирован на explicit metadata до прохождения validate/generate pipeline.
+  Минимальный scope для этого change: `.apidev/contracts/system/health.yaml` и `.apidev/contracts/users/search.yaml`.
 
 ## Связанные артефакты
 - Research: [operation-intent-ssot](./artifacts/research/2026-03-10-operation-intent-ssot.md)

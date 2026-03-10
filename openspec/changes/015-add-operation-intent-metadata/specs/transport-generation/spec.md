@@ -13,9 +13,6 @@ Generation SHALL maintain a stable operation registry contract that maps `operat
 - **THEN** generation SHALL fail before emitting registry metadata for that operation
 - **AND** generated outputs SHALL NOT invent metadata from HTTP method
 
-### Requirement: OpenAPI integration is assembled from generated metadata
-Generated OpenAPI integration SHALL preserve downstream-facing operation semantics metadata via deterministic vendor extensions.
-
 #### Scenario: OpenAPI publishes intent and access pattern
 - **WHEN** operation contract declares `intent` and `access_pattern`
 - **THEN** generated OpenAPI operation SHALL include vendor extensions `x-apidev-intent` and `x-apidev-access-pattern`

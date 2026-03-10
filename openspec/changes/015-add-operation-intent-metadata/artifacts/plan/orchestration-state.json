@@ -1,0 +1,57 @@
+{
+  "change_id": "015-add-operation-intent-metadata",
+  "mode": "STRICT",
+  "status": "active",
+  "epoch_id": 1,
+  "next_action": "execute_tasks",
+  "last_completed_stage": "spec_readiness_gate",
+  "completed_tasks": [
+    "1.1",
+    "1.2"
+  ],
+  "blocked_tasks": [],
+  "rejection_counts": {
+    "2.1": 1
+  },
+  "agent_identity_map": {
+    "spec_analyst": "019cd73a-8ce2-7910-a196-bd17e483a20a"
+  },
+  "last_subagent_evidence": [
+    {
+      "stage": "spec_readiness_gate",
+      "agent_role": "spec-analyst",
+      "agent_id": "019cd73a-8ce2-7910-a196-bd17e483a20a",
+      "verdict": "SPEC READY",
+      "timestamp": "2026-03-10T10:12:59Z"
+    },
+    {
+      "stage": "task_1.2",
+      "agent_role": "tester",
+      "agent_id": "019cd744-2a8a-7780-82cf-2b6118397c0f",
+      "verdict": "VERIFIED",
+      "timestamp": "2026-03-10T10:32:06Z"
+    },
+    {
+      "stage": "task_1.2",
+      "agent_role": "security",
+      "agent_id": "019cd749-7979-7201-b66d-6541bc87b308",
+      "verdict": "SECURITY VERIFIED",
+      "timestamp": "2026-03-10T10:32:06Z"
+    },
+    {
+      "stage": "task_1.2",
+      "agent_role": "qa",
+      "agent_id": "019cd74b-1598-7303-94fd-4c1cefe66e43",
+      "verdict": "APPROVED",
+      "timestamp": "2026-03-10T10:32:06Z"
+    },
+    {
+      "stage": "task_2.1",
+      "agent_role": "security",
+      "agent_id": "019cd756-377e-7222-bbc2-e4a5abbc78ce",
+      "verdict": "REJECT",
+      "timestamp": "2026-03-10T10:45:37Z"
+    }
+  ],
+  "updated_at": "2026-03-10T10:45:37Z"
+}

@@ -44,6 +44,7 @@ GENERATE_ALIAS_ALLOWED = {
 DOC_PATH_PATTERN = re.compile(
     r"(?:^|[`( ])((?:docs|openspec)/[A-Za-z0-9_./-]+\.md|CONTRIBUTING\.md)(?:[` )]|$)"
 )
+MARKDOWN_YAML_BLOCK_PATTERN = re.compile(r"```yaml\n(.*?)\n```", re.DOTALL)
 CONTRACT_FORMAT_DOC_PATH = REPO_ROOT / "docs" / "reference" / "contract-format.md"
 CANONICAL_CONFIG_KEYS = (
     "paths.templates_dir",
@@ -116,3 +117,110 @@ def test_contract_format_doc_uses_canonical_config_keys_only() -> None:
         assert key in text
     for legacy_key in LEGACY_CONFIG_KEYS:
         assert legacy_key not in text
+
+
+def test_operation_metadata_ssot_examples_are_documented_consistently() -> None:
+    contract_format = (REPO_ROOT / "docs" / "reference" / "contract-format.md").read_text(
+        encoding="utf-8"
+    )
+    cli_contract = (REPO_ROOT / "docs" / "reference" / "cli-contract.md").read_text(
+        encoding="utf-8"
+    )
+    health_contract = (REPO_ROOT / ".apidev" / "contracts" / "system" / "health.yaml").read_text(
+        encoding="utf-8"
+    )
+    search_contract = (REPO_ROOT / ".apidev" / "contracts" / "users" / "search.yaml").read_text(
+        encoding="utf-8"
+    )
+
+    expected_contract_format_phrases = (
+        "intent",
+        "access_pattern",
+        "GET-read",
+        "POST-read",
+        "POST-write",
+        "invalid-combination",
+    )
+    for phrase in expected_contract_format_phrases:
+        assert phrase in contract_format
+
+    expected_cli_contract_phrases = (
+        "intent",
+        "access_pattern",
+        "GET-read",
+        "POST-read",
+        "POST-write",
+        "invalid-combination",
+    )
+    for phrase in expected_cli_contract_phrases:
+        assert phrase in cli_contract
+
+    assert "intent: read" in health_contract
+    assert "access_pattern: cached" in health_contract
+    assert "intent: read" in search_contract
+    assert "access_pattern: imperative" in search_contract
+
+
+def _extract_yaml_block_after_heading(text: str, heading: str) -> str:
+    heading_index = text.index(heading)
+    match = MARKDOWN_YAML_BLOCK_PATTERN.search(text, heading_index)
+    assert match is not None, f"Missing YAML block after heading: {heading}"
+    return match.group(1)
+
+
+def test_operation_metadata_examples_use_explicit_non_empty_ssot_values() -> None:
+    contract_format = CONTRACT_FORMAT_DOC_PATH.read_text(encoding="utf-8")
+    cli_contract = (REPO_ROOT / "docs" / "reference" / "cli-contract.md").read_text(
+        encoding="utf-8"
+    )
+
+    scenario_headings = (
+        "`GET-read` example:",
+        "`POST-read` example:",
+        "`POST-write` example:",
+        "`invalid-combination` example:",
+    )
+    for heading in scenario_headings:
+        yaml_block = _extract_yaml_block_after_heading(contract_format, heading)
+        assert re.search(r"^intent: (read|write)$", yaml_block, re.MULTILINE)
+        assert re.search(
+            r"^access_pattern: (cached|imperative|both|none)$", yaml_block, re.MULTILINE
+        )
+
+    cli_headings = (
+        "### `validate`: `GET-read` проходит без diagnostics",
+        "### `validate`: `POST-read` проходит как чтение",
+        "### `validate`: `POST-write` проходит только с write-compatible access pattern",
+        "### `validate`: `invalid-combination` завершается validation failure",
+    )
+    for heading in cli_headings:
+        yaml_block = _extract_yaml_block_after_heading(cli_contract, heading)
+        assert re.search(r"^intent: (read|write)$", yaml_block, re.MULTILINE)
+        assert re.search(
+            r"^access_pattern: (cached|imperative|both|none)$", yaml_block, re.MULTILINE
+        )
+
+
+def test_operation_metadata_docs_cover_boundary_rules_and_invalid_examples() -> None:
+    contract_format = CONTRACT_FORMAT_DOC_PATH.read_text(encoding="utf-8")
+    cli_contract = (REPO_ROOT / "docs" / "reference" / "cli-contract.md").read_text(
+        encoding="utf-8"
+    )
+
+    for phrase in (
+        "`intent=read` допускает `cached`, `imperative`, `both`, `none`",
+        "`intent=write` допускает только `imperative` и `none`",
+        "`intent=write` вместе с `access_pattern=cached` запрещено",
+        "`intent=write` вместе с `access_pattern=both` запрещено",
+        "Эти поля обязательны для каждого operation contract.",
+    ):
+        assert phrase in contract_format
+
+    invalid_yaml = _extract_yaml_block_after_heading(
+        contract_format, "`invalid-combination` example:"
+    )
+    assert "intent: write" in invalid_yaml
+    assert "access_pattern: cached" in invalid_yaml
+
+    assert "exit code `1`" in cli_contract
+    assert "несовместимость `intent/access_pattern`" in cli_contract

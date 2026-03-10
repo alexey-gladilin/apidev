@@ -2,12 +2,15 @@ from pathlib import Path
 
 import yaml
 
-from apidev.core.models.contract import EndpointContract
+from apidev.core.models.contract import (
+    EndpointContract,
+)
 from apidev.core.models.contract_document import ContractDocument
 from apidev.core.models.operation import Operation
 from apidev.core.ports.contract_document_loader import ContractDocumentLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.rules.operation_id import build_operation_id
+from apidev.core.rules.contract_schema import validate_contract_schema
 
 
 class YamlContractLoader(ContractLoaderPort, ContractDocumentLoaderPort):
@@ -62,29 +65,12 @@ class YamlContractLoader(ContractLoaderPort, ContractDocumentLoaderPort):
                     "Expected 'operation' or 'shared_model'."
                 )
 
-            description = str(data.get("description", "")).strip()
-            request = data.get("request", {}) if isinstance(data.get("request"), dict) else {}
-            response = data.get("response", {}) if isinstance(data.get("response"), dict) else {}
-
-            contract = EndpointContract(
-                source_path=path,
-                method=str(data.get("method", "GET")).upper(),
-                path=str(data.get("path", "/")),
-                auth=str(data.get("auth", "public")),
-                description=description,
-                response_status=int(response.get("status", 200)),
-                response_body=response.get("body", {}),
-                errors=data.get("errors", []),
-                request_path=(
-                    request.get("path", {}) if isinstance(request.get("path"), dict) else {}
-                ),
-                request_query=(
-                    request.get("query", {}) if isinstance(request.get("query"), dict) else {}
-                ),
-                request_body=(
-                    request.get("body", {}) if isinstance(request.get("body"), dict) else {}
-                ),
-            )
+            contract, diagnostics = validate_contract_schema(document)
+            if contract is None:
+                detail = "; ".join(
+                    f"{diagnostic.location}: {diagnostic.message}" for diagnostic in diagnostics
+                )
+                raise ValueError(f"Invalid contract at {rel}: {detail}")
             operations.append(
                 Operation(operation_id=operation_id, contract=contract, contract_relpath=rel)
             )

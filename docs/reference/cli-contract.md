@@ -286,6 +286,112 @@ apidev gen --check --project-dir /tmp/apidev-request-openapi --json
 - `request.body` проецируется в `requestBody`;
 - `gen --check` на неизмененном состоянии возвращает `drift_status = no-drift` и exit code `0`.
 
+## Примеры `validate` для operation metadata
+
+CLI обязан принимать explicit SSOT metadata поля `intent` и `access_pattern` и не выводить semantic read/write только из HTTP method.
+
+### `validate`: `GET-read` проходит без diagnostics
+
+Минимальный контракт:
+
+```yaml
+method: GET
+path: /v1/health
+auth: public
+intent: read
+access_pattern: cached
+description: Returns health status.
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+```
+
+Ожидание:
+
+- `apidev validate` завершает команду с exit code `0`;
+- `GET-read` остается cached read scenario без дополнительных эвристик.
+
+### `validate`: `POST-read` проходит как чтение
+
+Минимальный контракт:
+
+```yaml
+method: POST
+path: /v1/users/search
+auth: bearer
+intent: read
+access_pattern: imperative
+description: Searches users by complex filter.
+request:
+  body:
+    type: object
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+```
+
+Ожидание:
+
+- `apidev validate` завершает команду с exit code `0`;
+- `POST-read` не должен быть переклассифицирован в write по transport method.
+
+### `validate`: `POST-write` проходит только с write-compatible access pattern
+
+Минимальный контракт:
+
+```yaml
+method: POST
+path: /v1/users
+auth: bearer
+intent: write
+access_pattern: imperative
+description: Creates a user.
+request:
+  body:
+    type: object
+response:
+  status: 201
+  body:
+    type: object
+errors: []
+```
+
+Ожидание:
+
+- `apidev validate` завершает команду с exit code `0`;
+- `POST-write` документирует canonical write scenario для imperative client usage.
+
+### `validate`: `invalid-combination` завершается validation failure
+
+Минимальный контракт:
+
+```yaml
+method: POST
+path: /v1/users/bulk-import
+auth: bearer
+intent: write
+access_pattern: cached
+description: Starts bulk import job.
+request:
+  body:
+    type: object
+response:
+  status: 202
+  body:
+    type: object
+errors: []
+```
+
+Ожидание:
+
+- `apidev validate` завершает команду с exit code `1`;
+- diagnostics классифицируют `invalid-combination` как несовместимость `intent/access_pattern`;
+- validate-first pipeline тем же образом блокирует `apidev diff`, `apidev gen --check` и `apidev gen`.
+
 ## Контракт help и UX
 
 Обязательные требования:

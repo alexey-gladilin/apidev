@@ -7,6 +7,16 @@
 - **WHEN** operation contract defines valid root-level fields `intent` and `access_pattern`
 - **THEN** schema validation SHALL accept them without unknown-field diagnostics
 
+#### Scenario: Allowed read metadata combination is accepted
+- **WHEN** operation contract defines `intent=read` and `access_pattern` as one of `cached | imperative | both | none`
+- **THEN** schema and semantic validation SHALL accept the combination
+- **AND** command SHALL finish with exit code `0`
+
+#### Scenario: Allowed write metadata combination is accepted
+- **WHEN** operation contract defines `intent=write` and `access_pattern` as one of `imperative | none`
+- **THEN** schema and semantic validation SHALL accept the combination
+- **AND** command SHALL finish with exit code `0`
+
 ### Requirement: Semantic Validation Layer
 `apidev validate` SHALL execute semantic checks after successful parsing/schema stage and SHALL report semantic violations as structured diagnostics, including invalid combinations of `intent` and `access_pattern`.
 
@@ -32,10 +42,12 @@
 
 #### Scenario: Missing intent is rejected
 - **WHEN** operation contract omits required field `intent`
-- **THEN** validation SHALL emit a structured diagnostic with stable `code`
+- **THEN** validation SHALL emit a structured schema diagnostic with stable `code`
+- **AND** diagnostic `rule` SHALL classify the failure as schema validation rather than semantic validation
 - **AND** command SHALL finish with exit code `1`
 
 #### Scenario: Missing access pattern is rejected
 - **WHEN** operation contract omits required field `access_pattern`
-- **THEN** validation SHALL emit a structured diagnostic with stable `code`
+- **THEN** validation SHALL emit a structured schema diagnostic with stable `code`
+- **AND** diagnostic `rule` SHALL classify the failure as schema validation rather than semantic validation
 - **AND** command SHALL finish with exit code `1`
