@@ -48,6 +48,8 @@
 - `method`
 - `path`
 - `auth`
+- `intent`
+- `access_pattern`
 - `description`
 - `response`
 - `errors`
@@ -64,7 +66,15 @@
 - `method`: `GET | POST | PUT | PATCH | DELETE | HEAD | OPTIONS`
 - `path`: строка, начинается с `/`, без пробелов
 - `auth`: `public | bearer`
+- `intent`: `read | write` — семантический intent операции независимо от HTTP-метода
+- `access_pattern`: `cached | imperative | both | none` — рекомендуемый client-access паттерн
 - `description`: непустое текстовое описание операции
+
+Семантическая матрица для `intent` и `access_pattern`:
+
+- при `intent: read` допустимы все варианты `access_pattern`;
+- при `intent: write` допустимы только `imperative` и `none`;
+- сочетания `intent: write` с `access_pattern: cached` или `both` считаются невалидными.
 
 Минимальный пример:
 
@@ -72,6 +82,8 @@
 method: GET
 path: /v1/health
 auth: public
+intent: read
+access_pattern: cached
 description: Returns health status.
 response:
   status: 200
@@ -329,7 +341,7 @@ request:
 
 - Один YAML operation contract описывает одну операцию.
 - `shared_model` живет в `.apidev/models` и обязан иметь `contract_type: shared_model`.
-- Для operation contract обязательны `method`, `path`, `auth`, `description`, `response`, `errors`.
+- Для operation contract обязательны `method`, `path`, `auth`, `intent`, `access_pattern`, `description`, `response`, `errors`.
 - Для shared model contract обязательны `contract_type`, `name`, `description`, `model`.
 - `$ref`-узел содержит только `$ref`.
 - `local_models` ограничены рамками одного operation contract.
