@@ -485,6 +485,110 @@ errors: []
     assert paths["/v1/status"]["get"] == expected_get_operation
 
 
+def test_generate_openapi_projects_shared_model_refs_into_components(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "models" / "common").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+[inputs]
+contracts_dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[paths]
+templates_dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "models" / "common" / "pagination_request.yaml").write_text(
+        """
+contract_type: shared_model
+name: PaginationRequest
+description: Shared pagination payload
+model:
+  type: object
+  properties:
+    number:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "search_invoices.yaml").write_text(
+        """
+method: POST
+path: /v1/invoices/search
+auth: bearer
+summary: Search invoices
+description: Search invoices with shared pagination
+intent: read
+access_pattern: cached
+request:
+  body:
+    type: object
+    properties:
+      page:
+        $ref: common.PaginationRequest
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    build_openapi_components = cast(Any, openapi_namespace["build_openapi_components"])
+
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    components = cast(dict[str, dict[str, dict[str, object]]], build_openapi_components())
+
+    assert (
+        paths["/v1/invoices/search"]["post"]["requestBody"]["content"]["application/json"][
+            "schema"
+        ]["properties"]["page"]["$ref"]
+        == "#/components/schemas/common.PaginationRequest"
+    )
+    assert components["common.PaginationRequest"] == {
+        "type": "object",
+        "properties": {
+            "number": {"type": "integer", "required": True},
+            "size": {"type": "integer", "required": True},
+        },
+    }
+    assert '"$ref": "common.PaginationRequest"' not in json.dumps(paths)
+
+
 def test_generate_creates_domain_package_markers_and_runtime_imports(tmp_path: Path) -> None:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(

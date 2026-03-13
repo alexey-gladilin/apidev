@@ -36,6 +36,12 @@ def _write_contract(project_dir: Path, relpath: str, body: str) -> None:
     target.write_text(body.strip(), encoding="utf-8")
 
 
+def _write_shared_model(project_dir: Path, relpath: str, body: str) -> None:
+    target = project_dir / ".apidev" / "models" / relpath
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(body.strip(), encoding="utf-8")
+
+
 def _create_diff_service() -> DiffService:
     fs = LocalFileSystem()
     return DiffService(
@@ -1095,3 +1101,91 @@ errors: []
     get_operation = paths["/v1/status"]["get"]
     assert "parameters" not in get_operation
     assert "requestBody" not in get_operation
+
+
+def test_openapi_projection_emits_components_for_shared_model_refs(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_shared_model(
+        tmp_path,
+        "common/pagination_request.yaml",
+        """
+contract_type: shared_model
+name: PaginationRequest
+description: Shared pagination payload
+model:
+  type: object
+  properties:
+    number:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+""",
+    )
+    _write_contract(
+        tmp_path,
+        "billing/search_invoices.yaml",
+        """
+method: POST
+path: /v1/invoices/search
+auth: bearer
+summary: Search invoices
+description: Search invoices with shared pagination
+intent: read
+access_pattern: cached
+request:
+  body:
+    type: object
+    properties:
+      page:
+        $ref: common.PaginationRequest
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+
+    openapi_source = openapi_docs.content.replace(
+        "from .operation_map import OPERATION_MAP\n\n", ""
+    )
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    build_openapi_components = cast(Any, openapi_namespace["build_openapi_components"])
+
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    components = cast(dict[str, dict[str, object]], build_openapi_components())
+
+    request_body_schema = paths["/v1/invoices/search"]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["schema"]
+    assert request_body_schema == {
+        "type": "object",
+        "properties": {
+            "page": {"$ref": "#/components/schemas/common.PaginationRequest"},
+        },
+    }
+    assert components == {
+        "common.PaginationRequest": {
+            "type": "object",
+            "properties": {
+                "number": {"type": "integer", "required": True},
+                "size": {"type": "integer", "required": True},
+            },
+        }
+    }

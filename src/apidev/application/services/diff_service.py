@@ -32,8 +32,10 @@ from apidev.core.models.baseline_snapshot import BaselineSnapshot
 from apidev.core.models.contract import EndpointContract
 from apidev.core.models.release_state import validate_baseline_ref
 from apidev.core.models.operation import Operation
+from apidev.core.models.contract_document import ContractDocument
 from apidev.core.path_boundary import is_path_within_root, resolve_relative_path_within_root
 from apidev.core.ports.config_loader import ConfigLoaderPort
+from apidev.core.ports.contract_document_loader import ContractDocumentLoaderPort
 from apidev.core.ports.contract_loader import ContractLoaderPort
 from apidev.core.ports.filesystem import FileSystemPort
 from apidev.core.ports.python_postprocessor import PythonPostprocessMode, PythonPostprocessorPort
@@ -99,6 +101,10 @@ class DiffService:
         operations = self._hydrate_loaded_operations_with_request_metadata(
             self.loader.load(paths.contracts_dir)
         )
+        shared_model_documents = cast(ContractDocumentLoaderPort, self.loader).load_documents(
+            paths.shared_models_dir
+        )
+        openapi_components = self._build_openapi_components(shared_model_documents)
         errors = ensure_unique_operation_ids(operations)
         if errors:
             raise ValueError("; ".join(errors))
@@ -168,6 +174,7 @@ class DiffService:
             {
                 "registry_entries": registry_entries,
                 "include_extensions": config.openapi.include_extensions,
+                "openapi_components_literal": self._python_literal(openapi_components),
             },
         )
         openapi_docs_content = self._postprocess_python(
@@ -736,6 +743,53 @@ class DiffService:
             operation.contract.request_query = request_query
             operation.contract.request_body = request_body
         return operations
+
+    def _build_openapi_components(
+        self, shared_model_documents: list[ContractDocument]
+    ) -> dict[str, dict[str, object]]:
+        components: dict[str, dict[str, object]] = {}
+
+        for document in shared_model_documents:
+            if document.parse_error:
+                raise ValueError(
+                    f"Invalid shared model at {document.contract_relpath}: {document.parse_error}"
+                )
+
+            payload = document.data
+            if not isinstance(payload, dict):
+                raise ValueError(
+                    f"Invalid shared model at {document.contract_relpath}: root must be a mapping."
+                )
+
+            contract_type = str(payload.get("contract_type", "")).strip().lower()
+            if contract_type != "shared_model":
+                continue
+
+            name = payload.get("name")
+            model = payload.get("model")
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(
+                    f"Invalid shared model at {document.contract_relpath}: missing non-empty name."
+                )
+            if not isinstance(model, dict):
+                raise ValueError(
+                    f"Invalid shared model at {document.contract_relpath}: model must be a mapping."
+                )
+
+            namespace = (
+                document.contract_relpath.parts[0] if document.contract_relpath.parts else ""
+            )
+            if not namespace:
+                raise ValueError(
+                    f"Invalid shared model at {document.contract_relpath}: namespace could not be resolved."
+                )
+
+            component_name = f"{namespace}.{name.strip()}"
+            if component_name in components:
+                raise ValueError(f"Duplicate shared model component '{component_name}'.")
+            components[component_name] = dict(model)
+
+        return components
 
     def _run_git_command(self, project_dir: Path, args: tuple[str, ...]) -> str | None:
         try:

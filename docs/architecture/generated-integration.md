@@ -254,7 +254,7 @@ async def endpoint(invoice_id: str, current_user=Depends(require_bearer_user)):
 ```python
 from fastapi.openapi.utils import get_openapi
 
-from generated_api.openapi_docs import build_openapi_paths
+from generated_api.openapi_docs import build_openapi_components, build_openapi_paths
 
 
 def install_custom_openapi(app) -> None:
@@ -265,6 +265,7 @@ def install_custom_openapi(app) -> None:
             routes=app.routes,
         )
         schema["paths"] = build_openapi_paths()
+        schema.setdefault("components", {})["schemas"] = build_openapi_components()
         return schema
 
     app.openapi = custom_openapi

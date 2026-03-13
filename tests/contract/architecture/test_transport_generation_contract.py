@@ -252,3 +252,70 @@ errors: []
 
     with pytest.raises(SystemExit):
         generate_command(project_dir=tmp_path, check=False)
+
+
+def test_generated_openapi_contract_exposes_components_for_shared_refs(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "models" / "common").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+[inputs]
+contracts_dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[paths]
+templates_dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "models" / "common" / "page_request.yaml").write_text(
+        """
+contract_type: shared_model
+name: PageRequest
+description: Shared page request
+model:
+  type: object
+  properties:
+    number:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "list_invoices.yaml").write_text(
+        """
+method: POST
+path: /v1/invoices/list
+auth: bearer
+intent: read
+access_pattern: cached
+summary: List invoices
+description: List invoices
+request:
+  body:
+    type: object
+    properties:
+      page:
+        $ref: common.PageRequest
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    generate_command(project_dir=tmp_path, check=False, baseline_ref="v1.0.0")
+
+    openapi_docs_path = tmp_path / ".apidev" / "output" / "api" / "openapi_docs.py"
+    openapi_docs_source = openapi_docs_path.read_text(encoding="utf-8")
+
+    assert "OPENAPI_COMPONENTS =" in openapi_docs_source
+    assert "def build_openapi_components()" in openapi_docs_source
+    assert "#/components/schemas/" in openapi_docs_source

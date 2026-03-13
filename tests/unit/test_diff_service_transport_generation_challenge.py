@@ -57,7 +57,9 @@ def test_transport_generation_empty_contract_set_keeps_core_outputs(tmp_path: Pa
     assert planned_paths == ["operation_map.py", "openapi_docs.py"]
 
 
-def test_transport_generation_handles_null_summary_with_required_description(tmp_path: Path) -> None:
+def test_transport_generation_handles_null_summary_with_required_description(
+    tmp_path: Path,
+) -> None:
     _write_project_config(tmp_path)
     _write_contract(
         tmp_path,

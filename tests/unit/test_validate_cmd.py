@@ -101,7 +101,8 @@ errors: []
     missing_metadata = [
         item
         for item in payload["diagnostics"]
-        if item["location"] in {
+        if item["location"]
+        in {
             "billing/bad_contract.yaml:access_pattern",
             "billing/bad_contract.yaml:intent",
         }
