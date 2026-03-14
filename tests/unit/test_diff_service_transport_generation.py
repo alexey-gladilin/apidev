@@ -5,6 +5,12 @@ from typing import Any, cast
 import pytest
 
 from apidev.application.services.diff_service import DiffService
+from apidev.core.auth_policy import (
+    AUTH_MODE_BEARER,
+    AUTH_MODE_PUBLIC,
+    AUTH_SECURITY_BY_MODE,
+    SUPPORTED_AUTH_MODES,
+)
 from apidev.core.constants import DEFAULT_INTEGRATION_DIR
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
@@ -1191,6 +1197,245 @@ errors: []
             },
         }
     }
+
+
+def test_diff_service_generated_templates_preserve_formatter_stability_markers(
+    tmp_path: Path,
+) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    generated_by_name = {change.path.name: change.content for change in plan.changes}
+
+    assert generated_by_name["openapi_docs.py"].splitlines()[2] == "# fmt: off"
+    assert generated_by_name["operation_map.py"].splitlines()[2] == "# fmt: off"
+    assert generated_by_name["get_invoice.py"].splitlines()[2] == "# fmt: off"
+    assert generated_by_name["get_invoice_request.py"].splitlines()[2] == "# fmt: off"
+
+    assert generated_by_name["openapi_docs.py"].rstrip().endswith("# fmt: on")
+    assert generated_by_name["operation_map.py"].rstrip().endswith("# fmt: on")
+    assert generated_by_name["get_invoice.py"].rstrip().endswith("# fmt: on")
+    assert generated_by_name["get_invoice_request.py"].rstrip().endswith("# fmt: on")
+
+
+def test_openapi_projection_omits_security_for_public_auth(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: public
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+
+    openapi_source = openapi_docs.content.replace(
+        "from .operation_map import OPERATION_MAP\n\n", ""
+    )
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert get_operation["x-apidev-auth"] == "public"
+    assert "security" not in get_operation
+
+
+def test_openapi_projection_normalizes_supported_auth_values(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+    openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+    operation_map_value["billing_get_invoice"]["auth"] = "  BeAreR  "
+
+    openapi_source = openapi_docs.content.replace(
+        "from .operation_map import OPERATION_MAP\n\n", ""
+    )
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert get_operation["security"] == [{"bearerAuth": []}]
+
+    operation_map_value["billing_get_invoice"]["auth"] = "  PuBlIc "
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert "security" not in get_operation
+
+
+def test_openapi_projection_uses_canonical_auth_policy_constants(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    openapi_docs = next(change for change in plan.changes if change.path.name == "openapi_docs.py")
+
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": {}}
+    exec(
+        openapi_docs.content.replace("from .operation_map import OPERATION_MAP\n\n", ""),
+        openapi_namespace,
+    )
+
+    assert openapi_namespace["DEFAULT_AUTH_MODE"] == AUTH_MODE_PUBLIC
+    assert openapi_namespace["AUTH_SECURITY_BY_MODE"] == AUTH_SECURITY_BY_MODE
+
+
+def test_scaffold_auth_registry_uses_canonical_supported_auth_modes(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_contract(
+        tmp_path,
+        "billing/get_invoice.yaml",
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    auth_registry = next(
+        change for change in plan.changes if change.path.name == "auth_registry.py"
+    )
+
+    auth_namespace: dict[str, object] = {}
+    exec(auth_registry.content, auth_namespace)
+    resolve_auth_dependency = cast(Any, auth_namespace["resolve_auth_dependency"])
+
+    assert auth_namespace["SUPPORTED_AUTH_MODES"] == SUPPORTED_AUTH_MODES
+    assert resolve_auth_dependency(AUTH_MODE_PUBLIC) is None
+    assert resolve_auth_dependency("  PuBlIc ") is None
+    with pytest.raises(NotImplementedError, match="Configure bearer auth dependency"):
+        resolve_auth_dependency(AUTH_MODE_BEARER)
+    with pytest.raises(NotImplementedError, match="Configure bearer auth dependency"):
+        resolve_auth_dependency("  BeAreR ")
+    with pytest.raises(ValueError, match="Unsupported auth mode: session"):
+        resolve_auth_dependency("session")
 
 
 def test_operation_map_normalizes_response_and_error_shared_model_refs(tmp_path: Path) -> None:

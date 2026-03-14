@@ -7,6 +7,7 @@ from typing import Any, cast
 import pytest
 
 from apidev.application.services.generate_service import GenerateService
+from apidev.core.rules.contract_schema import validate_contract_schema
 from apidev.infrastructure.config.toml_loader import TomlConfigLoader
 from apidev.infrastructure.contracts.yaml_loader import YamlContractLoader
 from apidev.infrastructure.filesystem.local_fs import LocalFileSystem
@@ -20,7 +21,7 @@ INTEGRATION_PACKAGE_ROOT = INTEGRATION_DIR.parent
 INTEGRATION_PACKAGE_NAME = INTEGRATION_DIR.name
 
 
-def _generate_bearer_contract_project(tmp_path: Path) -> Path:
+def _generate_bearer_contract_project(tmp_path: Path, *, auth_mode: str = "bearer") -> Path:
     (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
     (tmp_path / ".apidev" / "config.toml").write_text(
         """
@@ -36,10 +37,10 @@ templates_dir = ".apidev/templates"
         encoding="utf-8",
     )
     (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
-        """
+        f"""
 method: GET
-path: /v1/invoices/{invoice_id}
-auth: bearer
+path: /v1/invoices/{{invoice_id}}
+auth: {auth_mode}
 summary: Get invoice
 description: Get invoice details
 intent: read
@@ -70,6 +71,115 @@ errors: []
     )
     _ = service.run(tmp_path, baseline_ref="v1.0.0")
     return tmp_path / ".apidev" / "output" / "api"
+
+
+def test_auth_normalization_is_consistent_across_validation_generation_openapi_and_runtime(
+    tmp_path: Path,
+) -> None:
+    raw_auth_mode = "  BeAreR "
+    generated_dir_path = _generate_bearer_contract_project(tmp_path, auth_mode=raw_auth_mode)
+    contracts_root = tmp_path / ".apidev" / "contracts"
+    documents = YamlContractLoader().load_documents(contracts_root)
+    contract, diagnostics = validate_contract_schema(documents[0])
+
+    assert contract is not None
+    assert diagnostics == []
+    assert contract.auth == "bearer"
+
+    integration_root = tmp_path / INTEGRATION_DIR
+    integration_root.mkdir(parents=True, exist_ok=True)
+    (integration_root / "handler_registry.py").write_text(
+        """
+from typing import Any
+
+HANDLERS: dict[str, Any] = {}
+
+
+def resolve_handler(operation_id: str) -> Any:
+    return HANDLERS[operation_id]
+""".strip() + "\n",
+        encoding="utf-8",
+    )
+    (integration_root / "auth_registry.py").write_text(
+        """
+from typing import Any
+
+CAPTURED_AUTH_MODES: list[str] = []
+
+
+def resolve_auth_dependency(auth_mode: str) -> Any:
+    CAPTURED_AUTH_MODES.append(auth_mode)
+    if auth_mode == "public":
+        return None
+    if auth_mode == "bearer":
+        return None
+    raise ValueError(f"Unsupported auth mode: {auth_mode}")
+""".strip() + "\n",
+        encoding="utf-8",
+    )
+
+    inserted = str(generated_dir_path)
+    project_root_inserted = str(tmp_path / INTEGRATION_PACKAGE_ROOT)
+    loaded_modules: list[str] = []
+    sys.path.insert(0, inserted)
+    sys.path.insert(1, project_root_inserted)
+    try:
+        operation_map_module = importlib.import_module("operation_map")
+        loaded_modules.append("operation_map")
+        operation_map = cast(dict[str, Any], operation_map_module.OPERATION_MAP)
+        operation_entry = cast(dict[str, Any], operation_map["billing_get_invoice"])
+        assert operation_entry["auth"] == "bearer"
+        operation_entry["auth"] = raw_auth_mode
+
+        openapi_docs_module = importlib.import_module("openapi_docs")
+        loaded_modules.append("openapi_docs")
+        build_openapi_paths = cast(Any, getattr(openapi_docs_module, "build_openapi_paths"))
+        paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+        get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+        assert get_operation["security"] == [{"bearerAuth": []}]
+        assert get_operation["x-apidev-auth"] == "bearer"
+
+        handler_registry_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.handler_registry"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.handler_registry")
+        auth_registry_module = importlib.import_module(f"{INTEGRATION_PACKAGE_NAME}.auth_registry")
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.auth_registry")
+        handlers = cast(dict[str, Any], getattr(handler_registry_module, "HANDLERS"))
+
+        async def _manual_handler(_request: Any) -> Any:
+            class _Result:
+                payload = {"status": "ok"}
+
+            return _Result()
+
+        handlers["billing_get_invoice"] = _manual_handler
+
+        router_factory_module = importlib.import_module(
+            f"{INTEGRATION_PACKAGE_NAME}.router_factory"
+        )
+        loaded_modules.append(f"{INTEGRATION_PACKAGE_NAME}.router_factory")
+        router = cast(Any, getattr(router_factory_module, "build_router"))()
+        assert hasattr(router, "routes")
+        captured_auth_modes = cast(list[str], getattr(auth_registry_module, "CAPTURED_AUTH_MODES"))
+        assert captured_auth_modes == ["bearer"]
+    finally:
+        if sys.path and sys.path[0] == inserted:
+            sys.path.pop(0)
+        if sys.path and sys.path[0] == project_root_inserted:
+            sys.path.pop(0)
+        elif len(sys.path) > 1 and sys.path[1] == project_root_inserted:
+            sys.path.pop(1)
+        for module_name in loaded_modules:
+            sys.modules.pop(module_name, None)
+        sys.modules.pop("operation_map", None)
+        sys.modules.pop("openapi_docs", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.auth_registry", None)
+        sys.modules.pop(f"{INTEGRATION_PACKAGE_NAME}.handler_registry", None)
+        sys.modules.pop(INTEGRATION_PACKAGE_NAME, None)
+        sys.modules.pop("billing", None)
+        sys.modules.pop("billing.routes", None)
+        sys.modules.pop("billing.models", None)
 
 
 def test_auth_integration_manual_wiring_passes_current_user_to_handler_request_model(

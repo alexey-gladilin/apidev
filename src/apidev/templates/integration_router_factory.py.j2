@@ -12,6 +12,8 @@ from .auth_registry import resolve_auth_dependency
 from .handler_registry import resolve_handler
 
 GENERATED_API_PACKAGE = "api"
+DEFAULT_AUTH_MODE = {{ default_auth_mode_literal }}
+SUPPORTED_AUTH_MODES = {{ supported_auth_modes_literal }}
 
 
 def _import_generated_module(module_name: str) -> Any:
@@ -105,6 +107,17 @@ def _optional_string(meta: Mapping[str, object], key: str) -> str | None:
         value = str(value)
     stripped = value.strip()
     return stripped or None
+
+
+def _normalize_auth_mode(raw_auth_mode: object) -> str:
+    return str(raw_auth_mode).strip().lower()
+
+
+def _canonicalize_auth_mode(raw_auth_mode: object) -> str:
+    auth_mode = _normalize_auth_mode(raw_auth_mode)
+    if auth_mode not in SUPPORTED_AUTH_MODES:
+        raise ValueError(f"Unsupported auth mode: {auth_mode}")
+    return auth_mode
 
 
 def _build_responses(meta: Mapping[str, object]) -> dict[int, dict[str, object]]:
@@ -207,7 +220,7 @@ def build_router() -> APIRouter:
         method = _require_string(meta, operation_id, "method").upper()
         path = _require_string(meta, operation_id, "path")
         router_module = _require_string(meta, operation_id, "router_module")
-        auth_mode = str(meta.get("auth", "public"))
+        auth_mode = _canonicalize_auth_mode(meta.get("auth", DEFAULT_AUTH_MODE))
 
         handler = resolve_handler(operation_id)
         auth_dependency = resolve_auth_dependency(auth_mode)

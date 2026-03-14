@@ -715,9 +715,7 @@ errors: []
                 "size": {"type": "integer", "required": True},
             },
         }
-        assert assembled_security_schemes == {
-            "bearerAuth": {"type": "http", "scheme": "bearer"}
-        }
+        assert assembled_security_schemes == {"bearerAuth": {"type": "http", "scheme": "bearer"}}
 
         fastapi_module = ModuleType("fastapi")
         openapi_module = ModuleType("fastapi.openapi")
@@ -773,9 +771,7 @@ errors: []
                 "size": {"type": "integer", "required": True},
             },
         }
-        assert installed_security_schemes == {
-            "bearerAuth": {"type": "http", "scheme": "bearer"}
-        }
+        assert installed_security_schemes == {"bearerAuth": {"type": "http", "scheme": "bearer"}}
         assert cast(dict[str, object], app.openapi()) is installed_schema
     finally:
         if sys.path and sys.path[0] == inserted:
@@ -1537,7 +1533,9 @@ errors:
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map.read_text(encoding="utf-8"), {}, operation_map_namespace)
-    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
 
     openapi_source = openapi_docs.read_text(encoding="utf-8")
     openapi_source = openapi_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
@@ -1615,7 +1613,9 @@ errors: []
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
 
     openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
     openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
@@ -1701,7 +1701,9 @@ errors:
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
 
     openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
     openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
@@ -1775,7 +1777,9 @@ errors: []
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
     post_entry = cast(dict[str, object], operation_map_value["billing_create_invoice"])
     assert post_entry["intent"] == "write"
     assert post_entry["access_pattern"] == "imperative"
@@ -1958,4 +1962,154 @@ errors: []
     build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
 
     with pytest.raises(ValueError, match="MANUAL_TAGS_FORBIDDEN"):
+        build_openapi_paths()
+
+
+def test_generate_openapi_normalizes_supported_auth_values_in_operation_metadata(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+[inputs]
+contracts_dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[paths]
+templates_dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+
+    operation_map_value["billing_get_invoice"]["auth"] = "  BeAreR  "
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert get_operation["security"] == [{"bearerAuth": []}]
+
+    operation_map_value["billing_get_invoice"]["auth"] = "  PuBlIc "
+    paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
+    get_operation = paths["/v1/invoices/{invoice_id}"]["get"]
+    assert "security" not in get_operation
+
+
+def test_generate_openapi_rejects_unsupported_auth_in_operation_metadata(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+[inputs]
+contracts_dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[paths]
+templates_dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "get_invoice.yaml").write_text(
+        """
+method: GET
+path: /v1/invoices/{invoice_id}
+auth: bearer
+summary: Get invoice
+description: Get invoice details
+intent: read
+access_pattern: cached
+request:
+  path:
+    type: object
+    properties:
+      invoice_id:
+        type: string
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    operation_map_source = (generated_dir_path / "operation_map.py").read_text(encoding="utf-8")
+    openapi_docs_source = (generated_dir_path / "openapi_docs.py").read_text(encoding="utf-8")
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map_source, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+    operation_map_value["billing_get_invoice"]["auth"] = "session"
+
+    openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
+    openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
+    exec(openapi_source, openapi_namespace)
+    build_openapi_paths = cast(Any, openapi_namespace["build_openapi_paths"])
+
+    with pytest.raises(ValueError, match="UNSUPPORTED_AUTH_MODE"):
         build_openapi_paths()

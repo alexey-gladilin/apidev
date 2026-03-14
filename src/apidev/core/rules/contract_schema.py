@@ -6,6 +6,12 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from apidev.core.auth_policy import (
+    SUPPORTED_AUTH_MODES_DISPLAY,
+    SUPPORTED_AUTH_MODES_SET,
+    canonicalize_auth_mode,
+    normalize_auth_mode,
+)
 from apidev.core.models.contract import (
     ACCESS_PATTERN_FIELD,
     collect_operation_metadata_empty_value_errors,
@@ -38,7 +44,6 @@ RULE_FIELD_VALUE = "schema.contract.field_value"
 RULE_FIELD_UNKNOWN = "schema.contract.unknown_field"
 JSON_SCHEMA_TYPES = {"object", "array", "string", "integer", "number", "boolean", "null"}
 HTTP_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}
-AUTH_MODES = {"public", "bearer"}
 ROOT_ALLOWED_FIELDS = {
     "contract_type",
     "method",
@@ -244,13 +249,13 @@ def validate_contract_schema(
             )
 
     if isinstance(auth, str):
-        normalized_auth = auth.strip().lower()
-        if normalized_auth not in AUTH_MODES:
+        normalized_auth = normalize_auth_mode(auth)
+        if normalized_auth not in SUPPORTED_AUTH_MODES_SET:
             diagnostics.append(
                 ValidationDiagnostic(
                     code=SCHEMA_INVALID_VALUE,
                     severity="error",
-                    message=f"Field 'auth' must be one of: {', '.join(sorted(AUTH_MODES))}.",
+                    message=f"Field 'auth' must be one of: {SUPPORTED_AUTH_MODES_DISPLAY}.",
                     location=f"{relpath}:auth",
                     rule=RULE_FIELD_VALUE,
                 )
@@ -466,7 +471,7 @@ def validate_contract_schema(
             source_path=document.source_path,
             method=str(method).strip().upper(),
             path=str(path).strip(),
-            auth=str(auth).strip().lower(),
+            auth=canonicalize_auth_mode(auth),
             description=str(description).strip(),
             response_status=int(response_status),
             response_body=dict(response_body),

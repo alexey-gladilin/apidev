@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from apidev.core.auth_policy import SUPPORTED_AUTH_MODES_DISPLAY
 from apidev.core.models.contract_document import ContractDocument
 from apidev.core.rules.contract_schema import validate_contract_schema
 
@@ -116,3 +117,21 @@ def test_contract_schema_accepts_legacy_contract_without_request_when_path_has_n
 
     assert diagnostics == []
     assert contract is not None
+
+
+def test_contract_schema_rejects_auth_outside_canonical_policy() -> None:
+    payload = _valid_contract_payload()
+    payload["auth"] = "session"
+    payload["request"] = {
+        "path": {
+            "type": "object",
+            "properties": {"invoice_id": {"type": "string", "required": True}},
+        }
+    }
+
+    contract, diagnostics = validate_contract_schema(_document(payload))
+
+    assert contract is None
+    assert [item.code for item in diagnostics] == ["SCHEMA_INVALID_VALUE"]
+    assert diagnostics[0].location == "billing/get_invoice.yaml:auth"
+    assert diagnostics[0].message == f"Field 'auth' must be one of: {SUPPORTED_AUTH_MODES_DISPLAY}."

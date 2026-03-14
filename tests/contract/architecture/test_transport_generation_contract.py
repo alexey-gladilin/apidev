@@ -397,7 +397,9 @@ errors: []
     assert 'return importlib.import_module(f"{GENERATED_API_PACKAGE}.{module_name}")' in (
         router_factory_source
     )
-    assert "_openapi_docs_module = _import_generated_module(\"openapi_docs\")" in router_factory_source
+    assert (
+        '_openapi_docs_module = _import_generated_module("openapi_docs")' in router_factory_source
+    )
     assert "build_openapi_components = cast(" in router_factory_source
     assert "build_openapi_paths = cast(" in router_factory_source
     assert "def assemble_openapi_schema(" in router_factory_source

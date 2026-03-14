@@ -92,3 +92,22 @@ def test_endpoint_contract_request_model_ignores_invalid_request_fragment_shapes
     assert operation.contract.request_path == {}
     assert operation.contract.request_query == {}
     assert operation.contract.request_body == {}
+
+
+def test_endpoint_contract_request_model_canonicalizes_auth_mode() -> None:
+    service = _create_service()
+
+    operation = service._build_operation_from_contract_data(
+        contract_relpath=Path("billing/get_invoice.yaml"),
+        data={
+            "method": "GET",
+            "path": "/v1/invoices/{invoice_id}",
+            "auth": "  BeAreR ",
+            "summary": "Get invoice",
+            "description": "Get invoice details",
+            "response": {"status": 200, "body": {"type": "object"}},
+            "errors": [],
+        },
+    )
+
+    assert operation.contract.auth == "bearer"

@@ -18,6 +18,13 @@ from apidev.application.dto.generation_plan import (
     GenerationPlan,
     PlannedChange,
 )
+from apidev.core.auth_policy import (
+    AUTH_MODE_BEARER,
+    AUTH_SECURITY_BY_MODE,
+    DEFAULT_AUTH_MODE,
+    SUPPORTED_AUTH_MODES,
+    canonicalize_auth_mode,
+)
 from apidev.core.constants import (
     APIDEV_BASELINE_CACHE_RELATIVE_ROOT,
     COMPATIBILITY_POLICIES,
@@ -175,6 +182,7 @@ class DiffService:
                 "registry_entries": registry_entries,
                 "include_extensions": config.openapi.include_extensions,
                 "openapi_components_literal": self._python_literal(openapi_components),
+                **self._auth_template_context(),
             },
         )
         openapi_docs_content = self._postprocess_python(
@@ -705,7 +713,7 @@ class DiffService:
                 source_path=contract_relpath,
                 method=str(data.get("method", "GET")).upper(),
                 path=str(data.get("path", "/")),
-                auth=str(data.get("auth", "public")),
+                auth=canonicalize_auth_mode(data.get("auth", DEFAULT_AUTH_MODE)),
                 description=raw_description,
                 response_status=int(response_dict.get("status", 200)),
                 response_body=response_dict.get("body", {}),
@@ -927,10 +935,24 @@ class DiffService:
                 )
                 continue
 
-            content = self.renderer.render(template_name, dict(self._SCAFFOLD_TEMPLATE_CONTEXT))
+            content = self.renderer.render(
+                template_name,
+                {
+                    **self._SCAFFOLD_TEMPLATE_CONTEXT,
+                    **self._auth_template_context(),
+                },
+            )
             content = self._postprocess_python(project_dir, target, content, postprocess_mode)
             planned.append(PlannedChange(path=target, content=content, change_type="ADD"))
         return planned
+
+    def _auth_template_context(self) -> dict[str, str]:
+        return {
+            "default_auth_mode_literal": self._python_literal(DEFAULT_AUTH_MODE),
+            "bearer_auth_mode_literal": self._python_literal(AUTH_MODE_BEARER),
+            "supported_auth_modes_literal": self._python_literal(SUPPORTED_AUTH_MODES),
+            "auth_security_by_mode_literal": self._python_literal(AUTH_SECURITY_BY_MODE),
+        }
 
     def _resolve_scaffold_root(
         self, project_dir: Path, generated_dir_path: Path, raw_scaffold_dir: str
@@ -1076,7 +1098,10 @@ class DiffService:
         module_root = f"{domain_segment}.models.{operation_segment}"
         class_base = self._class_base(operation.operation_id)
         error_details = self._error_details(operation)
-        error_schemas = self._normalize_openapi_schema_fragment(self._error_schemas(operation))
+        error_schemas = cast(
+            list[dict[str, object]],
+            self._normalize_openapi_schema_fragment(self._error_schemas(operation)),
+        )
         response_schema = self._normalize_openapi_schema_fragment(operation.contract.response_body)
         request_path = self._normalize_openapi_schema_fragment(operation.contract.request_path)
         request_query = self._normalize_openapi_schema_fragment(operation.contract.request_query)
@@ -1086,7 +1111,7 @@ class DiffService:
             "operation_id": operation.operation_id,
             "method": operation.contract.method,
             "path": operation.contract.path,
-            "auth": operation.contract.auth,
+            "auth": canonicalize_auth_mode(operation.contract.auth),
             "intent": operation.contract.intent,
             "access_pattern": operation.contract.access_pattern,
             "description": operation.contract.description,
@@ -1341,7 +1366,7 @@ class DiffService:
         payload = {
             "method": operation.contract.method,
             "path": operation.contract.path,
-            "auth": operation.contract.auth,
+            "auth": canonicalize_auth_mode(operation.contract.auth),
             "description": operation.contract.description,
             "response": {
                 "status": operation.contract.response_status,
