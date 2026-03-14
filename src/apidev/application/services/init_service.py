@@ -172,9 +172,12 @@ class InitService:
             integration_mode=integration_mode,
         )
 
-        managed_defaults = self._build_managed_defaults(paths)
+        managed_defaults = self._build_managed_repair_defaults(paths)
         for template_name, template_content in managed_templates.items():
             managed_defaults[paths.templates_dir / template_name] = template_content
+
+        if mode == "create":
+            changed += self._create_missing_bootstrap_defaults(paths)
 
         for file_path, default_content in managed_defaults.items():
             if self.fs.exists(file_path):
@@ -209,9 +212,13 @@ class InitService:
             self.fs.write_text(file_path, default_content)
         return InitResult(status="forced", changed=changed + len(managed_defaults))
 
-    def _build_managed_defaults(self, paths: ResolvedPaths) -> dict[Path, str]:
+    def _build_managed_repair_defaults(self, paths: ResolvedPaths) -> dict[Path, str]:
         return {
             paths.config_path: self.default_config_text,
+        }
+
+    def _build_bootstrap_defaults(self, paths: ResolvedPaths) -> dict[Path, str]:
+        return {
             paths.contracts_dir / "system" / "health.yaml": DEFAULT_HEALTH_CONTRACT,
             paths.contracts_dir / "users" / "search.yaml": DEFAULT_USERS_SEARCH_CONTRACT,
             paths.shared_models_dir
@@ -222,6 +229,18 @@ class InitService:
             / "users"
             / "search_users_response.yaml": DEFAULT_SEARCH_USERS_RESPONSE_MODEL,
         }
+
+    def _create_missing_bootstrap_defaults(self, paths: ResolvedPaths) -> int:
+        changed = 0
+        for file_path, default_content in self._build_bootstrap_defaults(paths).items():
+            if self.fs.exists(file_path):
+                continue
+
+            self.fs.mkdir(file_path.parent, parents=True)
+            self.fs.write_text(file_path, default_content)
+            changed += 1
+
+        return changed
 
     def _load_existing_config(self, config_path: Path) -> ApidevConfig | None:
         if not self.fs.exists(config_path):

@@ -4,7 +4,6 @@ import pytest
 
 from apidev.application.services.init_service import (
     InitPathBoundaryError,
-    InitRepairRequiredError,
     InitService,
 )
 from apidev.infrastructure.config.toml_loader import default_config_text
@@ -82,7 +81,9 @@ def test_init_creates_managed_templates(tmp_path: Path) -> None:
         assert template_path.read_text(encoding="utf-8").strip()
 
 
-def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) -> None:
+def test_init_create_does_not_require_repair_for_modified_bootstrap_contract(
+    tmp_path: Path,
+) -> None:
     service = InitService(
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
@@ -93,11 +94,17 @@ def test_init_create_requires_repair_for_invalid_managed_file(tmp_path: Path) ->
         encoding="utf-8",
     )
 
-    with pytest.raises(InitRepairRequiredError):
-        service.run(tmp_path, mode="create")
+    result = service.run(tmp_path, mode="create")
+
+    assert result.status == "already_initialized"
+    assert "method: POST" in (
+        tmp_path / ".apidev" / "contracts" / "system" / "health.yaml"
+    ).read_text(encoding="utf-8")
 
 
-def test_init_create_requires_repair_for_invalid_shared_model(tmp_path: Path) -> None:
+def test_init_create_does_not_require_repair_for_modified_bootstrap_shared_model(
+    tmp_path: Path,
+) -> None:
     service = InitService(
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
@@ -108,8 +115,12 @@ def test_init_create_requires_repair_for_invalid_shared_model(tmp_path: Path) ->
         encoding="utf-8",
     )
 
-    with pytest.raises(InitRepairRequiredError):
-        service.run(tmp_path, mode="create")
+    result = service.run(tmp_path, mode="create")
+
+    assert result.status == "already_initialized"
+    assert "name: Broken" in (
+        tmp_path / ".apidev" / "models" / "common" / "pagination_request.yaml"
+    ).read_text(encoding="utf-8")
 
 
 def test_init_repair_overwrites_invalid_config_toml(tmp_path: Path) -> None:
@@ -131,22 +142,19 @@ def test_init_repair_overwrites_invalid_config_toml(tmp_path: Path) -> None:
     assert "version" not in rewritten
 
 
-def test_init_force_overwrites_managed_files(tmp_path: Path) -> None:
+def test_init_force_overwrites_managed_config(tmp_path: Path) -> None:
     service = InitService(
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
     )
     service.run(tmp_path)
-    contract_path = tmp_path / ".apidev" / "contracts" / "system" / "health.yaml"
-    contract_path.write_text(
-        "method: DELETE\npath: /override\nintent: write\naccess_pattern: imperative\n",
-        encoding="utf-8",
-    )
+    config_path = tmp_path / ".apidev" / "config.toml"
+    config_path.write_text("[generator]\nscaffold = \n", encoding="utf-8")
 
     result = service.run(tmp_path, mode="force")
 
     assert result.status == "forced"
-    assert "method: GET" in contract_path.read_text(encoding="utf-8")
+    assert "[paths]" in config_path.read_text(encoding="utf-8")
 
 
 def test_init_create_accepts_valid_custom_config(tmp_path: Path) -> None:
@@ -174,7 +182,9 @@ generated_dir = ".apidev/output/api"
     assert (tmp_path / "spec" / "contracts").exists()
 
 
-def test_init_repair_restores_missing_contract_in_custom_contracts_dir(tmp_path: Path) -> None:
+def test_init_repair_does_not_restore_missing_bootstrap_contract_in_custom_contracts_dir(
+    tmp_path: Path,
+) -> None:
     service = InitService(
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
@@ -202,11 +212,12 @@ templates_dir = ".apidev/templates"
     result = service.run(tmp_path, mode="repair")
 
     assert result.status == "repaired"
-    assert custom_contract.exists()
-    assert "method: GET" in custom_contract.read_text(encoding="utf-8")
+    assert not custom_contract.exists()
 
 
-def test_init_repair_restores_missing_shared_model_in_custom_dir(tmp_path: Path) -> None:
+def test_init_repair_does_not_restore_missing_bootstrap_shared_model_in_custom_dir(
+    tmp_path: Path,
+) -> None:
     service = InitService(
         fs=LocalFileSystem(),
         default_config_text=default_config_text(),
@@ -234,8 +245,7 @@ templates_dir = ".apidev/templates"
     result = service.run(tmp_path, mode="repair")
 
     assert result.status == "repaired"
-    assert custom_model.exists()
-    assert "name: PaginationRequest" in custom_model.read_text(encoding="utf-8")
+    assert not custom_model.exists()
 
 
 def test_init_repair_restores_missing_managed_template(tmp_path: Path) -> None:
@@ -252,6 +262,36 @@ def test_init_repair_restores_missing_managed_template(tmp_path: Path) -> None:
     assert result.status == "repaired"
     assert template_to_remove.exists()
     assert template_to_remove.read_text(encoding="utf-8").strip()
+
+
+def test_init_repair_does_not_recreate_removed_sample_contract(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    contract_to_remove = tmp_path / ".apidev" / "contracts" / "users" / "search.yaml"
+    contract_to_remove.unlink()
+
+    result = service.run(tmp_path, mode="repair")
+
+    assert result.status == "repaired"
+    assert not contract_to_remove.exists()
+
+
+def test_init_repair_does_not_recreate_removed_shared_model(tmp_path: Path) -> None:
+    service = InitService(
+        fs=LocalFileSystem(),
+        default_config_text=default_config_text(),
+    )
+    service.run(tmp_path)
+    model_to_remove = tmp_path / ".apidev" / "models" / "users" / "user_summary.yaml"
+    model_to_remove.unlink()
+
+    result = service.run(tmp_path, mode="repair")
+
+    assert result.status == "repaired"
+    assert not model_to_remove.exists()
 
 
 @pytest.mark.parametrize(
