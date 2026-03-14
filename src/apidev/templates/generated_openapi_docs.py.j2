@@ -12,6 +12,8 @@ OPENAPI_COMPONENTS = {{ openapi_components_literal }}
 
 
 def _normalize_ref_value(raw_ref: str) -> str:
+    if raw_ref.startswith("#/components/schemas/"):
+        return raw_ref
     ref_name = raw_ref[1:] if raw_ref.startswith("$") else raw_ref
     return f"#/components/schemas/{ref_name}"
 

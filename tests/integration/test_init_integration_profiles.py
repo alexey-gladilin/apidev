@@ -44,6 +44,10 @@ def test_init_bootstrap_contracts_validate_with_shared_model_refs(tmp_path: Path
     init_result = runner.invoke(app, ["init", "--project-dir", str(tmp_path)])
 
     assert init_result.exit_code == 0
+    assert _template_path(tmp_path, "generated_operation_map.py.j2").exists()
+    assert _template_path(tmp_path, "generated_openapi_docs.py.j2").exists()
+    assert _template_path(tmp_path, "generated_router.py.j2").exists()
+    assert _template_path(tmp_path, "generated_schema.py.j2").exists()
 
     validate_result = runner.invoke(app, ["validate", "--project-dir", str(tmp_path)])
 

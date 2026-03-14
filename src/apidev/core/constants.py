@@ -35,7 +35,7 @@ DEFAULT_INIT_RUNTIME: InitRuntimeProfile = "fastapi"
 InitIntegrationMode = Literal["off", "scaffold", "full"]
 INIT_INTEGRATION_MODES: tuple[InitIntegrationMode, ...] = ("off", "scaffold", "full")
 INIT_INTEGRATION_MODES_DISPLAY = ", ".join(INIT_INTEGRATION_MODES)
-DEFAULT_INIT_INTEGRATION_MODE: InitIntegrationMode = "scaffold"
+DEFAULT_INIT_INTEGRATION_MODE: InitIntegrationMode = "full"
 
 DIAG_CODE_PATH_BOUNDARY_VIOLATION = "validation.PATH_BOUNDARY_VIOLATION"
 DIAG_CODE_RELEASE_STATE_INVALID_KEY = "validation.RELEASE_STATE_INVALID_KEY"

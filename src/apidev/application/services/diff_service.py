@@ -1076,8 +1076,11 @@ class DiffService:
         module_root = f"{domain_segment}.models.{operation_segment}"
         class_base = self._class_base(operation.operation_id)
         error_details = self._error_details(operation)
-        error_schemas = self._error_schemas(operation)
-        response_schema = operation.contract.response_body
+        error_schemas = self._normalize_openapi_schema_fragment(self._error_schemas(operation))
+        response_schema = self._normalize_openapi_schema_fragment(operation.contract.response_body)
+        request_path = self._normalize_openapi_schema_fragment(operation.contract.request_path)
+        request_query = self._normalize_openapi_schema_fragment(operation.contract.request_query)
+        request_body = self._normalize_openapi_schema_fragment(operation.contract.request_body)
         deprecation = self._deprecation_metadata(operation.operation_id, deprecated_operations)
         return {
             "operation_id": operation.operation_id,
@@ -1100,9 +1103,9 @@ class DiffService:
             "error_examples_literal": self._python_literal(
                 [item["example"] for item in error_schemas]
             ),
-            "request_path_literal": self._python_literal(operation.contract.request_path),
-            "request_query_literal": self._python_literal(operation.contract.request_query),
-            "request_body_literal": self._python_literal(operation.contract.request_body),
+            "request_path_literal": self._python_literal(request_path),
+            "request_query_literal": self._python_literal(request_query),
+            "request_body_literal": self._python_literal(request_body),
             "router_module": f"{domain_segment}.routes.{operation_segment}",
             "models": {
                 "request": f"{module_root}_request.{class_base}Request",
@@ -1312,6 +1315,25 @@ class DiffService:
         if isinstance(schema_fragment, dict):
             return schema_fragment.get("example")
         return None
+
+    def _normalize_openapi_schema_fragment(self, schema_fragment: object) -> object:
+        if isinstance(schema_fragment, str):
+            if schema_fragment.startswith("$"):
+                return {"$ref": f"#/components/schemas/{schema_fragment[1:]}"}
+            return schema_fragment
+        if isinstance(schema_fragment, list):
+            return [self._normalize_openapi_schema_fragment(item) for item in schema_fragment]
+        if not isinstance(schema_fragment, dict):
+            return schema_fragment
+
+        normalized: dict[str, object] = {}
+        for key, value in schema_fragment.items():
+            if key == "$ref" and isinstance(value, str):
+                ref_name = value[1:] if value.startswith("$") else value
+                normalized[key] = f"#/components/schemas/{ref_name}"
+                continue
+            normalized[key] = self._normalize_openapi_schema_fragment(value)
+        return normalized
 
     def _contract_fingerprint(self, operation: Operation) -> str:
         response_body = operation.contract.response_body

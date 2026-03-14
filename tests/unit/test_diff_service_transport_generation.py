@@ -1191,3 +1191,85 @@ errors: []
             },
         }
     }
+
+
+def test_operation_map_normalizes_response_and_error_shared_model_refs(tmp_path: Path) -> None:
+    _write_project_config(tmp_path)
+    _write_shared_model(
+        tmp_path,
+        "common/page_info.yaml",
+        """
+contract_type: shared_model
+name: PageInfo
+description: Shared page info
+model:
+  type: object
+  properties:
+    total:
+      type: integer
+      required: true
+""",
+    )
+    _write_shared_model(
+        tmp_path,
+        "common/api_error.yaml",
+        """
+contract_type: shared_model
+name: ApiError
+description: Shared API error
+model:
+  type: object
+  properties:
+    message:
+      type: string
+      required: true
+""",
+    )
+    _write_contract(
+        tmp_path,
+        "billing/search_invoices.yaml",
+        """
+method: POST
+path: /v1/invoices/search
+auth: bearer
+summary: Search invoices
+description: Search invoices with shared refs
+intent: read
+access_pattern: cached
+request:
+  body:
+    type: object
+response:
+  status: 200
+  body:
+    type: object
+    properties:
+      page:
+        $ref: common.PageInfo
+errors:
+  - code: BAD_REQUEST
+    http_status: 400
+    body:
+      $ref: common.ApiError
+""",
+    )
+
+    plan = _create_diff_service().run(tmp_path)
+    operation_map = next(
+        change for change in plan.changes if change.path.name == "operation_map.py"
+    )
+
+    operation_map_namespace: dict[str, object] = {}
+    exec(operation_map.content, {}, operation_map_namespace)
+    operation_map_value = cast(
+        dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"]
+    )
+    search_entry = cast(dict[str, object], operation_map_value["billing_search_invoices"])
+    response_schema = cast(dict[str, object], search_entry["response_schema"])
+    response_properties = cast(dict[str, object], response_schema["properties"])
+    page_schema = cast(dict[str, object], response_properties["page"])
+    error_schemas = cast(list[dict[str, object]], search_entry["error_schemas"])
+    error_body = cast(dict[str, object], error_schemas[0]["body"])
+
+    assert page_schema["$ref"] == "#/components/schemas/common.PageInfo"
+    assert error_body["$ref"] == "#/components/schemas/common.ApiError"
