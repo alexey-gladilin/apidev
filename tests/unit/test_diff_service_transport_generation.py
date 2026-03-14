@@ -1171,9 +1171,11 @@ errors: []
     paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
     components = cast(dict[str, dict[str, object]], build_openapi_components())
 
-    request_body_schema = paths["/v1/invoices/search"]["post"]["requestBody"]["content"][
-        "application/json"
-    ]["schema"]
+    search_operation = cast(dict[str, object], paths["/v1/invoices/search"]["post"])
+    search_request_body = cast(dict[str, object], search_operation["requestBody"])
+    search_request_content = cast(dict[str, object], search_request_body["content"])
+    request_body_content = cast(dict[str, object], search_request_content["application/json"])
+    request_body_schema = cast(dict[str, object], request_body_content["schema"])
     assert request_body_schema == {
         "type": "object",
         "properties": {

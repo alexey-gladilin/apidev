@@ -319,3 +319,88 @@ errors: []
     assert "OPENAPI_COMPONENTS =" in openapi_docs_source
     assert "def build_openapi_components()" in openapi_docs_source
     assert "#/components/schemas/" in openapi_docs_source
+    assert "from .operation_map import OPERATION_MAP" in openapi_docs_source
+    assert "from operation_map import OPERATION_MAP" in openapi_docs_source
+
+
+def test_generated_integration_contract_exposes_standard_openapi_assembly_helper(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "models" / "common").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+[inputs]
+contracts_dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[paths]
+templates_dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "models" / "common" / "page_request.yaml").write_text(
+        """
+contract_type: shared_model
+name: PageRequest
+description: Shared page request
+model:
+  type: object
+  properties:
+    number:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "list_invoices.yaml").write_text(
+        """
+method: POST
+path: /v1/invoices/list
+auth: bearer
+intent: read
+access_pattern: cached
+summary: List invoices
+description: List invoices
+request:
+  body:
+    type: object
+    properties:
+      page:
+        $ref: common.PageRequest
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    generate_command(project_dir=tmp_path, check=False, baseline_ref="v1.0.0")
+
+    openapi_docs_path = tmp_path / ".apidev" / "output" / "api" / "openapi_docs.py"
+    router_factory_path = tmp_path / ".apidev" / "output" / "integration" / "router_factory.py"
+    openapi_docs_source = openapi_docs_path.read_text(encoding="utf-8")
+    router_factory_source = router_factory_path.read_text(encoding="utf-8")
+
+    assert 'if "OPERATION_MAP" not in globals():' in openapi_docs_source
+    assert "def assemble_openapi_schema(" in openapi_docs_source
+    assert 'merged_components["schemas"] = merged_schemas' in openapi_docs_source
+    assert "except (ImportError, KeyError)" in openapi_docs_source
+    assert "GENERATED_API_PACKAGE = " in router_factory_source
+    assert 'return importlib.import_module(f"{GENERATED_API_PACKAGE}.{module_name}")' in (
+        router_factory_source
+    )
+    assert "_openapi_docs_module = _import_generated_module(\"openapi_docs\")" in router_factory_source
+    assert "build_openapi_components = cast(" in router_factory_source
+    assert "build_openapi_paths = cast(" in router_factory_source
+    assert "def assemble_openapi_schema(" in router_factory_source
+    assert 'schema["paths"] = build_openapi_paths()' in router_factory_source
+    assert 'merged_components["schemas"] = merged_schemas' in router_factory_source
+    assert "def install_openapi(app: Any) -> None:" in router_factory_source

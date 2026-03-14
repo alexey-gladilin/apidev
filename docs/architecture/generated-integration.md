@@ -252,24 +252,19 @@ async def endpoint(invoice_id: str, current_user=Depends(require_bearer_user)):
 ## Пример: OpenAPI integration
 
 ```python
-from fastapi.openapi.utils import get_openapi
-
-from generated_api.openapi_docs import build_openapi_components, build_openapi_paths
+from integration.router_factory import install_openapi
 
 
-def install_custom_openapi(app) -> None:
-    def custom_openapi() -> dict[str, object]:
-        schema = get_openapi(
-            title=app.title,
-            version=app.version,
-            routes=app.routes,
-        )
-        schema["paths"] = build_openapi_paths()
-        schema.setdefault("components", {})["schemas"] = build_openapi_components()
-        return schema
-
-    app.openapi = custom_openapi
+install_openapi(app)
 ```
+
+Стандартный generated contract теперь такой:
+
+- `generated_api.openapi_docs` продолжает экспортировать fragment builders `build_openapi_paths()` и `build_openapi_components()`;
+- `generated_api.openapi_docs.assemble_openapi_schema(base_schema)` собирает полный OpenAPI schema dict;
+- `integration.router_factory.install_openapi(app)` является канонической точкой wiring для FastAPI app и использует generated assembly helper по умолчанию.
+
+Это убирает необходимость в project-specific `custom_openapi` glue только для того, чтобы добавить `components.schemas` из APIDev-generated shared models.
 
 ## Что может быть дополнительно сгенерировано
 

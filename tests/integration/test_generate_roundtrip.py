@@ -3,7 +3,8 @@ import importlib
 import ast
 from pathlib import Path
 import sys
-from typing import Any, cast
+from types import ModuleType
+from typing import Any, Callable, cast
 
 import pytest
 
@@ -573,12 +574,15 @@ errors: []
     paths = cast(dict[str, dict[str, dict[str, object]]], build_openapi_paths())
     components = cast(dict[str, dict[str, dict[str, object]]], build_openapi_components())
 
-    assert (
-        paths["/v1/invoices/search"]["post"]["requestBody"]["content"]["application/json"][
-            "schema"
-        ]["properties"]["page"]["$ref"]
-        == "#/components/schemas/common.PaginationRequest"
-    )
+    search_operation = cast(dict[str, Any], paths["/v1/invoices/search"]["post"])
+    search_request_body = cast(dict[str, Any], search_operation["requestBody"])
+    search_request_content = cast(dict[str, Any], search_request_body["content"])
+    request_body = cast(dict[str, Any], search_request_content["application/json"])
+    request_schema = cast(dict[str, Any], request_body["schema"])
+    request_properties = cast(dict[str, Any], request_schema["properties"])
+    page_schema = cast(dict[str, Any], request_properties["page"])
+
+    assert page_schema["$ref"] == "#/components/schemas/common.PaginationRequest"
     assert components["common.PaginationRequest"] == {
         "type": "object",
         "properties": {
@@ -587,6 +591,212 @@ errors: []
         },
     }
     assert '"$ref": "common.PaginationRequest"' not in json.dumps(paths)
+
+
+def test_generate_integration_router_factory_assembles_full_openapi_schema(tmp_path: Path) -> None:
+    (tmp_path / ".apidev" / "contracts" / "billing").mkdir(parents=True)
+    (tmp_path / ".apidev" / "models" / "common").mkdir(parents=True)
+    (tmp_path / ".apidev" / "config.toml").write_text(
+        """
+[inputs]
+contracts_dir = ".apidev/contracts"
+
+[generator]
+generated_dir = ".apidev/output/api"
+
+[paths]
+templates_dir = ".apidev/templates"
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "models" / "common" / "pagination_request.yaml").write_text(
+        """
+contract_type: shared_model
+name: PaginationRequest
+description: Shared pagination payload
+model:
+  type: object
+  properties:
+    number:
+      type: integer
+      required: true
+    size:
+      type: integer
+      required: true
+""".strip(),
+        encoding="utf-8",
+    )
+    (tmp_path / ".apidev" / "contracts" / "billing" / "search_invoices.yaml").write_text(
+        """
+method: POST
+path: /v1/invoices/search
+auth: bearer
+summary: Search invoices
+description: Search invoices with shared pagination
+intent: read
+access_pattern: cached
+request:
+  body:
+    type: object
+    properties:
+      page:
+        $ref: common.PaginationRequest
+response:
+  status: 200
+  body:
+    type: object
+errors: []
+""".strip(),
+        encoding="utf-8",
+    )
+
+    fs = LocalFileSystem()
+    service = GenerateService(
+        config_loader=TomlConfigLoader(fs=fs),
+        loader=YamlContractLoader(),
+        renderer=JinjaTemplateRenderer(custom_templates_dir=tmp_path / ".apidev" / "templates"),
+        fs=fs,
+        writer=SafeWriter(fs=fs),
+        postprocessor=PythonPostprocessor(),
+    )
+
+    _ = service.run(tmp_path, baseline_ref="v1.0.0")
+
+    generated_dir_path = tmp_path / ".apidev" / "output" / "api"
+    inserted = str(generated_dir_path)
+    project_root_inserted = str(tmp_path / ".apidev" / "output")
+    loaded_modules: list[str] = []
+    sys.path.insert(0, inserted)
+    sys.path.insert(1, project_root_inserted)
+    try:
+        sys.modules.pop("integration.router_factory", None)
+        sys.modules.pop("integration.auth_registry", None)
+        sys.modules.pop("integration.handler_registry", None)
+        sys.modules.pop("integration", None)
+        sys.modules.pop("operation_map", None)
+        sys.modules.pop("openapi_docs", None)
+        router_factory_module = importlib.import_module("integration.router_factory")
+        loaded_modules.append("integration.router_factory")
+        assemble_openapi_schema = cast(
+            Any, getattr(router_factory_module, "assemble_openapi_schema")
+        )
+        install_openapi = cast(Any, getattr(router_factory_module, "install_openapi"))
+
+        assembled = cast(
+            dict[str, object],
+            assemble_openapi_schema(
+                {
+                    "openapi": "3.1.0",
+                    "info": {"title": "Orbit", "version": "1.0.0"},
+                    "components": {
+                        "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}
+                    },
+                }
+            ),
+        )
+
+        assembled_paths = cast(dict[str, Any], assembled["paths"])
+        assembled_operation = cast(dict[str, Any], assembled_paths["/v1/invoices/search"]["post"])
+        assembled_request_body = cast(
+            dict[str, Any], assembled_operation["requestBody"]["content"]["application/json"]
+        )
+        assembled_request_schema = cast(dict[str, Any], assembled_request_body["schema"])
+        assembled_request_properties = cast(dict[str, Any], assembled_request_schema["properties"])
+        assembled_page_schema = cast(dict[str, Any], assembled_request_properties["page"])
+        assembled_components = cast(dict[str, Any], assembled["components"])
+        assembled_schemas = cast(dict[str, Any], assembled_components["schemas"])
+        assembled_security_schemes = cast(dict[str, Any], assembled_components["securitySchemes"])
+
+        assert assembled_page_schema["$ref"] == "#/components/schemas/common.PaginationRequest"
+        assert assembled_schemas["common.PaginationRequest"] == {
+            "type": "object",
+            "properties": {
+                "number": {"type": "integer", "required": True},
+                "size": {"type": "integer", "required": True},
+            },
+        }
+        assert assembled_security_schemes == {
+            "bearerAuth": {"type": "http", "scheme": "bearer"}
+        }
+
+        fastapi_module = ModuleType("fastapi")
+        openapi_module = ModuleType("fastapi.openapi")
+        openapi_utils_module = ModuleType("fastapi.openapi.utils")
+
+        def fake_get_openapi(
+            *, title: str, version: str, routes: list[object]
+        ) -> dict[str, object]:
+            return {
+                "openapi": "3.1.0",
+                "info": {"title": title, "version": version},
+                "paths": {"/keep": {"get": {"operationId": "keep"}}},
+                "components": {
+                    "securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}}
+                },
+                "routes": list(routes),
+            }
+
+        openapi_utils_module.get_openapi = fake_get_openapi  # type: ignore[attr-defined]
+        sys.modules["fastapi"] = fastapi_module
+        sys.modules["fastapi.openapi"] = openapi_module
+        sys.modules["fastapi.openapi.utils"] = openapi_utils_module
+        loaded_modules.extend(["fastapi", "fastapi.openapi", "fastapi.openapi.utils"])
+
+        class _App:
+            title = "Orbit"
+            version = "1.0.0"
+            routes = ["generated-route"]
+            openapi_schema: dict[str, object] | None = None
+            openapi: Callable[[], dict[str, object]]
+
+        app = _App()
+        install_openapi(app)
+        installed_schema = cast(dict[str, object], app.openapi())
+
+        installed_paths = cast(dict[str, Any], installed_schema["paths"])
+        installed_operation = cast(dict[str, Any], installed_paths["/v1/invoices/search"]["post"])
+        installed_request_body = cast(
+            dict[str, Any], installed_operation["requestBody"]["content"]["application/json"]
+        )
+        installed_request_schema = cast(dict[str, Any], installed_request_body["schema"])
+        installed_request_properties = cast(dict[str, Any], installed_request_schema["properties"])
+        installed_page_schema = cast(dict[str, Any], installed_request_properties["page"])
+        installed_components = cast(dict[str, Any], installed_schema["components"])
+        installed_schemas = cast(dict[str, Any], installed_components["schemas"])
+        installed_security_schemes = cast(dict[str, Any], installed_components["securitySchemes"])
+
+        assert installed_page_schema["$ref"] == "#/components/schemas/common.PaginationRequest"
+        assert installed_schemas["common.PaginationRequest"] == {
+            "type": "object",
+            "properties": {
+                "number": {"type": "integer", "required": True},
+                "size": {"type": "integer", "required": True},
+            },
+        }
+        assert installed_security_schemes == {
+            "bearerAuth": {"type": "http", "scheme": "bearer"}
+        }
+        assert cast(dict[str, object], app.openapi()) is installed_schema
+    finally:
+        if sys.path and sys.path[0] == inserted:
+            sys.path.pop(0)
+        if sys.path and sys.path[0] == project_root_inserted:
+            sys.path.pop(0)
+        elif len(sys.path) > 1 and sys.path[1] == project_root_inserted:
+            sys.path.pop(1)
+        for module_name in loaded_modules:
+            sys.modules.pop(module_name, None)
+        sys.modules.pop("integration.auth_registry", None)
+        sys.modules.pop("integration.handler_registry", None)
+        sys.modules.pop("integration", None)
+        sys.modules.pop("fastapi.openapi.utils", None)
+        sys.modules.pop("fastapi.openapi", None)
+        sys.modules.pop("fastapi", None)
+        sys.modules.pop("operation_map", None)
+        sys.modules.pop("openapi_docs", None)
+        sys.modules.pop("billing", None)
+        sys.modules.pop("billing.routes", None)
+        sys.modules.pop("billing.models", None)
 
 
 def test_generate_creates_domain_package_markers_and_runtime_imports(tmp_path: Path) -> None:
@@ -1327,7 +1537,7 @@ errors:
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map.read_text(encoding="utf-8"), {}, operation_map_namespace)
-    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
 
     openapi_source = openapi_docs.read_text(encoding="utf-8")
     openapi_source = openapi_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
@@ -1405,7 +1615,7 @@ errors: []
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
 
     openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
     openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
@@ -1491,7 +1701,7 @@ errors:
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
 
     openapi_source = openapi_docs_source.replace("from .operation_map import OPERATION_MAP\n\n", "")
     openapi_namespace: dict[str, object] = {"OPERATION_MAP": operation_map_value}
@@ -1565,7 +1775,7 @@ errors: []
 
     operation_map_namespace: dict[str, object] = {}
     exec(operation_map_source, {}, operation_map_namespace)
-    operation_map_value = operation_map_namespace["OPERATION_MAP"]
+    operation_map_value = cast(dict[str, dict[str, object]], operation_map_namespace["OPERATION_MAP"])
     post_entry = cast(dict[str, object], operation_map_value["billing_create_invoice"])
     assert post_entry["intent"] == "write"
     assert post_entry["access_pattern"] == "imperative"

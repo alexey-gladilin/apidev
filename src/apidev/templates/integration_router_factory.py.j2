@@ -6,11 +6,35 @@ Adapter contract: {{ runtime_router_adapter }}
 import importlib
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
-from operation_map import OPERATION_MAP
 from .auth_registry import resolve_auth_dependency
 from .handler_registry import resolve_handler
+
+GENERATED_API_PACKAGE = "api"
+
+
+def _import_generated_module(module_name: str) -> Any:
+    try:
+        return importlib.import_module(module_name)
+    except ModuleNotFoundError:
+        return importlib.import_module(f"{GENERATED_API_PACKAGE}.{module_name}")
+
+
+_openapi_docs_module = _import_generated_module("openapi_docs")
+build_openapi_components = cast(
+    Callable[[], dict[str, dict[str, object]]],
+    getattr(_openapi_docs_module, "build_openapi_components"),
+)
+build_openapi_paths = cast(
+    Callable[[], dict[str, dict[str, dict[str, object]]]],
+    getattr(_openapi_docs_module, "build_openapi_paths"),
+)
+_operation_map_module = _import_generated_module("operation_map")
+OPERATION_MAP = cast(
+    dict[str, Mapping[str, object]],
+    getattr(_operation_map_module, "OPERATION_MAP"),
+)
 
 try:
     from fastapi import APIRouter, Depends
@@ -121,11 +145,54 @@ def _resolve_domain_tag(meta: Mapping[str, object], operation_id: str, router_mo
 
 
 def _load_generated_route(router_module: str) -> Callable[..., Awaitable[Any]]:
-    module = importlib.import_module(router_module)
+    try:
+        module = importlib.import_module(router_module)
+    except ModuleNotFoundError:
+        module = importlib.import_module(f"{GENERATED_API_PACKAGE}.{router_module}")
     route_callable = getattr(module, "route", None)
     if not callable(route_callable):
         raise ValueError(f"Generated router module '{router_module}' does not expose callable 'route'.")
     return route_callable
+
+
+def _mapping_or_empty(value: object) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        return {}
+    return dict(value)
+
+
+def assemble_openapi_schema(
+    base_schema: Mapping[str, object] | None = None,
+) -> dict[str, object]:
+    schema = dict(base_schema or {})
+    schema["paths"] = build_openapi_paths()
+
+    merged_components = _mapping_or_empty(schema.get("components"))
+    merged_schemas = _mapping_or_empty(merged_components.get("schemas"))
+    merged_schemas.update(build_openapi_components())
+    merged_components["schemas"] = merged_schemas
+    schema["components"] = merged_components
+    return schema
+
+
+def install_openapi(app: Any) -> None:
+    from fastapi.openapi.utils import get_openapi
+
+    def custom_openapi() -> dict[str, object]:
+        cached_schema = getattr(app, "openapi_schema", None)
+        if isinstance(cached_schema, dict):
+            return cached_schema
+
+        base_schema = get_openapi(
+            title=str(getattr(app, "title", "")),
+            version=str(getattr(app, "version", "")),
+            routes=getattr(app, "routes", []),
+        )
+        assembled_schema = assemble_openapi_schema(base_schema)
+        app.openapi_schema = assembled_schema
+        return assembled_schema
+
+    app.openapi = custom_openapi
 
 
 def build_router() -> APIRouter:
